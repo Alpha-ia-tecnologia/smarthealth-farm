@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"dev:%{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(npm i *)",
+      "Bash(rm -f smoke-test.mjs shot-previsao.png shot-estoque.png shot-recomendacoes.png shot-alertas.png dev.log)",
+      "Bash(npm rm *)",
+      "Bash(node shot.mjs)",
+      "Bash(rm -f shot.mjs shot-dash.png shot-card.png)",
+      "Bash(rm -f shot.mjs shot-card.png shot-dark.png)"
+    ]
+  }
+}
