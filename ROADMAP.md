@@ -17,7 +17,7 @@ sênior — seguro, sem gambiarra, testado.
 | Fase | Tema | Telas / Domínios | Status |
 |---|---|---|---|
 | 1 | Autenticação & Acesso | Login, sessão, rotas protegidas | ✅ |
-| 2 | Fundação técnica & qualidade | (sem tela) testes + camada de dados | ⬜ |
+| 2 | Fundação técnica & qualidade | (sem tela) testes + camada de dados | ✅ |
 | 3 | Catálogo base | Unidades, Medicamentos | ⬜ |
 | 4 | Núcleo operacional | Estoque & Lotes, Alertas | ⬜ |
 | 5 | Inteligência preditiva | Previsão, Recomendações | ⬜ |
@@ -47,33 +47,32 @@ A ordem segue a dependência entre domínios: catálogo (unidade/medicamento) an
 
 > Esta fase é o **molde** das próximas: todo domínio repete o padrão serviço → hook → UI testada.
 
-**Pendência técnica (fechar na Fase 2):** ainda **não há testes automatizados** para esta camada;
-eles serão escritos junto com a fundação de testes, validando o molde em código real.
-
 ---
 
-## ⬜ Fase 2 — Fundação técnica & qualidade
+## ✅ Fase 2 — Fundação técnica & qualidade *(concluída)*
 
-**Objetivo:** montar os trilhos para integrar com segurança e testar tudo. **Nenhuma tela migrada
-ainda** — só a infraestrutura, provada nos testes da camada de auth.
+**Objetivo:** montar os trilhos para integrar com segurança e testar tudo. Nenhuma tela migrada —
+só a infraestrutura, **provada nos testes da camada de auth**.
 
-**Escopo:**
-1. **Estado de servidor:** adicionar **TanStack Query** (`@tanstack/react-query`); criar o
-   `QueryClientProvider` no `main.tsx`; definir convenção de **query keys** por domínio e política
-   de retry/erro (não dar retry em 401/403/422).
-2. **Infra de testes:** **Vitest** + **jsdom** + **Testing Library** (`@testing-library/react`,
-   `user-event`, `jest-dom`) + **MSW** (handlers que simulam o envelope da API). Script `test` no
-   `package.json`; `setupTests` global.
-3. **Tratamento de erro transversal:** mapear `ApiError` → toast/inline padrão; 401 global encerra a
-   sessão e manda para `/login`; helper de RBAC (`usePerfil`/`<RequirePerfil>`).
-4. **Tipos:** alinhar `src/types` aos DTOs reais do backend (conferir no Swagger/GUIA-API).
-5. **Provar o molde:** escrever os **testes da camada de auth** já existente — `api.ts` (envelope,
-   ApiError, 401, falha de rede), `auth-storage.ts`, `AuthContext` (restauração de sessão), `LoginPage`
-   (sucesso, credencial inválida, mostrar/ocultar senha) e `ProtectedRoute`.
+**Entregue:**
+- **Estado de servidor:** **TanStack Query** adicionado. `src/lib/query-client.ts`
+  (`criarQueryClient`) com política de retry que **não repete em erro 4xx**; `QueryClientProvider`
+  no `main.tsx`. *(As query keys e o uso por domínio entram na Fase 3, com as primeiras queries.)*
+- **Infra de testes:** **Vitest** + **jsdom** + **Testing Library** + **MSW**. Vive em `src/test/`:
+  `handlers.ts` (envelope real da API), `server.ts`, `setup.ts` (ciclo de vida + polyfills do jsdom)
+  e `utils.tsx` (helper `renderizar` com todos os providers). Scripts `test`/`test:run`/`coverage`.
+- **RBAC na UI:** helper `usePerfil()` no `AuthContext` (espelha o perfil; a barreira real é o backend).
+- **Tipos:** `src/types` conferidos contra os DTOs do backend (alinhados).
+- **Molde testado — 28 testes verdes:** `api.ts` (envelope, ApiError, 401, falha de rede, Bearer),
+  `auth-storage.ts`, `authApi`, `AuthContext` (restauração de sessão, login, logout), `LoginPage`
+  (validação, credencial inválida, mostrar/ocultar senha, redirecionamento) e `ProtectedRoute`.
+- **Baseline de qualidade:** `tsc -b`, `eslint` (0 erros) e `vitest` limpos; config do ESLint
+  ajustada ao padrão shadcn/testes.
 
-**Decisão a confirmar:** adoção do **TanStack Query** como padrão de estado de servidor (recomendado).
+**Decisão confirmada:** **TanStack Query** é o padrão de estado de servidor do projeto.
 
-**DoD:** `npm run test` verde com a suíte de auth cobrindo sucesso e erro; QueryClient ativo; lint/build limpos.
+> **Ainda pendente para a Fase 3:** o handler global de 401 vindo de *queries* (encerrar sessão →
+> `/login`) será ligado quando existirem as primeiras queries autenticadas.
 
 ---
 

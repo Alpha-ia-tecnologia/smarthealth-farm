@@ -54,8 +54,8 @@ A camada de autenticação (login, JWT, rotas protegidas) **já está integrada 
 | Estilo | Tailwind CSS v4 · shadcn/ui (Radix) · `lucide-react` |
 | Rotas | React Router 7 (code-splitting por página) |
 | Tabelas / Gráficos | TanStack Table · Recharts |
-| Estado de servidor (API) | **TanStack Query** *(proposto — ver ROADMAP Fase 2)* |
-| Testes | **Vitest · Testing Library · MSW** *(proposto — ver ROADMAP Fase 2)* |
+| Estado de servidor (API) | **TanStack Query** (`criarQueryClient` em `src/lib/query-client.ts`) |
+| Testes | **Vitest · Testing Library · MSW** (infra em `src/test/`) |
 | Notificações | `sonner` (toasts) |
 
 Backend: Spring Boot em `http://localhost:3002/api` (porta 3002, rotas sob `/api`). CORS liberado
@@ -71,7 +71,7 @@ npm run dev       # desenvolvimento (Vite) — porta 5173 (origem liberada no CO
 npm run build     # typecheck (tsc -b) + build de produção
 npm run preview   # pré-visualizar o build
 npm run lint      # ESLint
-# npm run test    # Vitest (a ser adicionado na Fase 2)
+npm run test      # Vitest (watch) · test:run (uma vez) · coverage (cobertura)
 ```
 
 O backend precisa estar de pé para a integração: na pasta do backend, `./mvnw spring-boot:run`
@@ -125,13 +125,19 @@ src/
     api.ts            # cliente HTTP + ApiError (fonte única de fetch)
     auth.ts           # serviço de autenticação (molde dos demais serviços)
     auth-storage.ts   # persistência do token (local vs session)
+    query-client.ts   # criarQueryClient (TanStack Query: retry, staleTime)
     <dominio>.ts      # um serviço por domínio (a criar por fase)
     utils.ts, format.ts, status.ts, nav.ts
   hooks/
     use-theme.tsx
     <dominio>.ts      # hooks TanStack Query por domínio (a criar por fase)
   context/
-    auth.tsx          # AuthProvider + useAuth
+    auth.tsx          # AuthProvider + useAuth + usePerfil
+  test/               # infra de teste (não vai para o bundle)
+    handlers.ts       # respostas MSW no envelope real da API
+    server.ts         # servidor MSW
+    setup.ts          # ciclo de vida + polyfills do jsdom
+    utils.tsx         # helper renderizar() com todos os providers
   components/
     ui/               # primitivos shadcn/ui (não reinventar)
     layout/           # AppShell, Sidebar, Header

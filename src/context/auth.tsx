@@ -19,15 +19,13 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [usuario, setUsuario] = useState<Usuario | null>(null)
-  const [status, setStatus] = useState<AuthStatus>("carregando")
+  // Sem token salvo já nascemos "anonimo"; com token, "carregando" até o /auth/me responder.
+  const [status, setStatus] = useState<AuthStatus>(() => (lerToken() ? "carregando" : "anonimo"))
 
-  // Restaura a sessão no boot: se há token salvo, valida-o em /auth/me.
+  // Restaura a sessão no boot: havendo token salvo, valida-o em /auth/me.
   useEffect(() => {
     const token = lerToken()
-    if (!token) {
-      setStatus("anonimo")
-      return
-    }
+    if (!token) return
 
     const controller = new AbortController()
     authApi
@@ -81,5 +79,13 @@ export function useAuth(): AuthContextValue {
   return ctx
 }
 
+/**
+ * Perfil do usuário autenticado (ou null). Base do RBAC na UI — esconder/mostrar ações.
+ * A barreira real continua sendo o backend; a UI apenas espelha.
+ */
 // eslint-disable-next-line react-refresh/only-export-components
+export function usePerfil(): Usuario["perfil"] | null {
+  return useAuth().usuario?.perfil ?? null
+}
+
 export { ApiError }

@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface DataTableProps<T> {
-  columns: ColumnDef<T, any>[]
+  columns: ColumnDef<T, unknown>[]
   data: T[]
   searchKey?: string
   searchPlaceholder?: string

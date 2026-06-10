@@ -21,7 +21,6 @@ import { Badge } from "@/components/ui/badge"
 import {
   alertas,
   getIndicador,
-  indicadores,
   recomendacoes,
   serieAgregada,
   totais,
