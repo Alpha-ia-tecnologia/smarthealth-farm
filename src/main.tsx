@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom"
 import "./index.css"
 import App from "./App.tsx"
 import { ThemeProvider } from "@/hooks/use-theme"
+import { AuthProvider } from "@/context/auth"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { Toaster } from "@/components/ui/sonner"
 
@@ -12,7 +13,9 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider>
       <TooltipProvider delayDuration={150}>
         <BrowserRouter>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </BrowserRouter>
         <Toaster position="top-right" richColors />
       </TooltipProvider>

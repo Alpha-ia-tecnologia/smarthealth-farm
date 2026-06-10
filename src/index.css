@@ -213,6 +213,12 @@
   }
 }
 
+/* Halo de luz pulsante (login) — apenas a opacidade/intensidade da luz oscila */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+
 /* Textura sutil de fundo institucional */
 .bg-grid {
   background-image:
