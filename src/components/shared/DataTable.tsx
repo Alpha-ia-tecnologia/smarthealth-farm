@@ -9,7 +9,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import { ArrowUpDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { ArrowUpDown, Search } from "lucide-react"
 import {
   Table,
   TableBody,
@@ -19,7 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
+import { Paginacao } from "@/components/shared/Paginacao"
 import { cn } from "@/lib/utils"
 
 interface DataTableProps<T> {
@@ -129,21 +129,12 @@ export function DataTable<T>({
         </Table>
       </div>
 
-      {table.getPageCount() > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <span className="tabular">
-            {table.getFilteredRowModel().rows.length} registro(s) · página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-          </span>
-          <div className="flex gap-1">
-            <Button variant="outline" size="icon" className="size-8" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-              <ChevronLeft className="size-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="size-8" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-        </div>
-      )}
+      <Paginacao
+        paginaAtual={table.getState().pagination.pageIndex}
+        totalPaginas={table.getPageCount()}
+        onMudarPagina={(p) => table.setPageIndex(p)}
+        totalRegistros={table.getFilteredRowModel().rows.length}
+      />
     </div>
   )
 }

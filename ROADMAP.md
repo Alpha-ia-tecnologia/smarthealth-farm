@@ -19,7 +19,7 @@ sênior — seguro, sem gambiarra, testado.
 | 1 | Autenticação & Acesso | Login, sessão, rotas protegidas | ✅ |
 | 2 | Fundação técnica & qualidade | (sem tela) testes + camada de dados | ✅ |
 | 3 | Catálogo base | Unidades, Medicamentos | ✅ |
-| 4 | Núcleo operacional | Estoque & Lotes, Alertas | ⬜ |
+| 4 | Núcleo operacional | Estoque & Lotes ✅, Alertas ⬜ | 🚧 |
 | 5 | Inteligência preditiva | Previsão, Recomendações | ⬜ |
 | 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ⬜ |
 | 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ⬜ |
@@ -40,7 +40,7 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 |---|---|---|---|
 | ✅ | Login (`/login`) | `/auth` (sem mock — nasceu integrado) | 1 |
 | ✅ | Header · seletor de unidade (`AppShell`) | `/unidades` | 3 |
-| ⬜ | Estoque & Lotes (`/estoque`) | `/estoque`, `/lotes`, `/movimentacoes` | 4 |
+| ✅ | Estoque & Lotes (`/estoque`) | `/estoque`, `/lotes`, `/movimentacoes` | 4 |
 | ⬜ | Alertas (`/alertas`) | `/alertas` | 4 |
 | ⬜ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
 | ⬜ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
@@ -136,22 +136,32 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 
 ---
 
-## ⬜ Fase 4 — Núcleo operacional (Estoque & Alertas)
+## 🚧 Fase 4 — Núcleo operacional (Estoque & Alertas)
 
 **Objetivo:** as telas operacionais de maior uso diário, lendo dados reais com status do backend.
 
-**Escopo:**
-- **Estoque & Lotes (`/estoque`):** posições com status, KPIs do resumo, drill-down por item
-  (lotes + movimentações). `lib/estoque.ts`, `hooks/use-estoque.ts`.
-- **Alertas (`/alertas`):** lista com filtros, resumo, **tratar status** (`PATCH .../status`:
-  Aberto→Em tratamento→Resolvido). `lib/alertas.ts`, `hooks/use-alertas.ts` (mutation + invalidação).
-- Usar **status/severidade que vêm do backend** (não recalcular). `StatusBadge` consome o valor real.
+**✅ Estoque & Lotes (`/estoque`) — concluída:**
+- Contract-check: a API já entrega tudo **denormalizado e pré-calculado** (nomes, `status` como
+  `ok/atencao/critico`, `tipo` de movimentação, `diasParaVencer`, KPIs em `/resumo`) — **sem mudança
+  no backend**. `StatusBadge` consome o `status` real (não recalcula).
+- `lib/estoque.ts` (posições/resumo/detalhe/lotes) + `hooks/use-estoque.ts` (query keys).
+- `EstoquePage` reescrita: KPIs do resumo, tabela de posições, aba de validade, drill-down por
+  query; estados de carregando/erro/vazio. **Mock removido da tela** (não importa mais `src/data`).
+- **Paginação:** novo componente reutilizável `components/shared/Paginacao.tsx` com **seleção de
+  página** (números + anterior/próxima); a aba "Controle de validade" passou a paginar e a `DataTable`
+  ganhou seleção de página. A **API não é paginada** (retorna a lista completa) → paginação no cliente.
+- Testes (+14): serviço, hook, `Paginacao` e `EstoquePage` (KPIs, drill-down, paginação da validade, erro).
 
-**Endpoints:** `GET /estoque` · `/estoque/resumo` · `/estoque/{med}/{uni}` · `GET /lotes` · `GET /movimentacoes`
+**⬜ Alertas (`/alertas`) — pendente:** lista com filtros, resumo, **tratar status**
+(`PATCH .../status`: Aberto→Em tratamento→Resolvido) — primeira **mutation** com invalidação de cache;
+`POST /alertas/gerar` restrito a Gestor (RBAC na UI). `lib/alertas.ts`, `hooks/use-alertas.ts`.
+
+**Endpoints:** `GET /estoque` · `/estoque/resumo` · `/estoque/{med}/{uni}` · `GET /lotes`
 · `GET /alertas` · `/alertas/resumo` · `PATCH /alertas/{id}/status` · `POST /alertas/gerar` *(Gestor)*.
 
-**DoD:** ambas as telas em dados reais; mutation de alerta testada (incl. invalidação); RBAC do "gerar"
-escondido para não-Gestor; mocks de estoque/alerta removidos.
+> **Nota:** o mock de estoque permanece em `src/data/index.ts` porque ainda **gera internamente**
+> os alertas/recomendações/`totais` usados por outras telas mockadas; sai quando Alertas (Fase 4),
+> Recomendações (Fase 5) e os dashboards (Fase 6) migrarem.
 
 ---
 
