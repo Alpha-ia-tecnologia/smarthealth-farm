@@ -11,6 +11,8 @@ export const unidades: Unidade[] = [
     leitos: 0,
     conectividade: "Estável",
     perfilDemografico: "Hub logístico estadual",
+    hub: true,
+    ativo: true,
   },
   {
     id: "u-htm",
@@ -21,6 +23,8 @@ export const unidades: Unidade[] = [
     leitos: 320,
     conectividade: "Estável",
     perfilDemografico: "Trauma · alta complexidade",
+    hub: false,
+    ativo: true,
   },
   {
     id: "u-imperatriz",
@@ -31,6 +35,8 @@ export const unidades: Unidade[] = [
     leitos: 280,
     conectividade: "Intermitente",
     perfilDemografico: "Geral · referência regional",
+    hub: false,
+    ativo: true,
   },
   {
     id: "u-caxias",
@@ -41,6 +47,8 @@ export const unidades: Unidade[] = [
     leitos: 160,
     conectividade: "Intermitente",
     perfilDemografico: "Geral · materno-infantil",
+    hub: false,
+    ativo: true,
   },
   {
     id: "u-balsas",
@@ -51,6 +59,8 @@ export const unidades: Unidade[] = [
     leitos: 120,
     conectividade: "Precária",
     perfilDemografico: "Geral · zona agrícola",
+    hub: false,
+    ativo: true,
   },
   {
     id: "u-acailandia",
@@ -61,6 +71,8 @@ export const unidades: Unidade[] = [
     leitos: 90,
     conectividade: "Precária",
     perfilDemografico: "Geral · clínica e emergência",
+    hub: false,
+    ativo: true,
   },
   {
     id: "u-bacabal",
@@ -71,6 +83,8 @@ export const unidades: Unidade[] = [
     leitos: 70,
     conectividade: "Intermitente",
     perfilDemografico: "Geral · interior",
+    hub: false,
+    ativo: true,
   },
   {
     id: "u-chapadinha",
@@ -81,7 +95,9 @@ export const unidades: Unidade[] = [
     leitos: 55,
     conectividade: "Precária",
     perfilDemografico: "Geral · baixa densidade",
+    hub: false,
+    ativo: true,
   },
 ]
 
-export const unidadesAtendidas = unidades.filter((u) => u.id !== "u-cahosp")
+export const unidadesAtendidas = unidades.filter((u) => !u.hub)

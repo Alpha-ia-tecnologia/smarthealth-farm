@@ -102,3 +102,19 @@ export const api = {
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
     request<T>(path, { ...options, method: "POST", body }),
 }
+
+/**
+ * Monta a query string a partir de um objeto de filtros, ignorando valores vazios
+ * (`undefined`, `null`, `""`). Devolve "" quando não há filtro, ou "?a=1&b=2".
+ * Os enums de domínio já vêm como rótulo pt-BR, que é o que o backend aceita.
+ */
+export function montarQuery(
+  params: Record<string, string | number | boolean | null | undefined>,
+): string {
+  const sp = new URLSearchParams()
+  for (const [chave, valor] of Object.entries(params)) {
+    if (valor !== undefined && valor !== null && valor !== "") sp.append(chave, String(valor))
+  }
+  const query = sp.toString()
+  return query ? `?${query}` : ""
+}

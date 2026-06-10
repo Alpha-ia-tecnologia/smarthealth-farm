@@ -196,24 +196,48 @@ Convenções:
 
 ## 9. Definition of Done
 
-Uma tarefa/fase só está concluída quando **tudo** abaixo é verdade:
+Uma tela/tarefa só está concluída quando **tudo** abaixo é verdade:
 
 - [ ] Código sem gambiarra, sem `any`, tipos espelhando a API.
-- [ ] Dados vêm da API real (o mock correspondente foi removido ou isolado), não de `src/data`.
+- [ ] A tela migrada **não importa mais nada de `src/data`** — todos os dados vêm da API.
 - [ ] Estados de **carregando / erro / vazio** tratados na UI.
 - [ ] RBAC espelhado na UI; 401 e 403 tratados.
-- [ ] **Testes escritos e verdes** (serviço + hook + UI relevante), via MSW.
+- [ ] **Testes de front escritos e verdes** (serviço + hook + UI relevante), via MSW.
+- [ ] Se o backend foi alterado: mudança feita conforme o **CLAUDE.md do backend**, com testes
+      (unitários + integração) **verdes** (`./mvnw test`).
 - [ ] `npm run build` (typecheck) e `npm run lint` passam limpos.
 - [ ] Acessibilidade preservada (contraste, foco, reduced-motion).
-- [ ] `ROADMAP.md` atualizado (item marcado como concluído).
+- [ ] `ROADMAP.md` atualizado: tela marcada na **tabela de rastreamento** e fase, se fechada.
 
 ---
 
-## 10. Fluxo de trabalho
+## 10. Fluxo de migração por tela (fatia vertical)
 
-- Trabalhamos **por fases** ([`ROADMAP.md`](ROADMAP.md)), uma de cada vez, na ordem de dependência.
-- Antes de migrar um domínio: confira o contrato no [`GUIA-API.md`](../smarthealth-farm-backend/docs/GUIA-API.md)
-  e, se preciso, o Swagger. Alinhe os tipos do front ao DTO real.
+A migração é **uma tela por vez, de ponta a ponta** — nunca alterar uma tela mockada sem, na mesma
+passada, remover o mock e integrar a API. Não se acumula dívida para "remover o mock no fim".
+
+Para cada tela:
+
+1. **Contract-check (antes de codar).** Liste o que a tela precisa (campos, ações, filtros) e
+   confronte com o contrato real: [`GUIA-API.md`](../smarthealth-farm-backend/docs/GUIA-API.md), os
+   DTOs do backend e, se preciso, o Swagger. Registre as **lacunas** (o que falta na API).
+2. **Sem lacuna → integra.** Cria/usa o serviço (`lib/<dominio>.ts`) + hook (`hooks/<dominio>.ts`),
+   alinha os tipos (`src/types`) ao DTO, e troca o mock pela API na tela.
+3. **Com lacuna → corrige o backend primeiro.** O backend é um repositório irmão
+   (`../smarthealth-farm-backend`). Antes de tocá-lo, **leia o `CLAUDE.md` dele** e siga o padrão:
+   camadas (controller fino · service · repository · DTO `record`), tipos corretos, **migration
+   Flyway** se mudar schema (`ddl-auto: validate`), RBAC por perfil, e **testes obrigatórios**
+   (unitário + integração). Rode `./mvnw test` até ficar **verde**. Mudança aditiva e não-quebrável
+   de preferência; se a resposta mudar de forma, atualize o tipo no front junto.
+4. **Remove o mock da tela.** A tela deixa de importar de `src/data`. Quando **nenhuma** tela mais
+   importar um arquivo de `src/data`, **apague o arquivo** (não deixe mock órfão).
+5. **Testes de front.** Serviço + hook + comportamento da tela (loading/erro/vazio/RBAC), via MSW.
+6. **Verde nos dois repos.** Front (`tsc -b`, `lint`, `vitest`) e back (`./mvnw test`) limpos.
+7. **Atualize o rastreamento** no `ROADMAP.md` (marque a tela) e os docs afetados.
+
+**Regras gerais:**
+- Uma tela está **ou totalmente mockada ou totalmente na API** — nunca metade-e-metade entre fases.
+- O catálogo compartilhado (`unidades`/`medicamentos`) some de `src/data` assim que a última tela
+  que o consumia migra — consequência natural do passo 4, não algo adiado de propósito.
 - Commits pequenos e descritivos; só commitar/pushar quando solicitado. Branch a partir de `main`.
-- Se um endpoint do backend não bater com o que o front precisa, **anote e alinhe** — o backend pode
-  mudar "uma coisa ou outra", mas não se improvisa no front para compensar.
+- Nunca improvise no front para compensar uma API incompleta — corrija a API (passo 3).

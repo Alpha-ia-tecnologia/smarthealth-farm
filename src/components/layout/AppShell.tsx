@@ -5,13 +5,7 @@ import { SidebarContent } from "./Sidebar"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { UnidadeSelect } from "@/components/shared/UnidadeSelect"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +18,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "@/hooks/use-theme"
 import { useAuth } from "@/context/auth"
 import { navItems } from "@/lib/nav"
-import { unidadesAtendidas, totais } from "@/data"
+import { totais } from "@/data"
 
 /** Iniciais para o avatar a partir do nome completo (ex.: "Ana Sousa" → "AS"). */
 function iniciais(nome: string): string {
@@ -41,6 +35,8 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const current = navItems.find((n) => n.to === pathname) ?? navItems[0]
+  // Filtro de unidade do header. O consumo por outras telas será ligado nas próximas fases.
+  const [unidade, setUnidade] = useState("todas")
 
   async function aoSair() {
     await logout()
@@ -63,19 +59,7 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
         <Input placeholder="Buscar medicamento, lote, unidade…" className="pl-8" />
       </div>
 
-      <Select defaultValue="todas">
-        <SelectTrigger className="w-[150px]" aria-label="Unidade">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="todas">Todas as unidades</SelectItem>
-          {unidadesAtendidas.map((u) => (
-            <SelectItem key={u.id} value={u.id}>
-              {u.sigla} · {u.municipio}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <UnidadeSelect value={unidade} onValueChange={setUnidade} />
 
       <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
         {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}

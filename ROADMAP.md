@@ -18,7 +18,7 @@ sênior — seguro, sem gambiarra, testado.
 |---|---|---|---|
 | 1 | Autenticação & Acesso | Login, sessão, rotas protegidas | ✅ |
 | 2 | Fundação técnica & qualidade | (sem tela) testes + camada de dados | ✅ |
-| 3 | Catálogo base | Unidades, Medicamentos | ⬜ |
+| 3 | Catálogo base | Unidades, Medicamentos | ✅ |
 | 4 | Núcleo operacional | Estoque & Lotes, Alertas | ⬜ |
 | 5 | Inteligência preditiva | Previsão, Recomendações | ⬜ |
 | 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ⬜ |
@@ -28,6 +28,38 @@ sênior — seguro, sem gambiarra, testado.
 
 A ordem segue a dependência entre domínios: catálogo (unidade/medicamento) antes dos consumidores
 (estoque, previsão, alerta, recomendação), e as agregações (painel/indicadores) depois das fontes.
+
+---
+
+## Rastreamento de telas (mock → API)
+
+Marcar a tela quando ela **deixar de usar `src/data`** e passar a consumir a API. "Mock removido"
+significa: a tela não importa mais de `src/data`, com estados de carregando/erro/vazio e testes.
+
+| ✓ | Tela (rota) | Domínio(s) da API | Fase alvo |
+|---|---|---|---|
+| ✅ | Login (`/login`) | `/auth` (sem mock — nasceu integrado) | 1 |
+| ✅ | Header · seletor de unidade (`AppShell`) | `/unidades` | 3 |
+| ⬜ | Estoque & Lotes (`/estoque`) | `/estoque`, `/lotes`, `/movimentacoes` | 4 |
+| ⬜ | Alertas (`/alertas`) | `/alertas` | 4 |
+| ⬜ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
+| ⬜ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
+| ⬜ | Dashboard Gerencial (`/`) | `/painel` | 6 |
+| ⬜ | Painel Operacional (`/operacional`) | `/painel/operacional` | 6 |
+| ⬜ | Indicadores (`/indicadores`) | `/indicadores` | 6 |
+| ⬜ | Relatórios (`/relatorios`) | `/indicadores`, `/painel` | 6 |
+| ⬜ | Ingestão de Dados (`/ingestao`) | `/ingestao` | 7 |
+| ⬜ | Integração EMSERH (`/integracao`) | `/integracoes` | 7 |
+| ⬜ | Segurança & LGPD (`/seguranca`) | `/seguranca/auditoria` | 8 |
+| ⬜ | Administração (`/admin`) | `/admin/usuarios`, `/auth` | 8 |
+
+> **Estado atual (pós-Fase 3):** as **12 telas** ainda consomem `src/data`. A Fase 3 trocou apenas
+> o seletor de unidade do header — nenhuma tela teve o mock removido ainda.
+>
+> **Como migramos daqui em diante (fatia vertical — CLAUDE.md §10):** uma tela por vez, removendo o
+> mock dela **na mesma passada** em que integra a API. Se a API não tiver o que a tela precisa, o
+> backend é corrigido primeiro (lendo o CLAUDE.md dele, com testes). Front e back **verdes** antes de
+> marcar a tela. A Fase 9 vira só uma **varredura de segurança**, não o lugar onde o mock "finalmente" sai.
 
 ---
 
@@ -76,22 +108,31 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 
 ---
 
-## ⬜ Fase 3 — Catálogo base (Unidades & Medicamentos)
+## ✅ Fase 3 — Catálogo base (Unidades & Medicamentos) *(concluída)*
 
 **Objetivo:** trocar o catálogo mockado pela API. É a base referenciada por quase todas as telas
 (seletores de unidade/medicamento no header e nos filtros).
 
-**Escopo:**
-- `lib/unidades.ts` + `lib/medicamentos.ts` (listar, detalhar, filtros pt-BR).
-- `hooks/use-unidades.ts` + `hooks/use-medicamentos.ts` (queries com cache).
-- Substituir `unidadesAtendidas`/catálogo do `src/data` no **seletor de unidade do header** e onde mais
-  for consumido; remover o mock correspondente.
-- Estados de carregando/erro/vazio nos seletores.
+**Entregue:**
+- **Tipos alinhados ao DTO real:** `Unidade` ganhou `hub`/`ativo`; `Medicamento` ganhou
+  `codigo`/`ativo` (espelham `UnidadeResponse`/`MedicamentoResponse`). Mock conformado.
+- **Serviços:** `lib/unidades.ts` e `lib/medicamentos.ts` (listar + filtros pt-BR + detalhar),
+  com o helper `montarQuery` em `lib/api.ts` (ignora filtros vazios; reutilizável por todos os domínios).
+- **Hooks:** `hooks/use-unidades.ts` e `hooks/use-medicamentos.ts` com **query keys** por domínio
+  (`unidadesKeys`/`medicamentosKeys`) — convenção das próximas fases.
+- **Componente reutilizável:** `components/shared/UnidadeSelect.tsx` (carregando/erro/vazio),
+  ligado ao **seletor de unidade do header** — o mock `unidadesAtendidas` saiu do header.
+- **Testes (40 no total, +12):** serviços (envelope, filtros na query, detalhar), hooks
+  (sucesso + erro) e `UnidadeSelect` (abre, lista atendidas excluindo o hub, estado de erro).
 
 **Endpoints:** `GET /unidades` (+filtros) · `GET /medicamentos` (+filtros) · `GET .../{id}`.
 *(escrita de catálogo é da Fase 8 — perfil TI.)*
 
-**DoD:** seletores e filtros consomem a API; testes de serviço+hook+seletor verdes; mock de catálogo removido.
+> **Nota de migração:** o mock de catálogo **ainda vive em `src/data`** porque as telas mockadas
+> (estoque, previsão, etc.) o usam para resolver nomes por id. Pelo fluxo de fatia vertical
+> (CLAUDE.md §10), **cada tela que migra passa a usar os hooks de catálogo da API** (`useUnidades`/
+> `useMedicamentos`) e larga o `src/data`; os arquivos de catálogo são **apagados assim que nenhuma
+> tela os importar** (durante as Fases 4–6, não adiado para o fim). Nesta fase migramos só o header.
 
 ---
 

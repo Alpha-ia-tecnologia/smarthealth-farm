@@ -17,6 +17,7 @@ export type FamiliaTerapeutica =
   | "Saúde Mental"
   | "Antiparasitários"
 
+// Espelha o UnidadeResponse do backend (RF-DAD-06).
 export interface Unidade {
   id: string
   nome: string
@@ -25,18 +26,22 @@ export interface Unidade {
   porte: "Pequeno" | "Médio" | "Grande"
   leitos: number
   conectividade: "Estável" | "Intermitente" | "Precária"
-  // RF-DAD-06 — variáveis de contexto
   perfilDemografico: string
+  hub: boolean // CAHOSP central (true) vs. unidades atendidas (false)
+  ativo: boolean
 }
 
+// Espelha o MedicamentoResponse do backend (RF-DAD-06).
 export interface Medicamento {
   id: string
+  codigo: string // código de negócio (MED-NNN)
   nome: string
   apresentacao: string
   familia: FamiliaTerapeutica
   unidadeMedida: string
   criticidade: "Alta" | "Média" | "Baixa"
   essencial: boolean
+  ativo: boolean
 }
 
 export interface Lote {
