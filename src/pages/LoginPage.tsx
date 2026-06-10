@@ -151,7 +151,7 @@ export default function LoginPage() {
                   autoComplete="email"
                   autoFocus
                   required
-                  placeholder="nome@cahosp.local"
+                  placeholder="nome@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={enviando}
