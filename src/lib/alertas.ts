@@ -27,11 +27,13 @@ export interface Alerta {
 }
 
 export interface ResumoAlertas {
+  /** Não resolvidos (abertos + em tratamento) — fecha com desabastecimento + vencimento. */
+  ativos: number
   abertos: number
+  emTratamento: number
   desabastecimento: number
   vencimento: number
   criticos: number
-  emTratamento: number
   resolvidos: number
   total: number
 }

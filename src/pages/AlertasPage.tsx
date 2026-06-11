@@ -241,7 +241,7 @@ export default function AlertasPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Alertas abertos" value={resumoQuery.data ? fmtNum(resumoQuery.data.abertos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" rf="RF-ALE-04" />
+          <KpiCard label="Alertas ativos" value={resumoQuery.data ? fmtNum(resumoQuery.data.ativos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" rf="RF-ALE-04" />
           <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" rf="RF-ALE-01" />
           <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" rf="RF-ALE-02" />
           <KpiCard label="Tratados" value={resumoQuery.data ? fmtNum(resumoQuery.data.resolvidos) : ""} carregando={resumoQuery.isPending} icon={SlidersHorizontal} accent="success" hint="alertas resolvidos" rf="RF-ALE-05" />

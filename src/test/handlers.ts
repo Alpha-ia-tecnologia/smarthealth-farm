@@ -217,12 +217,13 @@ export const alertasTeste: Alerta[] = [
 ]
 
 export const resumoAlertasTeste: ResumoAlertas = {
+  ativos: 15, // abertos(12) + emTratamento(3) = desabastecimento(6) + vencimento(9)
   abertos: 12,
-  desabastecimento: 7,
+  emTratamento: 3,
+  desabastecimento: 6,
   vencimento: 9,
   criticos: 4,
-  emTratamento: 3,
-  resolvidos: 38,
+  resolvidos: 38, // ativos(15) + resolvidos(38) = total(53)
   total: 53,
 }
 

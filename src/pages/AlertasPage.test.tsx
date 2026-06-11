@@ -24,9 +24,19 @@ function renderComoOperador() {
 describe("AlertasPage", () => {
   it("mostra os KPIs e os alertas vindos da API", async () => {
     renderComoGestor()
-    expect(await screen.findByText("Alertas abertos")).toBeInTheDocument()
+    // "Desabastecimento iminente" é um KPI único (não colide com a aba "Alertas ativos").
+    expect(await screen.findByText("Desabastecimento iminente")).toBeInTheDocument()
     expect(await screen.findByText("Ceftriaxona 1g")).toBeInTheDocument()
     expect(screen.getByText("Dipirona 500mg/mL")).toBeInTheDocument()
+  })
+
+  it("o card de alertas ativos mostra o valor coerente (= desabastecimento + vencimento)", async () => {
+    renderComoGestor()
+    // O card e a aba compartilham o rótulo "Alertas ativos"; o card é o que tem o valor numérico.
+    const cardAtivos = (await screen.findAllByText("Alertas ativos")).find((el) =>
+      el.parentElement?.textContent?.includes("15"),
+    )
+    expect(cardAtivos).toBeDefined()
   })
 
   it("trata um alerta aberto (mutation) e confirma com toast", async () => {
