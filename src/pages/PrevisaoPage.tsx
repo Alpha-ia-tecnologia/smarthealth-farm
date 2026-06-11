@@ -1,56 +1,142 @@
-import { useMemo, useState } from "react"
-import type { ColumnDef } from "@tanstack/react-table"
+import { useState } from "react"
+import type { ColumnDef, SortingState } from "@tanstack/react-table"
 import { Boxes, BrainCircuit, GitBranch, RefreshCw, Target, TrendingUp } from "lucide-react"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { DataTable } from "@/components/shared/DataTable"
-import { MedLabel, UniLabel } from "@/components/shared/MedLabel"
+import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
+import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
+import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ForecastChart } from "@/components/charts/ForecastChart"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { previsoes, getMedicamento, getUnidade } from "@/data"
-import type { Previsao } from "@/types"
-import { fmtPct, fmtNum } from "@/lib/format"
+import {
+  usePrevisaoDetalhe,
+  usePrevisoes,
+  useRecalibrarPrevisoes,
+  useResumoPrevisao,
+} from "@/hooks/use-previsoes"
+import { useDebounce } from "@/hooks/use-debounce"
+import { usePerfil } from "@/context/auth"
+import { ApiError } from "@/lib/api"
+import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
+import { META_MAPE, type Previsao } from "@/lib/previsoes"
+import type { StatusKey } from "@/lib/status"
+import { fmtData, fmtNum, fmtPct } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { AiInsight } from "@/components/shared/AiInsight"
-import { insightPrevisao } from "@/lib/insights"
 
-const driftStatus = { Estável: "ok", Atenção: "atencao", Degradado: "critico" } as const
+const driftStatus: Record<Previsao["drift"], StatusKey> = {
+  Estável: "ok",
+  Atenção: "atencao",
+  Degradado: "critico",
+}
 
-function mapeStatus(mape: number) {
-  return mape < 10 ? "ok" : mape < 15 ? "atencao" : "critico"
+/** Coluna da tabela (id) → campo de ordenação no backend. */
+const ORDENACAO_BACKEND: Record<string, string> = {
+  medicamentoNome: "medicamento.nome",
+  unidadeSigla: "unidade.sigla",
+  mape: "mape",
+  criticidade: "medicamento.criticidade",
+  drift: "drift",
+}
+
+/** Cor do MAPE pela meta do projeto (RF-PRV-05): dentro da meta (< 15%) ou fora. */
+function mapeStatus(mape: number): StatusKey {
+  return mape < META_MAPE ? "ok" : "critico"
+}
+
+function mensagemDeErro(erro: unknown): string {
+  return erro instanceof ApiError ? erro.message : "Erro inesperado. Tente novamente."
 }
 
 export default function PrevisaoPage() {
-  const [sel, setSel] = useState<Previsao>(
-    previsoes.find((p) => p.medicamentoId === "m-002") ?? previsoes[0],
-  )
+  const perfil = usePerfil()
+  const ehGestor = perfil === "Gestor"
 
-  const mapeMedio = useMemo(
-    () => previsoes.reduce((s, p) => s + p.mape, 0) / previsoes.length,
-    [],
+  // Guarda só a chave do item escolhido; a linha é derivada da página (default: a primeira).
+  const [selKey, setSelKey] = useState<{ medicamentoId: string; unidadeId: string } | null>(null)
+
+  // Estado da tabela (paginação/ordenação/busca server-side).
+  const [pagina, setPagina] = useState(0)
+  const [tamanho, setTamanho] = useState(TAMANHO_PAGINA_PADRAO)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [busca, setBusca] = useState("")
+  const buscaDebounced = useDebounce(busca, 350)
+
+  const ordenacao = sorting[0]
+  const resumoQuery = useResumoPrevisao()
+  const previsoesQuery = usePrevisoes(
+    { busca: buscaDebounced || undefined },
+    {
+      pagina,
+      tamanho,
+      ordenarPor: ordenacao ? ORDENACAO_BACKEND[ordenacao.id] : undefined,
+      ordem: ordenacao?.desc ? "desc" : "asc",
+    },
   )
-  const criticosAbaixoMeta = previsoes.filter(
-    (p) => getMedicamento(p.medicamentoId)?.criticidade === "Alta" && p.mape < 15,
-  ).length
-  const totalCriticos = previsoes.filter((p) => getMedicamento(p.medicamentoId)?.criticidade === "Alta").length
-  const driftDegradado = previsoes.filter((p) => p.drift === "Degradado").length
+  const recalibrar = useRecalibrarPrevisoes()
+
+  const itens = previsoesQuery.data?.itens
+  const sel: Previsao | null =
+    itens && itens.length > 0
+      ? itens.find(
+          (p) => p.medicamentoId === selKey?.medicamentoId && p.unidadeId === selKey?.unidadeId,
+        ) ?? itens[0]
+      : null
+  const detalheQuery = usePrevisaoDetalhe(sel?.medicamentoId, sel?.unidadeId)
+
+  const servidorPrevisoes: ControleServidor = {
+    paginaAtual: pagina,
+    tamanhoPagina: tamanho,
+    totalRegistros: previsoesQuery.data?.total ?? 0,
+    onMudarPagina: setPagina,
+    onMudarTamanho: (t) => {
+      setTamanho(t)
+      setPagina(0)
+    },
+    sorting,
+    onSortingChange: (s) => {
+      setSorting(s)
+      setPagina(0)
+    },
+    busca,
+    onBuscaChange: (b) => {
+      setBusca(b)
+      setPagina(0)
+    },
+  }
+
+  function aoRecalibrar() {
+    recalibrar.mutate(undefined, {
+      onSuccess: (resultado) => toast.success(resultado.mensagem),
+      onError: (erro) => toast.error(mensagemDeErro(erro)),
+    })
+  }
 
   const columns: ColumnDef<Previsao>[] = [
     {
-      accessorKey: "medicamentoId",
+      accessorKey: "medicamentoNome",
       header: "Medicamento",
-      accessorFn: (r) => getMedicamento(r.medicamentoId)?.nome,
-      cell: ({ row }) => <MedLabel id={row.original.medicamentoId} sub />,
+      cell: ({ row }) => (
+        <span className="flex flex-col">
+          <span className="font-medium leading-tight">{row.original.medicamentoNome}</span>
+          <span className="text-xs text-muted-foreground">{row.original.medicamentoCodigo}</span>
+        </span>
+      ),
     },
     {
-      accessorKey: "unidadeId",
+      accessorKey: "unidadeSigla",
       header: "Unidade",
-      accessorFn: (r) => getUnidade(r.unidadeId)?.sigla,
-      cell: ({ row }) => <UniLabel id={row.original.unidadeId} />,
+      cell: ({ row }) => (
+        <span className="flex flex-col">
+          <span className="font-medium">{row.original.unidadeSigla}</span>
+          <span className="text-xs text-muted-foreground">{row.original.unidadeNome}</span>
+        </span>
+      ),
     },
     {
       accessorKey: "mape",
@@ -60,23 +146,25 @@ export default function PrevisaoPage() {
       ),
     },
     {
-      id: "criticidade",
+      accessorKey: "criticidade",
       header: "Criticidade",
-      accessorFn: (r) => getMedicamento(r.medicamentoId)?.criticidade,
       cell: ({ row }) => {
-        const c = getMedicamento(row.original.medicamentoId)?.criticidade
+        const c = row.original.criticidade
         return <Badge variant={c === "Alta" ? "destructive" : "outline"} className="text-[10px]">{c}</Badge>
       },
     },
-    { accessorKey: "modelo", header: "Modelo", cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.modelo}</span> },
+    {
+      accessorKey: "modelo",
+      header: "Modelo",
+      enableSorting: false,
+      cell: ({ row }) => <span className="text-xs text-muted-foreground">{row.original.modelo}</span>,
+    },
     {
       accessorKey: "drift",
       header: "Desvio do modelo",
       cell: ({ row }) => <StatusBadge status={driftStatus[row.original.drift]} label={row.original.drift} />,
     },
   ]
-
-  const med = getMedicamento(sel.medicamentoId)!
 
   return (
     <>
@@ -86,114 +174,169 @@ export default function PrevisaoPage() {
         rf="RF-PRV"
         description="Estima a demanda futura por medicamento, unidade e horizonte, com assertividade aferida (meta de erro MAPE < 15% nos itens de maior criticidade)."
         actions={
-          <Button variant="outline"><RefreshCw className="size-4" /> Recalibrar previsões</Button>
+          ehGestor && (
+            <Button variant="outline" disabled={recalibrar.isPending} onClick={aoRecalibrar}>
+              <RefreshCw className={recalibrar.isPending ? "size-4 animate-spin" : "size-4"} />
+              Recalibrar previsões
+            </Button>
+          )
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Erro médio (MAPE)" value={fmtPct(mapeMedio)} icon={Target} accent="success" hint="alvo < 15%" rf="RF-PRV-05" />
-        <KpiCard label="Itens críticos na meta" value={`${criticosAbaixoMeta}/${totalCriticos}`} icon={Boxes} accent="teal" rf="RF-PRV-05" />
-        <KpiCard label="Previsões ativas" value={fmtNum(previsoes.length)} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" rf="RF-PRV-04" />
-        <KpiCard label="Itens com desvio" value={fmtNum(driftDegradado)} icon={GitBranch} accent={driftDegradado ? "warning" : "success"} hint="monitoramento contínuo" rf="RF-PRV-06" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-5">
-        <Section
-          className="lg:col-span-3"
-          title={`Previsão — ${med.nome}`}
-          rf="RF-PRV-02"
-          description={`${getUnidade(sel.unidadeId)?.nome} · horizonte de ${sel.horizonteMeses} meses`}
-          action={<Badge variant="outline" className="font-mono text-[10px]">{sel.modelo}</Badge>}
-        >
-          <ForecastChart serie={sel.serie} />
-          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { l: "Erro (MAPE)", v: fmtPct(sel.mape) },
-              { l: "Horizonte", v: `${sel.horizonteMeses} meses` },
-              { l: "Versão do modelo", v: sel.versaoModelo },
-              { l: "Atualizado", v: sel.atualizadoEm },
-            ].map((x) => (
-              <div key={x.l} className="rounded-lg bg-muted/50 p-3">
-                <p className="text-[11px] text-muted-foreground">{x.l}</p>
-                <p className="tabular text-sm font-semibold">{x.v}</p>
-              </div>
-            ))}
-          </div>
-          <AiInsight
-            className="mt-4"
-            {...insightPrevisao(sel.serie, med.nome, { mape: sel.mape, drift: sel.drift })}
-          />
-        </Section>
-
-        <Section className="lg:col-span-2" title="Composição da previsão" rf="RF-PRV-03" description="Combinação de métodos estatísticos e de inteligência artificial.">
-          <Tabs defaultValue="ensemble">
-            <TabsList className="w-full">
-              <TabsTrigger value="ensemble" className="flex-1">Composição</TabsTrigger>
-              <TabsTrigger value="validacao" className="flex-1">Validação</TabsTrigger>
-              <TabsTrigger value="versoes" className="flex-1">Versões</TabsTrigger>
-            </TabsList>
-            <TabsContent value="ensemble" className="space-y-3 pt-3">
-              {[
-                { n: "Sazonalidade epidemiológica", peso: 35, c: "var(--chart-1)" },
-                { n: "Padrões de consumo (IA)", peso: 40, c: "var(--chart-2)" },
-                { n: "Padrões de consumo — rápido (IA)", peso: 15, c: "var(--chart-4)" },
-                { n: "Tendência histórica", peso: 10, c: "var(--chart-3)" },
-              ].map((m) => (
-                <div key={m.n}>
-                  <div className="flex justify-between text-xs">
-                    <span className="font-medium">{m.n}</span>
-                    <span className="tabular text-muted-foreground">{m.peso}%</span>
-                  </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
-                    <div className="h-full rounded-full" style={{ width: `${m.peso}%`, background: m.c }} />
-                  </div>
-                </div>
-              ))}
-              <p className="pt-1 text-xs text-muted-foreground">Pesos ajustados por validação histórica (RF-PRV-03/08).</p>
-            </TabsContent>
-            <TabsContent value="validacao" className="space-y-2 pt-3 text-sm">
-              {[
-                ["Método de validação", "Validação temporal (5 ciclos)"],
-                ["Erro médio absoluto (MAE)", "284 un"],
-                ["Erro quadrático (RMSE)", "412 un"],
-                ["Erro percentual (MAPE)", fmtPct(sel.mape)],
-                ["Janela de calibração", "24 meses móveis"],
-              ].map(([k, v]) => (
-                <div key={k} className="flex justify-between border-b py-1.5 last:border-0">
-                  <span className="text-muted-foreground">{k}</span>
-                  <span className="tabular font-medium">{v}</span>
-                </div>
-              ))}
-              <RfTagLine rf="RF-PRV-08" />
-            </TabsContent>
-            <TabsContent value="versoes" className="space-y-2 pt-3">
-              {["v4.2 (produção)", "v4.1", "v3.7", "v3.0"].map((v, i) => (
-                <div key={v} className={cn("flex items-center justify-between rounded-lg border p-2.5", i === 0 && "border-primary/40 bg-primary/5")}>
-                  <span className="font-mono text-xs">{v}</span>
-                  {i === 0 ? <StatusBadge status="ok" label="Ativa" /> : <span className="text-[11px] text-muted-foreground">arquivada</span>}
-                </div>
-              ))}
-              <RfTagLine rf="RF-PRV-09" />
-            </TabsContent>
-          </Tabs>
-        </Section>
-      </div>
-
-      <Section
-        title="Previsões por item e unidade"
-        rf="RF-PRV-01 · RF-PRV-02"
-        description="Selecione uma linha para visualizar a série completa. Itens de maior criticidade destacados."
-      >
-        <DataTable
-          columns={columns}
-          data={previsoes}
-          searchKey="medicamentoId"
-          searchPlaceholder="Buscar medicamento ou unidade…"
-          pageSize={8}
-          onRowClick={(r) => setSel(r)}
-          dense
+      {/* KPIs */}
+      {resumoQuery.isError ? (
+        <ErroConsulta
+          mensagem="Não foi possível carregar os indicadores de previsão."
+          onTentarNovamente={() => resumoQuery.refetch()}
         />
-      </Section>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Erro médio (MAPE)" value={resumoQuery.data ? fmtPct(resumoQuery.data.mapeMedio) : ""} carregando={resumoQuery.isPending} icon={Target} accent="success" hint="alvo < 15%" rf="RF-PRV-05" />
+          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" rf="RF-PRV-05" />
+          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" rf="RF-PRV-04" />
+          <KpiCard label="Itens com desvio" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensComDesvio) : ""} carregando={resumoQuery.isPending} icon={GitBranch} accent={resumoQuery.data?.itensComDesvio ? "warning" : "success"} hint="monitoramento contínuo" rf="RF-PRV-06" />
+        </div>
+      )}
+
+      {previsoesQuery.isError ? (
+        <ErroConsulta
+          mensagem="Não foi possível carregar as previsões."
+          onTentarNovamente={() => previsoesQuery.refetch()}
+        />
+      ) : !previsoesQuery.data ? (
+        <div className="flex justify-center py-20">
+          <Spinner size={40} label="Carregando previsões" />
+        </div>
+      ) : previsoesQuery.data.itens.length === 0 ? (
+        <Section title="Previsões por item e unidade" rf="RF-PRV-01">
+          <p className="py-10 text-center text-sm text-muted-foreground">
+            Nenhuma previsão disponível no momento.
+          </p>
+        </Section>
+      ) : (
+        <>
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Section
+              className="lg:col-span-3"
+              title={sel ? `Previsão — ${sel.medicamentoNome}` : "Previsão"}
+              rf="RF-PRV-02"
+              description={sel ? `${sel.unidadeNome} · horizonte de ${sel.horizonteMeses} meses` : undefined}
+              action={sel && <Badge variant="outline" className="font-mono text-[10px]">{sel.modelo}</Badge>}
+            >
+              {!sel || detalheQuery.isPending ? (
+                <div className="flex justify-center py-20">
+                  <Spinner size={40} label="Carregando série" />
+                </div>
+              ) : detalheQuery.isError ? (
+                <ErroConsulta
+                  mensagem="Não foi possível carregar a série temporal."
+                  onTentarNovamente={() => detalheQuery.refetch()}
+                />
+              ) : (
+                <AreaAtualizavel atualizando={detalheQuery.isFetching}>
+                  <ForecastChart serie={detalheQuery.data.serie} />
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      { l: "Erro (MAPE)", v: fmtPct(sel.mape) },
+                      { l: "Horizonte", v: `${sel.horizonteMeses} meses` },
+                      { l: "Versão do modelo", v: sel.versaoModelo },
+                      { l: "Calibrado em", v: fmtData(sel.calibradoEm) },
+                    ].map((x) => (
+                      <div key={x.l} className="rounded-lg bg-muted/50 p-3">
+                        <p className="text-[11px] text-muted-foreground">{x.l}</p>
+                        <p className="tabular text-sm font-semibold">{x.v}</p>
+                      </div>
+                    ))}
+                  </div>
+                </AreaAtualizavel>
+              )}
+            </Section>
+
+            <Section
+              className="lg:col-span-2"
+              title="Composição da previsão"
+              rf="RF-PRV-03"
+              description="Combinação de métodos estatísticos e de inteligência artificial."
+              action={
+                <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
+                  Dados ilustrativos
+                </Badge>
+              }
+            >
+              {/* NOTA: este painel ainda usa dados ilustrativos (mock) embutidos — não há endpoint
+                  que sirva composição do ensemble, métricas de validação (MAE/RMSE) nem histórico de
+                  versões. Fica fora do escopo da Fase 5 (ver ROADMAP); migra quando o backend expuser. */}
+              <Tabs defaultValue="ensemble">
+                <TabsList className="w-full">
+                  <TabsTrigger value="ensemble" className="flex-1">Composição</TabsTrigger>
+                  <TabsTrigger value="validacao" className="flex-1">Validação</TabsTrigger>
+                  <TabsTrigger value="versoes" className="flex-1">Versões</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ensemble" className="space-y-3 pt-3">
+                  {[
+                    { n: "Sazonalidade epidemiológica", peso: 35, c: "var(--chart-1)" },
+                    { n: "Padrões de consumo (IA)", peso: 40, c: "var(--chart-2)" },
+                    { n: "Padrões de consumo — rápido (IA)", peso: 15, c: "var(--chart-4)" },
+                    { n: "Tendência histórica", peso: 10, c: "var(--chart-3)" },
+                  ].map((m) => (
+                    <div key={m.n}>
+                      <div className="flex justify-between text-xs">
+                        <span className="font-medium">{m.n}</span>
+                        <span className="tabular text-muted-foreground">{m.peso}%</span>
+                      </div>
+                      <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-full rounded-full" style={{ width: `${m.peso}%`, background: m.c }} />
+                      </div>
+                    </div>
+                  ))}
+                  <p className="pt-1 text-xs text-muted-foreground">Pesos ajustados por validação histórica (RF-PRV-03/08).</p>
+                </TabsContent>
+                <TabsContent value="validacao" className="space-y-2 pt-3 text-sm">
+                  {[
+                    ["Método de validação", "Validação temporal (5 ciclos)"],
+                    ["Erro médio absoluto (MAE)", "284 un"],
+                    ["Erro quadrático (RMSE)", "412 un"],
+                    ["Janela de calibração", "24 meses móveis"],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex justify-between border-b py-1.5 last:border-0">
+                      <span className="text-muted-foreground">{k}</span>
+                      <span className="tabular font-medium">{v}</span>
+                    </div>
+                  ))}
+                  <RfTagLine rf="RF-PRV-08" />
+                </TabsContent>
+                <TabsContent value="versoes" className="space-y-2 pt-3">
+                  {["v4.2 (produção)", "v4.1", "v3.7", "v3.0"].map((v, i) => (
+                    <div key={v} className={cn("flex items-center justify-between rounded-lg border p-2.5", i === 0 && "border-primary/40 bg-primary/5")}>
+                      <span className="font-mono text-xs">{v}</span>
+                      {i === 0 ? <StatusBadge status="ok" label="Ativa" /> : <span className="text-[11px] text-muted-foreground">arquivada</span>}
+                    </div>
+                  ))}
+                  <RfTagLine rf="RF-PRV-09" />
+                </TabsContent>
+              </Tabs>
+            </Section>
+          </div>
+
+          <Section
+            title="Previsões por item e unidade"
+            rf="RF-PRV-01 · RF-PRV-02"
+            description="Selecione uma linha para visualizar a série completa. Itens de maior criticidade destacados."
+          >
+            <AreaAtualizavel atualizando={previsoesQuery.isFetching}>
+              <DataTable
+                columns={columns}
+                data={previsoesQuery.data.itens}
+                searchKey="medicamentoNome"
+                searchPlaceholder="Buscar medicamento ou unidade…"
+                onRowClick={(r) => setSelKey({ medicamentoId: r.medicamentoId, unidadeId: r.unidadeId })}
+                dense
+                servidor={servidorPrevisoes}
+              />
+            </AreaAtualizavel>
+          </Section>
+        </>
+      )}
     </>
   )
 }

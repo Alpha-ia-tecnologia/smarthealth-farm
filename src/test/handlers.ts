@@ -8,6 +8,11 @@ import type {
   ResumoEstoque,
 } from "@/lib/estoque"
 import type { Alerta, LimiarAlerta, ResumoAlertas } from "@/lib/alertas"
+import type {
+  Previsao,
+  PrevisaoDetalhe,
+  ResumoPrevisao,
+} from "@/lib/previsoes"
 
 /** Usuário padrão devolvido pelos handlers de sucesso. */
 export const usuarioTeste: Usuario = {
@@ -239,6 +244,59 @@ export const limiaresTeste: LimiarAlerta = {
   atualizadoEm: "2026-06-10T12:00:00Z",
 }
 
+/** Previsões de teste: uma crítica dentro da meta (estável) e uma fora da meta (degradada). */
+export const previsoesTeste: Previsao[] = [
+  {
+    id: "pv-1",
+    medicamentoId: "med-001",
+    medicamentoCodigo: "MED-001",
+    medicamentoNome: "Ceftriaxona 1g",
+    criticidade: "Alta",
+    unidadeId: "uni-hto",
+    unidadeSigla: "HTO",
+    unidadeNome: "Hospital de Traumatologia e Ortopedia",
+    horizonteMeses: 3,
+    mape: 7.4,
+    modelo: "Modelo preditivo híbrido",
+    versaoModelo: "v4.2",
+    drift: "Estável",
+    calibradoEm: "2026-06-01",
+  },
+  {
+    id: "pv-2",
+    medicamentoId: "med-002",
+    medicamentoCodigo: "MED-002",
+    medicamentoNome: "Dipirona 500mg/mL",
+    criticidade: "Média",
+    unidadeId: "uni-hri",
+    unidadeSigla: "HRI",
+    unidadeNome: "Hospital Regional de Imperatriz",
+    horizonteMeses: 3,
+    mape: 18.2,
+    modelo: "Modelo preditivo híbrido",
+    versaoModelo: "v4.1",
+    drift: "Degradado",
+    calibradoEm: "2026-05-15",
+  },
+]
+
+export const detalhePrevisaoTeste: PrevisaoDetalhe = {
+  previsao: previsoesTeste[0],
+  serie: [
+    { periodo: "2026-04", realizado: 520, previsto: 500, limiteInferior: 470, limiteSuperior: 530 },
+    { periodo: "2026-05", realizado: 560, previsto: 545, limiteInferior: 515, limiteSuperior: 575 },
+    { periodo: "2026-06", realizado: null, previsto: 590, limiteInferior: 555, limiteSuperior: 625 },
+  ],
+}
+
+export const resumoPrevisaoTeste: ResumoPrevisao = {
+  mapeMedio: 12.8,
+  criticosNaMeta: 1,
+  totalCriticos: 1,
+  previsoesAtivas: 2,
+  itensComDesvio: 1,
+}
+
 /** Monta o envelope de sucesso da API (`{ success, data, total? }`). */
 export function ok<T>(data: T, total?: number) {
   return total === undefined
@@ -306,4 +364,19 @@ export const handlers = [
     ),
   ),
   http.get("*/alertas", ({ request }) => HttpResponse.json(paginar(request, alertasTeste))),
+  // Previsões — específicos antes do genérico (resumo e detalhe vs. lista).
+  http.get("*/previsoes/resumo", () => HttpResponse.json(ok(resumoPrevisaoTeste))),
+  http.get("*/previsoes/:medicamentoId/:unidadeId", () =>
+    HttpResponse.json(ok(detalhePrevisaoTeste)),
+  ),
+  http.post("*/previsoes/recalibrar", () =>
+    HttpResponse.json(
+      ok({
+        recalibradas: previsoesTeste.length,
+        calibradoEm: "2026-06-11",
+        mensagem: previsoesTeste.length + " previsoes recalibradas; drift estabilizado.",
+      }),
+    ),
+  ),
+  http.get("*/previsoes", ({ request }) => HttpResponse.json(paginar(request, previsoesTeste))),
 ]

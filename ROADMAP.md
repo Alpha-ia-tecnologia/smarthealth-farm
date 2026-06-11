@@ -42,7 +42,7 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 | ✅ | Header · seletor de unidade (`AppShell`) | `/unidades` | 3 |
 | ✅ | Estoque & Lotes (`/estoque`) | `/estoque`, `/lotes`, `/movimentacoes` | 4 |
 | ✅ | Alertas (`/alertas`) | `/alertas` (+ `/limiares`) | 4 |
-| ⬜ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
+| ✅ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
 | ⬜ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
 | ⬜ | Dashboard Gerencial (`/`) | `/painel` | 6 |
 | ⬜ | Painel Operacional (`/operacional`) | `/painel/operacional` | 6 |
@@ -186,15 +186,35 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 
 ---
 
-## ⬜ Fase 5 — Inteligência preditiva (Previsão & Recomendações)
+## 🚧 Fase 5 — Inteligência preditiva (Previsão & Recomendações)
 
 **Objetivo:** telas guiadas por ML, incluindo **ações de decisão** (perfil Gestor).
 
-**Escopo:**
-- **Previsão (`/previsao`):** lista, resumo (MAPE), série temporal completa por item (gráfico real),
-  `POST /previsoes/recalibrar` *(Gestor)*.
-- **Recomendações (`/recomendacoes`):** lista/filtros, resumo, ciclo **aprovar → executar**
-  *(Gestor)*, `POST /recomendacoes/gerar` *(Gestor)*.
+**✅ Previsão (`/previsao`) — concluída:**
+- Contract-check: a API já entrega tudo **denormalizado e pré-calculado** — resumo (`mapeMedio`,
+  `criticosNaMeta`/`totalCriticos`, `previsoesAtivas`, `itensComDesvio`), lista com nomes/criticidade/
+  modelo/`drift` e a série temporal por item. **Sem mudança no backend.** O front consome o status
+  pronto (some `mapeStatus`/`driftStatus`/`insightPrevisao` que reimplementavam regra).
+- `lib/previsoes.ts` (listar/resumo/detalhar/recalibrar) + `hooks/use-previsoes.ts` (query keys,
+  detalhe `enabled` por med/unidade, **mutation** de recalibrar com invalidação).
+- **Paginação server-side (back + front):** `GET /previsoes` passou a paginar no **servidor**
+  (`page`/`size`/`sort`, default 10/página) — `buscarComFiltros` virou `Page` com `countQuery`
+  (fetch joins to-one), controller com `@PageableDefault(sort = "medicamento.nome")`. No front,
+  `previsoesApi.listar` usa `getPagina` e a `DataTable` roda em **modo servidor** (paginação,
+  ordenação por coluna e busca com debounce conduzidas pela API).
+- `PrevisaoPage` reescrita: KPIs do resumo, gráfico real da série (`ForecastChart` desacoplado de
+  `src/data` via novo `fmtPeriodoMes`), tabela com seleção de linha → série; estados de
+  carregando/erro/vazio. Botão **Recalibrar** visível só para Gestor (RBAC espelhado), com toast e
+  tratamento de 403. **Mock removido da tela** (não importa mais `src/data`).
+- **Decisão de produto:** o painel "Composição da previsão" (ensemble/validação/versões) **não tem
+  endpoint** e fica **fora do escopo desta fase** — mantido com **dados ilustrativos**, marcado
+  visivelmente na UI ("Dados ilustrativos") e com nota no código. Migra quando o backend expuser.
+- Testes (+18): serviço (envelope, filtros, detalhe, recalibrar, 403), hooks (lista, detalhe
+  `enabled`, invalidação) e página (KPIs, seleção→série, recalibrar Gestor, 403 Operador sem botão,
+  vazio, erro, marcação de mock).
+
+**⬜ Recomendações (`/recomendacoes`) — pendente:**
+- Lista/filtros, resumo, ciclo **aprovar → executar** *(Gestor)*, `POST /recomendacoes/gerar` *(Gestor)*.
 - Mutations com invalidação de cache; feedback (toast) e tratamento de 403/422.
 
 **Endpoints:** `GET /previsoes` (+resumo/série) · `POST /previsoes/recalibrar` · `GET /recomendacoes`

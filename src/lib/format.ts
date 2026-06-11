@@ -27,3 +27,12 @@ export function fmtDataHora(iso: string): string {
 
 export const fmtMilhar = (n: number) =>
   n >= 1_000_000 ? `${fmtDec(n / 1_000_000)}M` : n >= 1000 ? `${fmtDec(n / 1000)}k` : fmtNum(n)
+
+const mesesAbrev = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+/** Período "AAAA-MM" → rótulo curto "Mmm/AA" (ex.: "2026-06" → "Jun/26"). */
+export function fmtPeriodoMes(periodo: string): string {
+  const [ano, mes] = periodo.split("-").map(Number)
+  const rotulo = mesesAbrev[mes - 1]
+  return rotulo ? `${rotulo}/${String(ano).slice(-2)}` : periodo
+}
