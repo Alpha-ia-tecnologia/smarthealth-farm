@@ -13,6 +13,10 @@ import type {
   PrevisaoDetalhe,
   ResumoPrevisao,
 } from "@/lib/previsoes"
+import type {
+  Recomendacao,
+  ResumoRecomendacoes,
+} from "@/lib/recomendacoes"
 
 /** Usuário padrão devolvido pelos handlers de sucesso. */
 export const usuarioTeste: Usuario = {
@@ -297,6 +301,60 @@ export const resumoPrevisaoTeste: ResumoPrevisao = {
   itensComDesvio: 1,
 }
 
+/** Recomendações de teste: uma redistribuição pendente (IA) e uma reposição aprovada (regras). */
+export const recomendacoesTeste: Recomendacao[] = [
+  {
+    id: "rec-1",
+    tipo: "Redistribuição",
+    medicamentoId: "med-001",
+    medicamentoCodigo: "MED-001",
+    medicamentoNome: "Ceftriaxona 1g",
+    unidadeDestinoId: "uni-hto",
+    unidadeDestinoSigla: "HTO",
+    unidadeDestinoNome: "Hospital de Traumatologia e Ortopedia",
+    unidadeOrigemId: "uni-hri",
+    unidadeOrigemSigla: "HRI",
+    unidadeOrigemNome: "Hospital Regional de Imperatriz",
+    quantidade: 120,
+    justificativa: "Excedente em HRI cobre a ruptura iminente em HTO sem compra emergencial.",
+    origemMotor: "Aprendizado de Máquina",
+    prioridade: "Essencial",
+    economiaEstimada: 8400,
+    status: "Pendente",
+    criadoEm: "2026-06-10T08:00:00Z",
+  },
+  {
+    id: "rec-2",
+    tipo: "Reposição",
+    medicamentoId: "med-002",
+    medicamentoCodigo: "MED-002",
+    medicamentoNome: "Dipirona 500mg/mL",
+    unidadeDestinoId: "uni-hri",
+    unidadeDestinoSigla: "HRI",
+    unidadeDestinoNome: "Hospital Regional de Imperatriz",
+    unidadeOrigemId: null,
+    unidadeOrigemSigla: null,
+    unidadeOrigemNome: null,
+    quantidade: 300,
+    justificativa: "Reposição dimensionada pela previsão para restaurar o nível de segurança.",
+    origemMotor: "Regras",
+    prioridade: "Importante",
+    economiaEstimada: 2100,
+    status: "Aprovada",
+    criadoEm: "2026-06-09T10:00:00Z",
+  },
+]
+
+export const resumoRecomendacoesTeste: ResumoRecomendacoes = {
+  pendentes: 1,
+  aprovadas: 1,
+  executadas: 0,
+  economiaPotencial: 10500,
+  geradasPorIA: 1,
+  taxaAdesao: 50,
+  total: 2,
+}
+
 /** Monta o envelope de sucesso da API (`{ success, data, total? }`). */
 export function ok<T>(data: T, total?: number) {
   return total === undefined
@@ -379,4 +437,26 @@ export const handlers = [
     ),
   ),
   http.get("*/previsoes", ({ request }) => HttpResponse.json(paginar(request, previsoesTeste))),
+  // Recomendações — específicos antes do genérico.
+  http.get("*/recomendacoes/resumo", () => HttpResponse.json(ok(resumoRecomendacoesTeste))),
+  http.post("*/recomendacoes/:id/aprovar", ({ params }) => {
+    const rec = recomendacoesTeste.find((r) => r.id === params.id) ?? recomendacoesTeste[0]
+    return HttpResponse.json(ok({ ...rec, status: "Aprovada" }))
+  }),
+  http.post("*/recomendacoes/:id/executar", ({ params }) => {
+    const rec = recomendacoesTeste.find((r) => r.id === params.id) ?? recomendacoesTeste[0]
+    return HttpResponse.json(ok({ ...rec, status: "Executada" }))
+  }),
+  http.post("*/recomendacoes/gerar", () =>
+    HttpResponse.json(
+      ok({
+        reposicaoGeradas: 4,
+        redistribuicaoGeradas: 3,
+        pendentesRenovadas: 7,
+        totalAtivo: 12,
+        mensagem: "7 recomendacao(oes) gerada(s): 4 de reposição e 3 de redistribuição.",
+      }),
+    ),
+  ),
+  http.get("*/recomendacoes", ({ request }) => HttpResponse.json(paginar(request, recomendacoesTeste))),
 ]

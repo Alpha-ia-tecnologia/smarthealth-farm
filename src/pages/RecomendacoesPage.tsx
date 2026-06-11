@@ -1,22 +1,59 @@
 import { useState } from "react"
-import { ArrowLeftRight, ArrowRight, BadgeCheck, Boxes, BrainCircuit, Coins } from "lucide-react"
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  BadgeCheck,
+  Boxes,
+  BrainCircuit,
+  CheckCheck,
+  Coins,
+  RefreshCw,
+} from "lucide-react"
+import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { MedLabel, UniLabel } from "@/components/shared/MedLabel"
+import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
+import { ErroConsulta } from "@/components/shared/ErroConsulta"
+import { Paginacao } from "@/components/shared/Paginacao"
+import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { recomendacoes, totais } from "@/data"
-import type { Recomendacao } from "@/types"
+import { Spinner } from "@/components/ui/spinner"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  useAprovarRecomendacao,
+  useExecutarRecomendacao,
+  useGerarRecomendacoes,
+  useRecomendacoes,
+  useResumoRecomendacoes,
+} from "@/hooks/use-recomendacoes"
+import { usePerfil } from "@/context/auth"
+import { ApiError } from "@/lib/api"
+import type { Recomendacao, TipoRecomendacao } from "@/lib/recomendacoes"
 import { fmtMoeda, fmtNum } from "@/lib/format"
-import { toast } from "sonner"
 
 const statusMap = { Pendente: "atencao", Aprovada: "info", Executada: "ok" } as const
 
-function RecCard({ r }: { r: Recomendacao }) {
+function mensagemDeErro(erro: unknown): string {
+  return erro instanceof ApiError ? erro.message : "Erro inesperado. Tente novamente."
+}
+
+function RecCard({
+  r,
+  ehGestor,
+  onAprovar,
+  onExecutar,
+  ocupada,
+}: {
+  r: Recomendacao
+  ehGestor: boolean
+  onAprovar: (r: Recomendacao) => void
+  onExecutar: (r: Recomendacao) => void
+  ocupada: boolean
+}) {
   return (
     <Card className="gap-3 p-4">
       <div className="flex items-center justify-between">
@@ -27,24 +64,29 @@ function RecCard({ r }: { r: Recomendacao }) {
           ) : (
             <Badge variant="outline" className="text-[10px]">Regras</Badge>
           )}
-          <span className="font-mono text-[10px] text-muted-foreground">{r.id}</span>
+          <Badge variant="outline" className="text-[10px]">{r.prioridade}</Badge>
         </div>
       </div>
 
-      <div className="text-sm"><MedLabel id={r.medicamentoId} sub /></div>
+      <div className="text-sm">
+        <span className="flex flex-col">
+          <span className="font-medium leading-tight">{r.medicamentoNome}</span>
+          <span className="text-xs text-muted-foreground">{r.medicamentoCodigo}</span>
+        </span>
+      </div>
 
       <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
-        {r.unidadeOrigemId ? (
+        {r.unidadeOrigemSigla ? (
           <>
-            <UniLabel id={r.unidadeOrigemId} />
+            <span className="font-medium">{r.unidadeOrigemSigla}</span>
             <ArrowRight className="size-3.5 text-primary" />
-            <UniLabel id={r.unidadeDestinoId} />
+            <span className="font-medium">{r.unidadeDestinoSigla}</span>
           </>
         ) : (
           <>
             <Boxes className="size-3.5 text-muted-foreground" />
             <span className="text-muted-foreground">Reposição →</span>
-            <UniLabel id={r.unidadeDestinoId} />
+            <span className="font-medium">{r.unidadeDestinoSigla}</span>
           </>
         )}
       </div>
@@ -58,8 +100,17 @@ function RecCard({ r }: { r: Recomendacao }) {
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={statusMap[r.status]} label={r.status} />
-          {r.status === "Pendente" && (
-            <Button size="sm" onClick={() => toast.success(`Recomendação ${r.id} aprovada`)}>Aprovar</Button>
+          {ehGestor && r.status === "Pendente" && (
+            <Button size="sm" disabled={ocupada} onClick={() => onAprovar(r)}>
+              <BadgeCheck className="size-3.5" />
+              Aprovar
+            </Button>
+          )}
+          {ehGestor && r.status === "Aprovada" && (
+            <Button size="sm" variant="secondary" disabled={ocupada} onClick={() => onExecutar(r)}>
+              <CheckCheck className="size-3.5" />
+              Executar
+            </Button>
           )}
         </div>
       </div>
@@ -68,12 +119,53 @@ function RecCard({ r }: { r: Recomendacao }) {
 }
 
 export default function RecomendacoesPage() {
-  const [tab, setTab] = useState("todas")
-  const filtrar = (t?: Recomendacao["tipo"]) => recomendacoes.filter((r) => !t || r.tipo === t)
-  const dados = tab === "todas" ? recomendacoes : tab === "reposicao" ? filtrar("Reposição") : filtrar("Redistribuição")
+  const perfil = usePerfil()
+  const ehGestor = perfil === "Gestor"
 
-  const porML = recomendacoes.filter((r) => r.origemMotor === "Aprendizado de Máquina").length
-  const taxaAdesao = Math.round((recomendacoes.filter((r) => r.status !== "Pendente").length / recomendacoes.length) * 100)
+  const [filtroTipo, setFiltroTipo] = useState<"todas" | TipoRecomendacao>("todas")
+  const [pagina, setPagina] = useState(0)
+  const [tamanho, setTamanho] = useState(TAMANHO_PAGINA_PADRAO)
+
+  const resumoQuery = useResumoRecomendacoes()
+  const recomendacoesQuery = useRecomendacoes(
+    { tipo: filtroTipo === "todas" ? undefined : filtroTipo },
+    { pagina, tamanho },
+  )
+
+  const aprovar = useAprovarRecomendacao()
+  const executar = useExecutarRecomendacao()
+  const gerar = useGerarRecomendacoes()
+  const ocupada = aprovar.isPending || executar.isPending
+
+  function aoAprovar(r: Recomendacao) {
+    aprovar.mutate(r.id, {
+      onSuccess: () => toast.success("Recomendação aprovada."),
+      onError: (erro) => toast.error(mensagemDeErro(erro)),
+    })
+  }
+
+  function aoExecutar(r: Recomendacao) {
+    executar.mutate(r.id, {
+      onSuccess: () => toast.success("Recomendação executada."),
+      onError: (erro) => toast.error(mensagemDeErro(erro)),
+    })
+  }
+
+  function aoGerar() {
+    gerar.mutate(undefined, {
+      onSuccess: (resultado) => toast.success(resultado.mensagem),
+      onError: (erro) => toast.error(mensagemDeErro(erro)),
+    })
+  }
+
+  function mudarTipo(t: "todas" | TipoRecomendacao) {
+    setFiltroTipo(t)
+    setPagina(0)
+  }
+
+  const itens = recomendacoesQuery.data?.itens ?? []
+  const total = recomendacoesQuery.data?.total ?? 0
+  const totalPaginas = Math.ceil(total / tamanho)
 
   return (
     <>
@@ -82,41 +174,107 @@ export default function RecomendacoesPage() {
         title="Reposição & Redistribuição"
         rf="RF-REC"
         description="Módulo de recomendação dimensionado pela previsão de demanda — reduz compras emergenciais e equilibra estoques críticos entre unidades."
+        actions={
+          ehGestor && (
+            <Button variant="outline" disabled={gerar.isPending} onClick={aoGerar}>
+              <RefreshCw className={gerar.isPending ? "size-4 animate-spin" : "size-4"} />
+              Gerar recomendações
+            </Button>
+          )
+        }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Recomendações pendentes" value={fmtNum(totais.recomendacoesPendentes)} icon={ArrowLeftRight} accent="warning" rf="RF-REC-01" />
-        <KpiCard label="Economia potencial" value={fmtMoeda(totais.economiaPotencial)} icon={Coins} accent="success" rf="RF-REC-02" />
-        <KpiCard label="Geradas por IA" value={fmtNum(porML)} icon={BrainCircuit} accent="primary" hint="evolução de regras → IA" rf="RF-REC-03" />
-        <KpiCard label="Taxa de adesão" value={`${taxaAdesao}%`} icon={BadgeCheck} accent="teal" hint="aprovadas + executadas" rf="RF-REC-05" />
-      </div>
+      {/* KPIs */}
+      {resumoQuery.isError ? (
+        <ErroConsulta
+          mensagem="Não foi possível carregar os indicadores de recomendações."
+          onTentarNovamente={() => resumoQuery.refetch()}
+        />
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Recomendações pendentes" value={resumoQuery.data ? fmtNum(resumoQuery.data.pendentes) : ""} carregando={resumoQuery.isPending} icon={ArrowLeftRight} accent="warning" rf="RF-REC-01" />
+          <KpiCard label="Economia potencial" value={resumoQuery.data ? fmtMoeda(resumoQuery.data.economiaPotencial) : ""} carregando={resumoQuery.isPending} icon={Coins} accent="success" rf="RF-REC-02" />
+          <KpiCard label="Geradas por IA" value={resumoQuery.data ? fmtNum(resumoQuery.data.geradasPorIA) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="evolução de regras → IA" rf="RF-REC-03" />
+          <KpiCard label="Taxa de adesão" value={resumoQuery.data ? `${resumoQuery.data.taxaAdesao}%` : ""} carregando={resumoQuery.isPending} icon={BadgeCheck} accent="teal" hint="aprovadas + executadas" rf="RF-REC-05" />
+        </div>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-4">
-        <div className="lg:col-span-3">
-          <Tabs value={tab} onValueChange={setTab}>
-            <TabsList>
-              <TabsTrigger value="todas">Todas</TabsTrigger>
-              <TabsTrigger value="reposicao">Reposição</TabsTrigger>
-              <TabsTrigger value="redistribuicao">Redistribuição</TabsTrigger>
-            </TabsList>
-            <TabsContent value={tab} className="pt-4">
+        <div className="space-y-4 lg:col-span-3">
+          <div className="flex items-center justify-between gap-2">
+            <Tabs value={filtroTipo} onValueChange={(v) => mudarTipo(v as "todas" | TipoRecomendacao)}>
+              <TabsList>
+                <TabsTrigger value="todas">Todas</TabsTrigger>
+                <TabsTrigger value="Reposição">Reposição</TabsTrigger>
+                <TabsTrigger value="Redistribuição">Redistribuição</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {recomendacoesQuery.isError ? (
+            <ErroConsulta
+              mensagem="Não foi possível carregar as recomendações."
+              onTentarNovamente={() => recomendacoesQuery.refetch()}
+            />
+          ) : !recomendacoesQuery.data ? (
+            <div className="flex justify-center py-20">
+              <Spinner size={40} label="Carregando recomendações" />
+            </div>
+          ) : itens.length === 0 ? (
+            <p className="py-16 text-center text-sm text-muted-foreground">
+              Nenhuma recomendação para este filtro.
+            </p>
+          ) : (
+            <AreaAtualizavel atualizando={recomendacoesQuery.isFetching}>
               <div className="grid gap-3 md:grid-cols-2">
-                {dados.map((r) => (
-                  <RecCard key={r.id} r={r} />
+                {itens.map((r) => (
+                  <RecCard
+                    key={r.id}
+                    r={r}
+                    ehGestor={ehGestor}
+                    onAprovar={aoAprovar}
+                    onExecutar={aoExecutar}
+                    ocupada={ocupada}
+                  />
                 ))}
               </div>
-            </TabsContent>
-          </Tabs>
+              <div className="pt-4">
+                <Paginacao
+                  paginaAtual={pagina}
+                  totalPaginas={totalPaginas}
+                  onMudarPagina={setPagina}
+                  tamanhoPagina={tamanho}
+                  onMudarTamanho={(t) => {
+                    setTamanho(t)
+                    setPagina(0)
+                  }}
+                  totalRegistros={total}
+                />
+              </div>
+            </AreaAtualizavel>
+          )}
         </div>
 
-        {/* Métricas do módulo (RF-REC-05) */}
-        <Section className="lg:col-span-1 h-fit" title="Desempenho do módulo" rf="RF-REC-05" description="Acompanhamento e auditoria.">
+        {/* Desempenho do módulo (RF-REC-05) — dados ilustrativos (sem endpoint dedicado). */}
+        <Section
+          className="lg:col-span-1 h-fit"
+          title="Desempenho do módulo"
+          rf="RF-REC-05"
+          description="Acompanhamento e auditoria."
+          action={
+            <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
+              Dados ilustrativos
+            </Badge>
+          }
+        >
+          {/* NOTA: métricas ilustrativas (mock) — não há endpoint que sirva assertividade /
+              redistribuições aceitas / cobertura. Fora do escopo da Fase 5 (ver ROADMAP). */}
           <div className="space-y-4">
             {[
               { l: "Assertividade das recomendações", v: 87, c: "var(--chart-4)" },
               { l: "Redistribuições aceitas", v: 72, c: "var(--chart-2)" },
-              { l: "Cobertura por regras", v: 100 - Math.round((porML / recomendacoes.length) * 100), c: "var(--chart-1)" },
-              { l: "Cobertura assistida por IA", v: Math.round((porML / recomendacoes.length) * 100), c: "var(--chart-3)" },
+              { l: "Cobertura por regras", v: 60, c: "var(--chart-1)" },
+              { l: "Cobertura assistida por IA", v: 40, c: "var(--chart-3)" },
             ].map((m) => (
               <div key={m.l}>
                 <div className="flex justify-between text-xs">

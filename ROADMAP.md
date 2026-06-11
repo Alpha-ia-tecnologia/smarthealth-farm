@@ -20,7 +20,7 @@ sênior — seguro, sem gambiarra, testado.
 | 2 | Fundação técnica & qualidade | (sem tela) testes + camada de dados | ✅ |
 | 3 | Catálogo base | Unidades, Medicamentos | ✅ |
 | 4 | Núcleo operacional | Estoque & Lotes ✅, Alertas ✅ | ✅ |
-| 5 | Inteligência preditiva | Previsão, Recomendações | ⬜ |
+| 5 | Inteligência preditiva | Previsão, Recomendações | ✅ |
 | 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ⬜ |
 | 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ⬜ |
 | 8 | Segurança & Administração | Auditoria/LGPD, Admin de usuários | ⬜ |
@@ -43,7 +43,7 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 | ✅ | Estoque & Lotes (`/estoque`) | `/estoque`, `/lotes`, `/movimentacoes` | 4 |
 | ✅ | Alertas (`/alertas`) | `/alertas` (+ `/limiares`) | 4 |
 | ✅ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
-| ⬜ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
+| ✅ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
 | ⬜ | Dashboard Gerencial (`/`) | `/painel` | 6 |
 | ⬜ | Painel Operacional (`/operacional`) | `/painel/operacional` | 6 |
 | ⬜ | Indicadores (`/indicadores`) | `/indicadores` | 6 |
@@ -186,7 +186,7 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 
 ---
 
-## 🚧 Fase 5 — Inteligência preditiva (Previsão & Recomendações)
+## ✅ Fase 5 — Inteligência preditiva (Previsão & Recomendações) *(concluída)*
 
 **Objetivo:** telas guiadas por ML, incluindo **ações de decisão** (perfil Gestor).
 
@@ -213,9 +213,22 @@ só a infraestrutura, **provada nos testes da camada de auth**.
   `enabled`, invalidação) e página (KPIs, seleção→série, recalibrar Gestor, 403 Operador sem botão,
   vazio, erro, marcação de mock).
 
-**⬜ Recomendações (`/recomendacoes`) — pendente:**
-- Lista/filtros, resumo, ciclo **aprovar → executar** *(Gestor)*, `POST /recomendacoes/gerar` *(Gestor)*.
-- Mutations com invalidação de cache; feedback (toast) e tratamento de 403/422.
+**✅ Recomendações (`/recomendacoes`) — concluída:**
+- Contract-check: a API entrega tudo denormalizado (cards com medicamento/origem→destino, motor,
+  prioridade, economia R$, status) + resumo (`pendentes`, `economiaPotencial`, `geradasPorIA`,
+  `taxaAdesao`) — o front consome, não recalcula (o mock computava os KPIs no cliente).
+- **Paginação server-side (back + front):** `GET /recomendacoes` passou a paginar (`page`/`size`/`sort`,
+  default 10/pág., `economiaEstimada` desc) — `buscarComFiltros` virou `Page` com `countQuery`
+  (fetch joins to-one). No front, `getPagina` + `<Paginacao>` sob a grade de cards.
+- `lib/recomendacoes.ts` + `hooks/use-recomendacoes.ts` (queries + 3 **mutations** com invalidação:
+  aprovar, executar, gerar). `RecomendacoesPage` reescrita: KPIs reais, filtro por tipo (tabs →
+  servidor), ciclo **Aprovar → Executar** por card (Gestor; RBAC espelhado), botão **Gerar**
+  (Gestor), toasts e tratamento de 403/422. **Mock removido da tela** (não importa mais `src/data`).
+- **Decisão de produto:** o painel "Desempenho do módulo" (assertividade/redistribuições/cobertura)
+  não tem endpoint → mantido como **dados ilustrativos**, marcado na UI e com nota no código.
+- Testes: front +21 (serviço com 422/403, hooks com invalidação, página: aprovar/executar/gerar,
+  RBAC de Operador, filtro por tipo, paginação, erro, marcação de mock); back: `RecomendacaoIT` +1
+  (paginação) — **12/12 verde** no `./mvnw verify`.
 
 **Endpoints:** `GET /previsoes` (+resumo/série) · `POST /previsoes/recalibrar` · `GET /recomendacoes`
 (+resumo) · `POST /recomendacoes/{id}/aprovar` · `/executar` · `/recomendacoes/gerar`.
