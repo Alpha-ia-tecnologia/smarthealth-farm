@@ -17,6 +17,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // Testes de componente com Radix (portais/animações) ficam lentos sob carga paralela;
+    // 5s estourava de forma intermitente no run completo.
+    testTimeout: 15_000,
     coverage: {
       provider: 'v8',
       include: [

@@ -31,6 +31,8 @@ export interface ControleServidor {
   tamanhoPagina: number
   totalRegistros: number
   onMudarPagina: (pagina: number) => void
+  /** Troca o tamanho da página (o chamador deve voltar à página 0). */
+  onMudarTamanho: (tamanho: number) => void
   sorting: SortingState
   onSortingChange: (sorting: SortingState) => void
   busca: string
@@ -100,7 +102,14 @@ export function DataTable<T>({
     ? Math.ceil(servidor.totalRegistros / servidor.tamanhoPagina)
     : table.getPageCount()
   const totalRegistros = servidor ? servidor.totalRegistros : table.getFilteredRowModel().rows.length
+  const tamanhoAtual = servidor ? servidor.tamanhoPagina : table.getState().pagination.pageSize
   const mudarPagina = servidor ? servidor.onMudarPagina : (p: number) => table.setPageIndex(p)
+  const mudarTamanho = servidor
+    ? servidor.onMudarTamanho
+    : (t: number) => {
+        table.setPageSize(t)
+        table.setPageIndex(0)
+      }
 
   return (
     <div className="space-y-3">
@@ -176,6 +185,8 @@ export function DataTable<T>({
         paginaAtual={paginaAtual}
         totalPaginas={totalPaginas}
         onMudarPagina={mudarPagina}
+        tamanhoPagina={tamanhoAtual}
+        onMudarTamanho={mudarTamanho}
         totalRegistros={totalRegistros}
       />
     </div>

@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import userEvent from "@testing-library/user-event"
 import { ThemeProvider } from "@/hooks/use-theme"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Toaster } from "@/components/ui/sonner"
 import { AuthProvider } from "@/context/auth"
 import { criarQueryClient } from "@/lib/query-client"
 
@@ -28,6 +29,7 @@ export function renderizar(ui: ReactElement, { rota = "/", ...opcoes }: OpcoesRe
             <MemoryRouter initialEntries={[rota]}>
               <AuthProvider>{children}</AuthProvider>
             </MemoryRouter>
+            <Toaster position="top-right" />
           </TooltipProvider>
         </QueryClientProvider>
       </ThemeProvider>

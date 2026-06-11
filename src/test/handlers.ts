@@ -7,6 +7,7 @@ import type {
   PosicaoEstoqueDetalhe,
   ResumoEstoque,
 } from "@/lib/estoque"
+import type { Alerta, LimiarAlerta, ResumoAlertas } from "@/lib/alertas"
 
 /** Usuário padrão devolvido pelos handlers de sucesso. */
 export const usuarioTeste: Usuario = {
@@ -175,6 +176,68 @@ export const detalheEstoqueTeste: PosicaoEstoqueDetalhe = {
   movimentacoes: movimentacoesTeste,
 }
 
+/** Alertas de teste: um aberto (desabastecimento) e um em tratamento (vencimento). */
+export const alertasTeste: Alerta[] = [
+  {
+    id: "ale-1",
+    tipo: "Desabastecimento",
+    severidade: "Crítico",
+    medicamentoId: "med-001",
+    medicamentoCodigo: "MED-001",
+    medicamentoNome: "Ceftriaxona 1g",
+    unidadeId: "uni-hto",
+    unidadeSigla: "HTO",
+    unidadeNome: "Hospital de Traumatologia e Ortopedia",
+    mensagem: "Cobertura de 3 dia(s) — abaixo do estoque mínimo (200 fa).",
+    status: "Aberto",
+    destinatarios: ["Operador", "Gestor"],
+    loteId: null,
+    numeroLote: null,
+    diasParaEvento: 3,
+    criadoEm: "2026-06-10T08:00:00Z",
+  },
+  {
+    id: "ale-2",
+    tipo: "Vencimento",
+    severidade: "Alto",
+    medicamentoId: "med-002",
+    medicamentoCodigo: "MED-002",
+    medicamentoNome: "Dipirona 500mg/mL",
+    unidadeId: "uni-hri",
+    unidadeSigla: "HRI",
+    unidadeNome: "Hospital Regional de Imperatriz",
+    mensagem: "Lote DIP-2002 (200 amp) vence em 30 dia(s).",
+    status: "Em tratamento",
+    destinatarios: ["Operador"],
+    loteId: "lote-2",
+    numeroLote: "DIP-2002",
+    diasParaEvento: 30,
+    criadoEm: "2026-06-09T10:00:00Z",
+  },
+]
+
+export const resumoAlertasTeste: ResumoAlertas = {
+  abertos: 12,
+  desabastecimento: 7,
+  vencimento: 9,
+  criticos: 4,
+  emTratamento: 3,
+  resolvidos: 38,
+  total: 53,
+}
+
+export const limiaresTeste: LimiarAlerta = {
+  percentualEstoqueMinimo: 100,
+  coberturaCriticaDias: 5,
+  coberturaAltaDias: 10,
+  antecedenciaVencimentoDias: 60,
+  vencimentoCriticoDias: 20,
+  vencimentoAltoDias: 40,
+  desabastecimentoAtivo: true,
+  vencimentoAtivo: true,
+  atualizadoEm: "2026-06-10T12:00:00Z",
+}
+
 /** Monta o envelope de sucesso da API (`{ success, data, total? }`). */
 export function ok<T>(data: T, total?: number) {
   return total === undefined
@@ -218,4 +281,28 @@ export const handlers = [
   ),
   http.get("*/estoque", ({ request }) => HttpResponse.json(paginar(request, posicoesTeste))),
   http.get("*/lotes", ({ request }) => HttpResponse.json(paginar(request, lotesTeste))),
+  // Alertas — específicos antes do genérico.
+  http.get("*/alertas/resumo", () => HttpResponse.json(ok(resumoAlertasTeste))),
+  http.get("*/alertas/limiares", () => HttpResponse.json(ok(limiaresTeste))),
+  http.put("*/alertas/limiares", async ({ request }) => {
+    const corpo = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json(ok({ ...limiaresTeste, ...corpo, atualizadoEm: "2026-06-11T09:00:00Z" }))
+  }),
+  http.patch("*/alertas/:id/status", async ({ params, request }) => {
+    const { status } = (await request.json()) as { status: Alerta["status"] }
+    const alerta = alertasTeste.find((a) => a.id === params.id) ?? alertasTeste[0]
+    return HttpResponse.json(ok({ ...alerta, status }))
+  }),
+  http.post("*/alertas/gerar", () =>
+    HttpResponse.json(
+      ok({
+        desabastecimentoGerados: 5,
+        vencimentoGerados: 3,
+        abertosRenovados: 8,
+        totalAtivo: 20,
+        mensagem: "8 alerta(s) gerado(s): 5 de desabastecimento e 3 de vencimento.",
+      }),
+    ),
+  ),
+  http.get("*/alertas", ({ request }) => HttpResponse.json(paginar(request, alertasTeste))),
 ]

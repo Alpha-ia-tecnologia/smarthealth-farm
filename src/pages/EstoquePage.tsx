@@ -1,13 +1,15 @@
 import { useState } from "react"
 import type { ColumnDef, SortingState } from "@tanstack/react-table"
-import { AlertCircle, Boxes, CalendarClock, Clock, Layers, PackageX } from "lucide-react"
+import { Boxes, CalendarClock, Clock, Layers, PackageX } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
+import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { Paginacao } from "@/components/shared/Paginacao"
+import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
@@ -25,8 +27,6 @@ import type { PosicaoEstoque } from "@/lib/estoque"
 import type { StatusKey } from "@/lib/status"
 import { fmtData, fmtDataHora, fmtNum } from "@/lib/format"
 
-const TAMANHO_PAGINA = 10
-
 /** Coluna da tabela (id) → campo de ordenação no backend. Status é derivado: não ordenável. */
 const ORDENACAO_BACKEND: Record<string, string> = {
   medicamentoNome: "medicamento.nome",
@@ -36,29 +36,19 @@ const ORDENACAO_BACKEND: Record<string, string> = {
   tempoMedioRessuprimentoDias: "tempoMedioRessuprimentoDias",
 }
 
-function ErroConsulta({ mensagem }: { mensagem?: string }) {
-  return (
-    <div
-      role="alert"
-      className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
-    >
-      <AlertCircle className="size-4 shrink-0" />
-      {mensagem ?? "Não foi possível carregar os dados. Tente novamente."}
-    </div>
-  )
-}
-
 export default function EstoquePage() {
   const [sel, setSel] = useState<PosicaoEstoque | null>(null)
 
   // Estado da tabela de posições (paginação/ordenação/busca server-side).
   const [pagina, setPagina] = useState(0)
+  const [tamanho, setTamanho] = useState(TAMANHO_PAGINA_PADRAO)
   const [sorting, setSorting] = useState<SortingState>([])
   const [busca, setBusca] = useState("")
   const buscaDebounced = useDebounce(busca, 350)
 
   // Estado da aba de validade (paginação server-side).
   const [pagVenc, setPagVenc] = useState(0)
+  const [tamanhoVenc, setTamanhoVenc] = useState(TAMANHO_PAGINA_PADRAO)
 
   const ordenacao = sorting[0]
   const resumoQuery = useResumoEstoque()
@@ -66,14 +56,14 @@ export default function EstoquePage() {
     { busca: buscaDebounced || undefined },
     {
       pagina,
-      tamanho: TAMANHO_PAGINA,
+      tamanho,
       ordenarPor: ordenacao ? ORDENACAO_BACKEND[ordenacao.id] : undefined,
       ordem: ordenacao?.desc ? "desc" : "asc",
     },
   )
   const lotesQuery = useLotes(
     { comSaldo: true, validadeAteDias: 90 },
-    { pagina: pagVenc, tamanho: TAMANHO_PAGINA },
+    { pagina: pagVenc, tamanho: tamanhoVenc },
   )
   const detalheQuery = usePosicaoDetalhe(sel?.medicamentoId, sel?.unidadeId)
 
@@ -138,9 +128,13 @@ export default function EstoquePage() {
 
   const servidorPosicoes: ControleServidor = {
     paginaAtual: pagina,
-    tamanhoPagina: TAMANHO_PAGINA,
+    tamanhoPagina: tamanho,
     totalRegistros: posicoesQuery.data?.total ?? 0,
     onMudarPagina: setPagina,
+    onMudarTamanho: (t) => {
+      setTamanho(t)
+      setPagina(0)
+    },
     sorting,
     onSortingChange: (s) => {
       setSorting(s)
@@ -155,7 +149,7 @@ export default function EstoquePage() {
 
   const lotesVenc = lotesQuery.data?.itens ?? []
   const totalLotes = lotesQuery.data?.total ?? 0
-  const totalPagVenc = Math.ceil(totalLotes / TAMANHO_PAGINA)
+  const totalPagVenc = Math.ceil(totalLotes / tamanhoVenc)
 
   return (
     <>
@@ -168,7 +162,10 @@ export default function EstoquePage() {
 
       {/* KPIs — cada card mostra um spinner enquanto a API carrega */}
       {resumoQuery.isError ? (
-        <ErroConsulta mensagem="Não foi possível carregar os indicadores do estoque." />
+        <ErroConsulta
+          mensagem="Não foi possível carregar os indicadores do estoque."
+          onTentarNovamente={() => resumoQuery.refetch()}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard label="Itens abaixo do mínimo" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensCriticos) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" rf="RF-EST-04" />
@@ -191,7 +188,10 @@ export default function EstoquePage() {
             description="Estoque mínimo calculado a partir da previsão de demanda. Clique para ver os lotes e a movimentação."
           >
             {posicoesQuery.isError ? (
-              <ErroConsulta mensagem="Não foi possível carregar as posições de estoque." />
+              <ErroConsulta
+                mensagem="Não foi possível carregar as posições de estoque."
+                onTentarNovamente={() => posicoesQuery.refetch()}
+              />
             ) : !posicoesQuery.data ? (
               <div className="flex justify-center py-20">
                 <Spinner size={40} label="Carregando posições" />
@@ -221,7 +221,10 @@ export default function EstoquePage() {
           >
             {lotesQuery.isError ? (
               <div className="p-5">
-                <ErroConsulta mensagem="Não foi possível carregar os lotes." />
+                <ErroConsulta
+                  mensagem="Não foi possível carregar os lotes."
+                  onTentarNovamente={() => lotesQuery.refetch()}
+                />
               </div>
             ) : !lotesQuery.data ? (
               <div className="flex justify-center py-16">
@@ -259,6 +262,11 @@ export default function EstoquePage() {
                     paginaAtual={pagVenc}
                     totalPaginas={totalPagVenc}
                     onMudarPagina={setPagVenc}
+                    tamanhoPagina={tamanhoVenc}
+                    onMudarTamanho={(t) => {
+                      setTamanhoVenc(t)
+                      setPagVenc(0)
+                    }}
                     totalRegistros={totalLotes}
                   />
                 </div>

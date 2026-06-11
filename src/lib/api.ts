@@ -102,11 +102,33 @@ export interface Pagina<T> {
   total: number
 }
 
+/** Parâmetros de paginação/ordenação enviados ao servidor (página base 0). */
+export interface ParamsPaginacao {
+  pagina?: number
+  tamanho?: number
+  /** Campo de ordenação no formato do backend (ex.: "quantidade", "medicamento.nome"). */
+  ordenarPor?: string
+  ordem?: "asc" | "desc"
+}
+
+/** Converte os parâmetros de paginação para as chaves que o Spring espera (page/size/sort). */
+export function paramsPaginacao(p: ParamsPaginacao): Record<string, string | number | undefined> {
+  return {
+    page: p.pagina,
+    size: p.tamanho,
+    sort: p.ordenarPor ? `${p.ordenarPor},${p.ordem ?? "asc"}` : undefined,
+  }
+}
+
 export const api = {
   get: async <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
     (await request<T>(path, { ...options, method: "GET" })).data,
   post: async <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
     (await request<T>(path, { ...options, method: "POST", body })).data,
+  put: async <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+    (await request<T>(path, { ...options, method: "PUT", body })).data,
+  patch: async <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+    (await request<T>(path, { ...options, method: "PATCH", body })).data,
   /** GET de lista paginada: devolve `{ itens, total }` lendo `data` e `total` do envelope. */
   getPagina: async <T>(
     path: string,

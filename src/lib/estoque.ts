@@ -1,24 +1,8 @@
 // Serviço de Estoque, Lotes e Movimentações (RF-EST). Leitura para qualquer autenticado.
 // Os tipos espelham os DTOs do backend (respostas já denormalizadas e com status derivado).
-import { api, montarQuery, type Pagina } from "./api"
+import { api, montarQuery, paramsPaginacao, type Pagina, type ParamsPaginacao } from "./api"
 
-/** Parâmetros de paginação/ordenação enviados ao servidor (página base 0). */
-export interface ParamsPaginacao {
-  pagina?: number
-  tamanho?: number
-  /** Campo de ordenação no formato do backend (ex.: "quantidade", "medicamento.nome"). */
-  ordenarPor?: string
-  ordem?: "asc" | "desc"
-}
-
-/** Converte os parâmetros de paginação para as chaves que o Spring espera (page/size/sort). */
-function paramsPaginacao(p: ParamsPaginacao): Record<string, string | number | undefined> {
-  return {
-    page: p.pagina,
-    size: p.tamanho,
-    sort: p.ordenarPor ? `${p.ordenarPor},${p.ordem ?? "asc"}` : undefined,
-  }
-}
+export type { ParamsPaginacao } from "./api"
 
 /** Token de status da posição (idêntico ao StatusEstoque do backend e ao StatusBadge). */
 export type StatusEstoque = "ok" | "atencao" | "critico"

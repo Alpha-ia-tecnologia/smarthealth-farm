@@ -19,7 +19,7 @@ sênior — seguro, sem gambiarra, testado.
 | 1 | Autenticação & Acesso | Login, sessão, rotas protegidas | ✅ |
 | 2 | Fundação técnica & qualidade | (sem tela) testes + camada de dados | ✅ |
 | 3 | Catálogo base | Unidades, Medicamentos | ✅ |
-| 4 | Núcleo operacional | Estoque & Lotes ✅, Alertas ⬜ | 🚧 |
+| 4 | Núcleo operacional | Estoque & Lotes ✅, Alertas ✅ | ✅ |
 | 5 | Inteligência preditiva | Previsão, Recomendações | ⬜ |
 | 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ⬜ |
 | 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ⬜ |
@@ -41,7 +41,7 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 | ✅ | Login (`/login`) | `/auth` (sem mock — nasceu integrado) | 1 |
 | ✅ | Header · seletor de unidade (`AppShell`) | `/unidades` | 3 |
 | ✅ | Estoque & Lotes (`/estoque`) | `/estoque`, `/lotes`, `/movimentacoes` | 4 |
-| ⬜ | Alertas (`/alertas`) | `/alertas` | 4 |
+| ✅ | Alertas (`/alertas`) | `/alertas` (+ `/limiares`) | 4 |
 | ⬜ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
 | ⬜ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
 | ⬜ | Dashboard Gerencial (`/`) | `/painel` | 6 |
@@ -136,7 +136,7 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 
 ---
 
-## 🚧 Fase 4 — Núcleo operacional (Estoque & Alertas)
+## ✅ Fase 4 — Núcleo operacional (Estoque & Alertas) *(concluída)*
 
 **Objetivo:** as telas operacionais de maior uso diário, lendo dados reais com status do backend.
 
@@ -158,9 +158,24 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 - Testes (+16): serviço, hook, `Paginacao` e `EstoquePage` (KPIs, drill-down, paginação server-side de
   posições e de validade, erro); backend: teste de paginação no `EstoqueIT`.
 
-**⬜ Alertas (`/alertas`) — pendente:** lista com filtros, resumo, **tratar status**
-(`PATCH .../status`: Aberto→Em tratamento→Resolvido) — primeira **mutation** com invalidação de cache;
-`POST /alertas/gerar` restrito a Gestor (RBAC na UI). `lib/alertas.ts`, `hooks/use-alertas.ts`.
+**✅ Alertas (`/alertas`) — concluída:**
+- Contract-check encontrou **uma lacuna real no backend**: a aba "Configuração de limiares"
+  (RF-ALE-03) não tinha endpoint — o mock era decorativo. **Backend implementado:** migration
+  `V12__limiar_alerta.sql` (config singleton), entidade `LimiarAlerta` (validações cruzadas),
+  `GET/PUT /alertas/limiares` (PUT restrito a **Gestor**, com **auditoria** `ALTERAR_LIMIAR_ALERTA`),
+  e o **motor (`GeradorAlerta`) passou a usar os limiares salvos** (percentual do estoque mínimo,
+  bandas de severidade, janela de vencimento e toggles por tipo) — salvar limiar muda de fato a
+  próxima geração. `GET /alertas` paginado (`Pageable` + countQuery, fetch joins to-one).
+- **Front:** `lib/alertas.ts` + `hooks/use-alertas.ts` (queries + 3 **mutations** com invalidação:
+  tratar status, gerar, salvar limiares). `AlertasPage` reescrita: KPIs reais (o "Tratados" era um
+  `"38"` cravado no mock), tabela server-side com ações **Tratar/Resolver** por linha, botão
+  **Gerar alertas** visível só para Gestor (RBAC espelhado), formulário de limiares **real**
+  (somente leitura para não-Gestor) e histórico paginado. Toasts de sucesso/erro (sonner).
+- `api.ts` ganhou `put`/`patch` e a paginação compartilhada (`ParamsPaginacao` movida para `api.ts`).
+- Testes: front +17 (serviço, hooks com invalidação, página: mutation, RBAC dos dois perfis,
+  limiares, filtro por rótulo, erro); back: `CalculadoraAlertaTest` parametrizado + 7 casos novos
+  no `AlertaIT` (paginação, GET/PUT limiares, 403 Operador, 422 banda incoerente, 400 faixa,
+  toggle desligado zera a geração do tipo).
 
 **Endpoints:** `GET /estoque` · `/estoque/resumo` · `/estoque/{med}/{uni}` · `GET /lotes`
 · `GET /alertas` · `/alertas/resumo` · `PATCH /alertas/{id}/status` · `POST /alertas/gerar` *(Gestor)*.
