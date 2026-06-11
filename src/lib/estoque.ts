@@ -1,6 +1,24 @@
 // Serviço de Estoque, Lotes e Movimentações (RF-EST). Leitura para qualquer autenticado.
 // Os tipos espelham os DTOs do backend (respostas já denormalizadas e com status derivado).
-import { api, montarQuery } from "./api"
+import { api, montarQuery, type Pagina } from "./api"
+
+/** Parâmetros de paginação/ordenação enviados ao servidor (página base 0). */
+export interface ParamsPaginacao {
+  pagina?: number
+  tamanho?: number
+  /** Campo de ordenação no formato do backend (ex.: "quantidade", "medicamento.nome"). */
+  ordenarPor?: string
+  ordem?: "asc" | "desc"
+}
+
+/** Converte os parâmetros de paginação para as chaves que o Spring espera (page/size/sort). */
+function paramsPaginacao(p: ParamsPaginacao): Record<string, string | number | undefined> {
+  return {
+    page: p.pagina,
+    size: p.tamanho,
+    sort: p.ordenarPor ? `${p.ordenarPor},${p.ordem ?? "asc"}` : undefined,
+  }
+}
 
 /** Token de status da posição (idêntico ao StatusEstoque do backend e ao StatusBadge). */
 export type StatusEstoque = "ok" | "atencao" | "critico"
@@ -80,9 +98,12 @@ export interface LoteFiltros {
 }
 
 export const estoqueApi = {
-  /** GET /estoque — posições com status (+ filtros). */
-  listarPosicoes: (filtros: PosicaoFiltros = {}) =>
-    api.get<PosicaoEstoque[]>(`/estoque${montarQuery({ ...filtros })}`),
+  /** GET /estoque — posições paginadas com status (+ filtros). */
+  listarPosicoes: (
+    filtros: PosicaoFiltros = {},
+    paginacao: ParamsPaginacao = {},
+  ): Promise<Pagina<PosicaoEstoque>> =>
+    api.getPagina<PosicaoEstoque>(`/estoque${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
   /** GET /estoque/resumo — KPIs da tela. */
   resumo: () => api.get<ResumoEstoque>("/estoque/resumo"),
@@ -91,7 +112,10 @@ export const estoqueApi = {
   detalhar: (medicamentoId: string, unidadeId: string) =>
     api.get<PosicaoEstoqueDetalhe>(`/estoque/${medicamentoId}/${unidadeId}`),
 
-  /** GET /lotes — lotes com dias para vencer (+ filtros). */
-  listarLotes: (filtros: LoteFiltros = {}) =>
-    api.get<Lote[]>(`/lotes${montarQuery({ ...filtros })}`),
+  /** GET /lotes — lotes paginados com dias para vencer (+ filtros). */
+  listarLotes: (
+    filtros: LoteFiltros = {},
+    paginacao: ParamsPaginacao = {},
+  ): Promise<Pagina<Lote>> =>
+    api.getPagina<Lote>(`/lotes${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 }

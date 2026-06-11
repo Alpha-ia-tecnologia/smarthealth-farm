@@ -4,10 +4,25 @@ import { lotesTeste, ok, posicoesTeste, resumoEstoqueTeste } from "@/test/handle
 import { estoqueApi } from "@/lib/estoque"
 
 describe("estoqueApi", () => {
-  it("lista as posições com status", async () => {
-    const posicoes = await estoqueApi.listarPosicoes()
-    expect(posicoes).toHaveLength(posicoesTeste.length)
-    expect(posicoes[0].status).toBe("critico")
+  it("lista as posições paginadas com status e total", async () => {
+    const pagina = await estoqueApi.listarPosicoes()
+    expect(pagina.itens).toHaveLength(posicoesTeste.length)
+    expect(pagina.itens[0].status).toBe("critico")
+    expect(pagina.total).toBe(posicoesTeste.length)
+  })
+
+  it("envia page/size/sort ao paginar e ordenar", async () => {
+    let url: URL | undefined
+    server.use(
+      http.get("*/estoque", ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(ok([], 0))
+      }),
+    )
+    await estoqueApi.listarPosicoes({}, { pagina: 2, tamanho: 20, ordenarPor: "quantidade", ordem: "desc" })
+    expect(url?.searchParams.get("page")).toBe("2")
+    expect(url?.searchParams.get("size")).toBe("20")
+    expect(url?.searchParams.get("sort")).toBe("quantidade,desc")
   })
 
   it("envia os filtros de posição na query", async () => {

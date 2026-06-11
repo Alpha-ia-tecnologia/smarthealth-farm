@@ -50,7 +50,7 @@ interface RequestOptions {
   signal?: AbortSignal
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiEnvelope<T>> {
   const { method = "GET", body, auth = true, signal } = options
 
   const headers: Record<string, string> = {}
@@ -93,14 +93,28 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     )
   }
 
-  return envelope.data
+  return envelope
+}
+
+/** Página de uma lista: os itens + o total de elementos do conjunto (para calcular as páginas). */
+export interface Pagina<T> {
+  itens: T[]
+  total: number
 }
 
 export const api = {
-  get: <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
-    request<T>(path, { ...options, method: "GET" }),
-  post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
-    request<T>(path, { ...options, method: "POST", body }),
+  get: async <T>(path: string, options?: Omit<RequestOptions, "method" | "body">) =>
+    (await request<T>(path, { ...options, method: "GET" })).data,
+  post: async <T>(path: string, body?: unknown, options?: Omit<RequestOptions, "method" | "body">) =>
+    (await request<T>(path, { ...options, method: "POST", body })).data,
+  /** GET de lista paginada: devolve `{ itens, total }` lendo `data` e `total` do envelope. */
+  getPagina: async <T>(
+    path: string,
+    options?: Omit<RequestOptions, "method" | "body">,
+  ): Promise<Pagina<T>> => {
+    const envelope = await request<T[]>(path, { ...options, method: "GET" })
+    return { itens: envelope.data, total: envelope.total ?? envelope.data.length }
+  },
 }
 
 /**

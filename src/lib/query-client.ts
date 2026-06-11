@@ -17,7 +17,11 @@ export function criarQueryClient(): QueryClient {
     defaultOptions: {
       queries: {
         retry: deveTentarNovamente,
-        staleTime: 30_000,
+        // stale-while-revalidate: ao reentrar numa tela, mostra o cache na hora e revalida
+        // em background (uma nova requisição). Com staleTime > 0, revisitar dentro da janela
+        // serviria só o cache, sem requisição — não é o que queremos para dados operacionais.
+        staleTime: 0,
+        // Evita refetch a cada foco de janela; a revalidação acontece ao montar a tela.
         refetchOnWindowFocus: false,
       },
       mutations: {

@@ -1,24 +1,28 @@
-import { useQuery } from "@tanstack/react-query"
+import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
   estoqueApi,
   type LoteFiltros,
+  type ParamsPaginacao,
   type PosicaoFiltros,
 } from "@/lib/estoque"
 
 /** Chaves de cache do domínio de estoque. */
 export const estoqueKeys = {
   raiz: ["estoque"] as const,
-  posicoes: (filtros: PosicaoFiltros) => ["estoque", "posicoes", filtros] as const,
+  posicoes: (filtros: PosicaoFiltros, paginacao: ParamsPaginacao) =>
+    ["estoque", "posicoes", filtros, paginacao] as const,
   resumo: () => ["estoque", "resumo"] as const,
   detalhe: (medId: string, uniId: string) => ["estoque", "detalhe", medId, uniId] as const,
-  lotes: (filtros: LoteFiltros) => ["estoque", "lotes", filtros] as const,
+  lotes: (filtros: LoteFiltros, paginacao: ParamsPaginacao) =>
+    ["estoque", "lotes", filtros, paginacao] as const,
 }
 
-/** Posições de estoque com status (+ filtros). */
-export function usePosicoes(filtros: PosicaoFiltros = {}) {
+/** Posições de estoque paginadas com status (+ filtros). Mantém a página anterior ao paginar. */
+export function usePosicoes(filtros: PosicaoFiltros = {}, paginacao: ParamsPaginacao = {}) {
   return useQuery({
-    queryKey: estoqueKeys.posicoes(filtros),
-    queryFn: () => estoqueApi.listarPosicoes(filtros),
+    queryKey: estoqueKeys.posicoes(filtros, paginacao),
+    queryFn: () => estoqueApi.listarPosicoes(filtros, paginacao),
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -39,10 +43,11 @@ export function usePosicaoDetalhe(medicamentoId: string | undefined, unidadeId: 
   })
 }
 
-/** Lotes com dias para vencer (+ filtros). */
-export function useLotes(filtros: LoteFiltros = {}) {
+/** Lotes paginados com dias para vencer (+ filtros). Mantém a página anterior ao paginar. */
+export function useLotes(filtros: LoteFiltros = {}, paginacao: ParamsPaginacao = {}) {
   return useQuery({
-    queryKey: estoqueKeys.lotes(filtros),
-    queryFn: () => estoqueApi.listarLotes(filtros),
+    queryKey: estoqueKeys.lotes(filtros, paginacao),
+    queryFn: () => estoqueApi.listarLotes(filtros, paginacao),
+    placeholderData: keepPreviousData,
   })
 }

@@ -219,6 +219,24 @@
   50% { opacity: 0.85; }
 }
 
+/* Barra de progresso global indeterminada — segmento desliza da esquerda para a direita */
+@keyframes barra-indeterminada {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}
+
+/* Spinner: anéis girando em sentidos opostos. transform-box garante o giro em torno do centro. */
+@keyframes girar {
+  to { transform: rotate(1turn); }
+}
+@keyframes girar-reverso {
+  to { transform: rotate(-1turn); }
+}
+.spinner-arco {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 /* Textura sutil de fundo institucional */
 .bg-grid {
   background-image:

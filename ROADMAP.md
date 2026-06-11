@@ -147,10 +147,16 @@ só a infraestrutura, **provada nos testes da camada de auth**.
 - `lib/estoque.ts` (posições/resumo/detalhe/lotes) + `hooks/use-estoque.ts` (query keys).
 - `EstoquePage` reescrita: KPIs do resumo, tabela de posições, aba de validade, drill-down por
   query; estados de carregando/erro/vazio. **Mock removido da tela** (não importa mais `src/data`).
-- **Paginação:** novo componente reutilizável `components/shared/Paginacao.tsx` com **seleção de
-  página** (números + anterior/próxima); a aba "Controle de validade" passou a paginar e a `DataTable`
-  ganhou seleção de página. A **API não é paginada** (retorna a lista completa) → paginação no cliente.
-- Testes (+14): serviço, hook, `Paginacao` e `EstoquePage` (KPIs, drill-down, paginação da validade, erro).
+- **Paginação server-side (back + front):** `/estoque`, `/lotes` e `/movimentacoes` agora paginam no
+  **servidor** (`page`/`size`/`sort`, default 10/página), com filtro e ordenação no banco. O `status`
+  derivado virou `Specification` (`EspecificacoesPosicao`) para paginar corretamente; o livro-razão do
+  drill-down é limitado às 20 movimentações mais recentes. No front: `api.getPagina` (lê `data`+`total`),
+  componente reutilizável `Paginacao` (com seleção de página) e `DataTable` com **modo servidor opt-in**
+  (paginação/ordenação/busca conduzidas pela API, busca com debounce). Backend `./mvnw verify` verde.
+- **Correção de cache:** `staleTime` do React Query ajustado para **stale-while-revalidate** (revisitar
+  uma tela mostra o cache na hora e revalida) — antes (30s) revisitar dentro da janela não refazia a requisição.
+- Testes (+16): serviço, hook, `Paginacao` e `EstoquePage` (KPIs, drill-down, paginação server-side de
+  posições e de validade, erro); backend: teste de paginação no `EstoqueIT`.
 
 **⬜ Alertas (`/alertas`) — pendente:** lista com filtros, resumo, **tratar status**
 (`PATCH .../status`: Aberto→Em tratamento→Resolvido) — primeira **mutation** com invalidação de cache;

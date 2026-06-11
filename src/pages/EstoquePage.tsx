@@ -1,15 +1,16 @@
 import { useState } from "react"
-import type { ColumnDef } from "@tanstack/react-table"
-import { AlertCircle, Boxes, CalendarClock, Clock, Layers, Loader2, PackageX } from "lucide-react"
+import type { ColumnDef, SortingState } from "@tanstack/react-table"
+import { AlertCircle, Boxes, CalendarClock, Clock, Layers, PackageX } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
-import { DataTable } from "@/components/shared/DataTable"
+import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
+import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
 import { Paginacao } from "@/components/shared/Paginacao"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Dialog,
@@ -19,13 +20,22 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { usePosicaoDetalhe, usePosicoes, useResumoEstoque, useLotes } from "@/hooks/use-estoque"
+import { useDebounce } from "@/hooks/use-debounce"
 import type { PosicaoEstoque } from "@/lib/estoque"
 import type { StatusKey } from "@/lib/status"
 import { fmtData, fmtDataHora, fmtNum } from "@/lib/format"
 
-const LOTES_POR_PAGINA = 8
+const TAMANHO_PAGINA = 10
 
-/** Mensagem de erro padrão de uma consulta. */
+/** Coluna da tabela (id) → campo de ordenação no backend. Status é derivado: não ordenável. */
+const ORDENACAO_BACKEND: Record<string, string> = {
+  medicamentoNome: "medicamento.nome",
+  unidadeSigla: "unidade.sigla",
+  quantidade: "quantidade",
+  nivelCritico: "nivelCritico",
+  tempoMedioRessuprimentoDias: "tempoMedioRessuprimentoDias",
+}
+
 function ErroConsulta({ mensagem }: { mensagem?: string }) {
   return (
     <div
@@ -40,11 +50,31 @@ function ErroConsulta({ mensagem }: { mensagem?: string }) {
 
 export default function EstoquePage() {
   const [sel, setSel] = useState<PosicaoEstoque | null>(null)
+
+  // Estado da tabela de posições (paginação/ordenação/busca server-side).
+  const [pagina, setPagina] = useState(0)
+  const [sorting, setSorting] = useState<SortingState>([])
+  const [busca, setBusca] = useState("")
+  const buscaDebounced = useDebounce(busca, 350)
+
+  // Estado da aba de validade (paginação server-side).
   const [pagVenc, setPagVenc] = useState(0)
 
+  const ordenacao = sorting[0]
   const resumoQuery = useResumoEstoque()
-  const posicoesQuery = usePosicoes()
-  const lotesQuery = useLotes({ comSaldo: true, validadeAteDias: 90 })
+  const posicoesQuery = usePosicoes(
+    { busca: buscaDebounced || undefined },
+    {
+      pagina,
+      tamanho: TAMANHO_PAGINA,
+      ordenarPor: ordenacao ? ORDENACAO_BACKEND[ordenacao.id] : undefined,
+      ordem: ordenacao?.desc ? "desc" : "asc",
+    },
+  )
+  const lotesQuery = useLotes(
+    { comSaldo: true, validadeAteDias: 90 },
+    { pagina: pagVenc, tamanho: TAMANHO_PAGINA },
+  )
   const detalheQuery = usePosicaoDetalhe(sel?.medicamentoId, sel?.unidadeId)
 
   const columns: ColumnDef<PosicaoEstoque>[] = [
@@ -101,17 +131,31 @@ export default function EstoquePage() {
     {
       accessorKey: "status",
       header: "Status",
+      enableSorting: false, // status é derivado no backend; não há coluna para ordenar
       cell: ({ row }) => <StatusBadge status={row.original.status} />,
     },
   ]
 
-  const lotesVenc = [...(lotesQuery.data ?? [])].sort((a, b) => a.diasParaVencer - b.diasParaVencer)
-  const totalPagVenc = Math.ceil(lotesVenc.length / LOTES_POR_PAGINA)
-  const pagVencSegura = Math.min(pagVenc, Math.max(0, totalPagVenc - 1))
-  const lotesVencPagina = lotesVenc.slice(
-    pagVencSegura * LOTES_POR_PAGINA,
-    pagVencSegura * LOTES_POR_PAGINA + LOTES_POR_PAGINA,
-  )
+  const servidorPosicoes: ControleServidor = {
+    paginaAtual: pagina,
+    tamanhoPagina: TAMANHO_PAGINA,
+    totalRegistros: posicoesQuery.data?.total ?? 0,
+    onMudarPagina: setPagina,
+    sorting,
+    onSortingChange: (s) => {
+      setSorting(s)
+      setPagina(0)
+    },
+    busca,
+    onBuscaChange: (b) => {
+      setBusca(b)
+      setPagina(0)
+    },
+  }
+
+  const lotesVenc = lotesQuery.data?.itens ?? []
+  const totalLotes = lotesQuery.data?.total ?? 0
+  const totalPagVenc = Math.ceil(totalLotes / TAMANHO_PAGINA)
 
   return (
     <>
@@ -122,21 +166,15 @@ export default function EstoquePage() {
         description="Níveis de estoque por unidade, rastreabilidade por lote com controle de validade e histórico de movimentação para auditoria sanitária."
       />
 
-      {/* KPIs */}
+      {/* KPIs — cada card mostra um spinner enquanto a API carrega */}
       {resumoQuery.isError ? (
         <ErroConsulta mensagem="Não foi possível carregar os indicadores do estoque." />
-      ) : resumoQuery.isPending ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
-        </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Itens abaixo do mínimo" value={fmtNum(resumoQuery.data.itensCriticos)} icon={PackageX} accent="danger" rf="RF-EST-04" />
-          <KpiCard label="Lotes próx. do vencimento" value={fmtNum(resumoQuery.data.lotesProximosVencimento)} icon={CalendarClock} accent="warning" hint="≤ 60 dias" rf="RF-EST-04" />
-          <KpiCard label="Tempo médio de ressup." value={`${resumoQuery.data.tempoMedioRessuprimentoDias} dias`} icon={Clock} accent="teal" rf="RF-EST-05" />
-          <KpiCard label="Unidades em estoque" value={fmtNum(resumoQuery.data.totalUnidadesEstoque)} icon={Layers} accent="primary" rf="RF-EST-01" />
+          <KpiCard label="Itens abaixo do mínimo" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensCriticos) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" rf="RF-EST-04" />
+          <KpiCard label="Lotes próx. do vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.lotesProximosVencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" hint="≤ 60 dias" rf="RF-EST-04" />
+          <KpiCard label="Tempo médio de ressup." value={resumoQuery.data ? `${resumoQuery.data.tempoMedioRessuprimentoDias} dias` : ""} carregando={resumoQuery.isPending} icon={Clock} accent="teal" rf="RF-EST-05" />
+          <KpiCard label="Unidades em estoque" value={resumoQuery.data ? fmtNum(resumoQuery.data.totalUnidadesEstoque) : ""} carregando={resumoQuery.isPending} icon={Layers} accent="primary" rf="RF-EST-01" />
         </div>
       )}
 
@@ -154,18 +192,22 @@ export default function EstoquePage() {
           >
             {posicoesQuery.isError ? (
               <ErroConsulta mensagem="Não foi possível carregar as posições de estoque." />
-            ) : posicoesQuery.isPending ? (
-              <Skeleton className="h-96" />
+            ) : !posicoesQuery.data ? (
+              <div className="flex justify-center py-20">
+                <Spinner size={40} label="Carregando posições" />
+              </div>
             ) : (
-              <DataTable
-                columns={columns}
-                data={posicoesQuery.data}
-                searchKey="medicamentoNome"
-                searchPlaceholder="Buscar medicamento ou unidade…"
-                pageSize={10}
-                onRowClick={(r) => setSel(r)}
-                dense
-              />
+              <AreaAtualizavel atualizando={posicoesQuery.isFetching}>
+                <DataTable
+                  columns={columns}
+                  data={posicoesQuery.data.itens}
+                  searchKey="medicamentoNome"
+                  searchPlaceholder="Buscar medicamento ou unidade…"
+                  onRowClick={(r) => setSel(r)}
+                  dense
+                  servidor={servidorPosicoes}
+                />
+              </AreaAtualizavel>
             )}
           </Section>
         </TabsContent>
@@ -181,20 +223,18 @@ export default function EstoquePage() {
               <div className="p-5">
                 <ErroConsulta mensagem="Não foi possível carregar os lotes." />
               </div>
-            ) : lotesQuery.isPending ? (
-              <div className="space-y-2 p-5">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12" />
-                ))}
+            ) : !lotesQuery.data ? (
+              <div className="flex justify-center py-16">
+                <Spinner size={40} label="Carregando lotes" />
               </div>
             ) : lotesVenc.length === 0 ? (
               <p className="px-5 py-10 text-center text-sm text-muted-foreground">
                 Nenhum lote vence nos próximos 90 dias.
               </p>
             ) : (
-              <>
+              <AreaAtualizavel atualizando={lotesQuery.isFetching}>
                 <div className="divide-y">
-                  {lotesVencPagina.map((l) => {
+                  {lotesVenc.map((l) => {
                     const st: StatusKey =
                       l.diasParaVencer <= 20 ? "critico" : l.diasParaVencer <= 45 ? "atencao" : "info"
                     return (
@@ -216,13 +256,13 @@ export default function EstoquePage() {
                 </div>
                 <div className="px-5 py-3">
                   <Paginacao
-                    paginaAtual={pagVencSegura}
+                    paginaAtual={pagVenc}
                     totalPaginas={totalPagVenc}
                     onMudarPagina={setPagVenc}
-                    totalRegistros={lotesVenc.length}
+                    totalRegistros={totalLotes}
                   />
                 </div>
-              </>
+              </AreaAtualizavel>
             )}
           </Section>
         </TabsContent>
@@ -243,8 +283,8 @@ export default function EstoquePage() {
               {detalheQuery.isError ? (
                 <ErroConsulta mensagem="Não foi possível carregar o detalhe da posição." />
               ) : detalheQuery.isPending ? (
-                <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-                  <Loader2 className="size-4 animate-spin" />
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-sm text-muted-foreground">
+                  <Spinner size={32} />
                   Carregando lotes e movimentações…
                 </div>
               ) : (
@@ -279,7 +319,7 @@ export default function EstoquePage() {
                       {detalheQuery.data.movimentacoes.length === 0 ? (
                         <p className="text-sm text-muted-foreground">Sem movimentações registradas.</p>
                       ) : (
-                        detalheQuery.data.movimentacoes.slice(0, 12).map((m) => (
+                        detalheQuery.data.movimentacoes.map((m) => (
                           <div key={m.id} className="flex items-center justify-between rounded-md bg-muted/40 px-2.5 py-1.5 text-xs">
                             <div className="flex items-center gap-2">
                               <Badge variant={m.tipo === "Entrada" ? "secondary" : m.tipo === "Transferência" ? "outline" : "default"} className="text-[10px]">{m.tipo}</Badge>

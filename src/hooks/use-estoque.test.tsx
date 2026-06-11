@@ -14,10 +14,11 @@ function criarWrapper() {
 }
 
 describe("usePosicoes", () => {
-  it("carrega e devolve as posições", async () => {
+  it("carrega e devolve as posições paginadas", async () => {
     const { result } = renderHook(() => usePosicoes(), { wrapper: criarWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data).toHaveLength(posicoesTeste.length)
+    expect(result.current.data?.itens).toHaveLength(posicoesTeste.length)
+    expect(result.current.data?.total).toBe(posicoesTeste.length)
   })
 
   it("expõe estado de erro quando a API falha", async () => {

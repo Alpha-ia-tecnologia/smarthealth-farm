@@ -182,6 +182,14 @@ export function ok<T>(data: T, total?: number) {
     : { success: true, data, total }
 }
 
+/** Envelope paginado: fatia `itens` por `page`/`size` da URL e devolve o total do conjunto. */
+export function paginar<T>(request: Request, itens: T[]) {
+  const url = new URL(request.url)
+  const page = Number(url.searchParams.get("page") ?? "0")
+  const size = Number(url.searchParams.get("size") ?? "20")
+  return ok(itens.slice(page * size, page * size + size), itens.length)
+}
+
 /** Monta o envelope de erro da API (`{ success: false, error, codigo }`). */
 export function erro(mensagem: string, codigo: string) {
   return { success: false, error: mensagem, codigo }
@@ -208,6 +216,6 @@ export const handlers = [
   http.get("*/estoque/:medicamentoId/:unidadeId", () =>
     HttpResponse.json(ok(detalheEstoqueTeste)),
   ),
-  http.get("*/estoque", () => HttpResponse.json(ok(posicoesTeste, posicoesTeste.length))),
-  http.get("*/lotes", () => HttpResponse.json(ok(lotesTeste, lotesTeste.length))),
+  http.get("*/estoque", ({ request }) => HttpResponse.json(paginar(request, posicoesTeste))),
+  http.get("*/lotes", ({ request }) => HttpResponse.json(paginar(request, lotesTeste))),
 ]

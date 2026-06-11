@@ -22,6 +22,21 @@ import { Input } from "@/components/ui/input"
 import { Paginacao } from "@/components/shared/Paginacao"
 import { cn } from "@/lib/utils"
 
+/**
+ * Controle server-side: quando presente, paginação, ordenação e busca são conduzidas pelo
+ * servidor (a `data` já é a página atual). Sem ele, a tabela opera 100% no cliente.
+ */
+export interface ControleServidor {
+  paginaAtual: number
+  tamanhoPagina: number
+  totalRegistros: number
+  onMudarPagina: (pagina: number) => void
+  sorting: SortingState
+  onSortingChange: (sorting: SortingState) => void
+  busca: string
+  onBuscaChange: (busca: string) => void
+}
+
 interface DataTableProps<T> {
   columns: ColumnDef<T, unknown>[]
   data: T[]
@@ -31,6 +46,8 @@ interface DataTableProps<T> {
   toolbar?: React.ReactNode
   onRowClick?: (row: T) => void
   dense?: boolean
+  /** Quando fornecido, a tabela usa paginação/ordenação/busca do servidor. */
+  servidor?: ControleServidor
 }
 
 export function DataTable<T>({
@@ -42,22 +59,48 @@ export function DataTable<T>({
   toolbar,
   onRowClick,
   dense,
+  servidor,
 }: DataTableProps<T>) {
-  const [sorting, setSorting] = useState<SortingState>([])
-  const [globalFilter, setGlobalFilter] = useState("")
+  const noServidor = Boolean(servidor)
+  const [sortingLocal, setSortingLocal] = useState<SortingState>([])
+  const [filtroLocal, setFiltroLocal] = useState("")
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, globalFilter },
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
+    state: servidor
+      ? {
+          sorting: servidor.sorting,
+          pagination: { pageIndex: servidor.paginaAtual, pageSize: servidor.tamanhoPagina },
+        }
+      : { sorting: sortingLocal, globalFilter: filtroLocal },
+    onSortingChange: servidor
+      ? (updater) =>
+          servidor.onSortingChange(
+            typeof updater === "function" ? updater(servidor.sorting) : updater,
+          )
+      : setSortingLocal,
+    onGlobalFilterChange: servidor ? undefined : setFiltroLocal,
+    manualPagination: noServidor,
+    manualSorting: noServidor,
+    manualFiltering: noServidor,
+    rowCount: servidor ? servidor.totalRegistros : undefined,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize } },
+    getSortedRowModel: noServidor ? undefined : getSortedRowModel(),
+    getFilteredRowModel: noServidor ? undefined : getFilteredRowModel(),
+    getPaginationRowModel: noServidor ? undefined : getPaginationRowModel(),
+    initialState: noServidor ? undefined : { pagination: { pageSize } },
   })
+
+  const buscaValor = servidor ? servidor.busca : filtroLocal
+  const aoBuscar = servidor ? servidor.onBuscaChange : setFiltroLocal
+
+  const paginaAtual = servidor ? servidor.paginaAtual : table.getState().pagination.pageIndex
+  const totalPaginas = servidor
+    ? Math.ceil(servidor.totalRegistros / servidor.tamanhoPagina)
+    : table.getPageCount()
+  const totalRegistros = servidor ? servidor.totalRegistros : table.getFilteredRowModel().rows.length
+  const mudarPagina = servidor ? servidor.onMudarPagina : (p: number) => table.setPageIndex(p)
 
   return (
     <div className="space-y-3">
@@ -67,8 +110,8 @@ export function DataTable<T>({
             <div className="relative w-full max-w-xs">
               <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                value={globalFilter}
-                onChange={(e) => setGlobalFilter(e.target.value)}
+                value={buscaValor}
+                onChange={(e) => aoBuscar(e.target.value)}
                 placeholder={searchPlaceholder}
                 className="pl-8"
               />
@@ -130,10 +173,10 @@ export function DataTable<T>({
       </div>
 
       <Paginacao
-        paginaAtual={table.getState().pagination.pageIndex}
-        totalPaginas={table.getPageCount()}
-        onMudarPagina={(p) => table.setPageIndex(p)}
-        totalRegistros={table.getFilteredRowModel().rows.length}
+        paginaAtual={paginaAtual}
+        totalPaginas={totalPaginas}
+        onMudarPagina={mudarPagina}
+        totalRegistros={totalRegistros}
       />
     </div>
   )
