@@ -94,25 +94,26 @@ export function Paginacao({
         </div>
 
         <nav className="flex items-center gap-1" aria-label="Paginação">
+          {/* Setas com destaque sutil na cor da marca (borda + ícone); apagam quando desabilitadas. */}
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
+            className="size-8 border-primary/35 text-primary hover:border-primary/60 hover:bg-primary/10 hover:text-primary disabled:border-input disabled:text-muted-foreground"
             onClick={() => onMudarPagina(paginaAtual - 1)}
             disabled={paginaAtual === 0}
             aria-label="Página anterior"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="size-4" strokeWidth={2.5} />
           </Button>
           <Button
             variant="outline"
             size="icon"
-            className="size-8"
+            className="size-8 border-primary/35 text-primary hover:border-primary/60 hover:bg-primary/10 hover:text-primary disabled:border-input disabled:text-muted-foreground"
             onClick={() => onMudarPagina(paginaAtual + 1)}
             disabled={paginaAtual + 1 >= totalPaginas}
             aria-label="Próxima página"
           >
-            <ChevronRight className="size-4" />
+            <ChevronRight className="size-4" strokeWidth={2.5} />
           </Button>
         </nav>
       </div>
