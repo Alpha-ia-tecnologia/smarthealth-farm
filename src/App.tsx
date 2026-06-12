@@ -1,8 +1,11 @@
 import { lazy, Suspense } from "react"
 import { Route, Routes } from "react-router-dom"
 import { AppShell } from "@/components/layout/AppShell"
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
+import { RequireRole } from "@/components/auth/RequireRole"
 import { Skeleton } from "@/components/ui/skeleton"
 
+const LoginPage = lazy(() => import("@/pages/LoginPage"))
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"))
 const OperacionalPage = lazy(() => import("@/pages/OperacionalPage"))
 const PrevisaoPage = lazy(() => import("@/pages/PrevisaoPage"))
@@ -34,14 +37,26 @@ function PageFallback() {
 export default function App() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        <Route
-          element={
-            <Suspense fallback={<PageFallback />}>
-              <RouteOutlet />
-            </Suspense>
-          }
-        >
+      {/* Rota pública de autenticação */}
+      <Route
+        path="/login"
+        element={
+          <Suspense fallback={null}>
+            <LoginPage />
+          </Suspense>
+        }
+      />
+
+      {/* Aplicação protegida: exige sessão válida */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppShell />}>
+          <Route
+            element={
+              <Suspense fallback={<PageFallback />}>
+                <RouteOutlet />
+              </Suspense>
+            }
+          >
           <Route path="/" element={<DashboardPage />} />
           <Route path="/operacional" element={<OperacionalPage />} />
           <Route path="/previsao" element={<PrevisaoPage />} />
@@ -51,10 +66,16 @@ export default function App() {
           <Route path="/relatorios" element={<RelatoriosPage />} />
           <Route path="/ingestao" element={<IngestaoPage />} />
           <Route path="/integracao" element={<IntegracaoPage />} />
-          <Route path="/seguranca" element={<SegurancaPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          {/* Governança restrita por perfil (RBAC espelhado do backend). */}
+          <Route element={<RequireRole perfis={["Gestor", "TI"]} />}>
+            <Route path="/seguranca" element={<SegurancaPage />} />
+          </Route>
+          <Route element={<RequireRole perfis={["TI"]} />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
           <Route path="/indicadores" element={<IndicadoresPage />} />
           <Route path="*" element={<NotFoundPage />} />
+          </Route>
         </Route>
       </Route>
     </Routes>

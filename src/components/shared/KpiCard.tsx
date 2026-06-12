@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils"
 import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react"
 import { Card } from "@/components/ui/card"
+import { Spinner } from "@/components/ui/spinner"
 import { RfTag } from "./RfTag"
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   rf?: string
   accent?: "primary" | "teal" | "success" | "warning" | "danger"
   footer?: React.ReactNode
+  /** Mostra um spinner no lugar do valor enquanto a API carrega. */
+  carregando?: boolean
 }
 
 const accents: Record<NonNullable<Props["accent"]>, string> = {
@@ -22,13 +25,19 @@ const accents: Record<NonNullable<Props["accent"]>, string> = {
   danger: "text-danger bg-danger/10 ring-danger/15",
 }
 
-export function KpiCard({ label, value, icon: Icon, delta, hint, rf, accent = "primary", footer }: Props) {
+export function KpiCard({ label, value, icon: Icon, delta, hint, rf, accent = "primary", footer, carregando }: Props) {
   return (
     <Card className="relative gap-0 overflow-hidden p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1.5">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-          <p className="tabular font-display text-3xl font-bold leading-none">{value}</p>
+          {carregando ? (
+            <div className="flex h-9 items-center">
+              <Spinner size={26} label={`Carregando ${label}`} />
+            </div>
+          ) : (
+            <p className="tabular font-display text-3xl font-bold leading-none">{value}</p>
+          )}
         </div>
         {Icon && (
           <div className={cn("flex size-10 items-center justify-center rounded-xl ring-1", accents[accent])}>
@@ -38,7 +47,7 @@ export function KpiCard({ label, value, icon: Icon, delta, hint, rf, accent = "p
       </div>
       <div className="mt-3 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          {delta && (
+          {!carregando && delta && (
             <span
               className={cn(
                 "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular",
@@ -49,7 +58,7 @@ export function KpiCard({ label, value, icon: Icon, delta, hint, rf, accent = "p
               {delta.value}
             </span>
           )}
-          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+          {!carregando && hint && <span className="text-xs text-muted-foreground">{hint}</span>}
         </div>
         {rf && <RfTag ids={rf} />}
       </div>

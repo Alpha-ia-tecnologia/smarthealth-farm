@@ -11,10 +11,12 @@ FAPEMA GovIA — Desafio Tecnológico 2).
 
 ## Stack
 
-- **Vite + React 18 + TypeScript**
+- **Vite + React 19 + TypeScript**
 - **Tailwind CSS v4** + **shadcn/ui** (estilo *new-york*)
 - **React Router** (rotas com code-splitting)
-- **Recharts** (gráficos) · **TanStack Table** (tabelas densas) · **lucide-react** (ícones)
+- **TanStack Query** (estado de servidor/API) · **TanStack Table** (tabelas densas)
+- **Recharts** (gráficos) · **lucide-react** (ícones)
+- **Vitest + Testing Library + MSW** (testes)
 - Tema institucional "clínico & confiável" (azul/teal) com **modo claro/escuro**
 
 ## Como rodar
@@ -24,7 +26,30 @@ npm install
 npm run dev      # ambiente de desenvolvimento (http://localhost:5173)
 npm run build    # build de produção (typecheck + bundle)
 npm run preview  # pré-visualizar o build
+npm run lint     # ESLint
 ```
+
+> O frontend conversa com a API em `http://localhost:3002/api` (configurável via `VITE_API_URL`
+> no `.env`; veja `.env.example`). O CORS do backend libera `http://localhost:5173`, então rode
+> o front nessa porta.
+
+## Testes
+
+Os testes usam **Vitest** (runner), **Testing Library** (renderiza e interage como o usuário) e
+**MSW** (simula a API HTTP — nenhum teste depende do backend de pé).
+
+```bash
+npm run test       # modo watch (re-roda ao salvar)
+npm run test:run   # roda uma vez (CI)
+npm run coverage   # roda com relatório de cobertura
+```
+
+- Arquivos de teste ficam **co-localizados**: `algo.ts` → `algo.test.ts` (ou `.test.tsx`).
+- A infraestrutura compartilhada vive em [`src/test/`](src/test/): `handlers.ts` (respostas
+  simuladas da API no envelope real), `server.ts` (servidor MSW), `setup.ts` (ciclo de vida +
+  polyfills do jsdom) e `utils.tsx` (helper `renderizar` com todos os providers do app).
+- Para um caso de erro específico, sobrescreva o handler no próprio teste com `server.use(...)`.
+- O que testar e o padrão por camada (serviço → hook → UI) estão no [`CLAUDE.md`](CLAUDE.md) (§8).
 
 ## Estrutura
 

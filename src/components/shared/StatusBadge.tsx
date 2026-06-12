@@ -9,7 +9,9 @@ interface Props {
 }
 
 export function StatusBadge({ status, label, className, dot = true }: Props) {
-  const s = statusStyles[status]
+  // Os mapas severidade/conectividade indexam por rótulo vindo da API; um valor fora do
+  // contrato não pode derrubar a tela — degrada para o estilo neutro.
+  const s = statusStyles[status] ?? statusStyles.neutro
   return (
     <span
       className={cn(

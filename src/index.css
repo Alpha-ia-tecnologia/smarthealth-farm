@@ -211,6 +211,41 @@
     background: color-mix(in oklch, var(--muted-foreground) 50%, transparent);
     background-clip: content-box;
   }
+  /* Tailwind v4 mudou o preflight de button para cursor: default; restaura o cursor de
+     clicável em todo elemento interativo habilitado (triggers Radix, tabs, switches…). */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  [role="tab"]:not(:disabled),
+  [role="switch"]:not(:disabled),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  label[for] {
+    cursor: pointer;
+  }
+}
+
+/* Halo de luz pulsante (login) — apenas a opacidade/intensidade da luz oscila */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.85; }
+}
+
+/* Barra de progresso global indeterminada — segmento desliza da esquerda para a direita */
+@keyframes barra-indeterminada {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(420%); }
+}
+
+/* Spinner: anéis girando em sentidos opostos. transform-box garante o giro em torno do centro. */
+@keyframes girar {
+  to { transform: rotate(1turn); }
+}
+@keyframes girar-reverso {
+  to { transform: rotate(-1turn); }
+}
+.spinner-arco {
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 /* Textura sutil de fundo institucional */

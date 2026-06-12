@@ -5,8 +5,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { rotuloMes } from "@/data"
-import { fmtMilhar } from "@/lib/format"
+import { fmtMilhar, fmtPeriodoMes } from "@/lib/format"
 
 interface Props {
   data: { periodo: string; valor: number }[]
@@ -18,7 +17,7 @@ interface Props {
 
 export function TrendChart({ data, color = "var(--chart-1)", meta, height = 220, label = "Valor" }: Props) {
   const config: ChartConfig = { valor: { label, color } }
-  const rows = data.map((d) => ({ ...d, mes: rotuloMes[d.periodo] ?? d.periodo }))
+  const rows = data.map((d) => ({ ...d, mes: fmtPeriodoMes(d.periodo) }))
   return (
     <ChartContainer config={config} style={{ height }} className="w-full">
       <AreaChart data={rows} margin={{ left: 4, right: 8, top: 8, bottom: 0 }}>
