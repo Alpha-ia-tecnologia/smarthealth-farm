@@ -22,7 +22,7 @@ sênior — seguro, sem gambiarra, testado.
 | 4 | Núcleo operacional | Estoque & Lotes ✅, Alertas ✅ | ✅ |
 | 5 | Inteligência preditiva | Previsão, Recomendações | ✅ |
 | 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ✅ |
-| 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ⬜ |
+| 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ✅ |
 | 8 | Segurança & Administração | Auditoria/LGPD, Admin de usuários | ⬜ |
 | 9 | Hardening & produção | Tudo (remoção final do mock, cobertura, prod) | ⬜ |
 
@@ -48,8 +48,8 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 | ✅ | Painel Operacional (`/operacional`) | `/painel/operacional` | 6 |
 | ✅ | Indicadores (`/indicadores`) | `/indicadores` | 6 |
 | ✅ | Relatórios (`/relatorios`) | `/indicadores`, `/painel` | 6 |
-| ⬜ | Ingestão de Dados (`/ingestao`) | `/ingestao` | 7 |
-| ⬜ | Integração EMSERH (`/integracao`) | `/integracoes` | 7 |
+| ✅ | Ingestão de Dados (`/ingestao`) | `/ingestao` | 7 |
+| ✅ | Integração EMSERH (`/integracao`) | `/integracoes` | 7 |
 | ⬜ | Segurança & LGPD (`/seguranca`) | `/seguranca/auditoria` | 8 |
 | ⬜ | Administração (`/admin`) | `/admin/usuarios`, `/auth` | 8 |
 
@@ -290,9 +290,9 @@ mocks de previsão/recomendação removidos.
   "Dados ilustrativos"**. `TrendChart` já desacoplado de `src/data`. **Mock removido** (não importa `src/data`).
 - Testes (+5): página (resumo executivo composto, filtro de unidade real, marcação de mock, export demo, erro).
 
-> **8 das 12 telas já largaram o `src/data`** (Login + Fases 3–6). Restam mockadas as telas das
-> Fases 7–8 (Ingestão, Integração EMSERH, Segurança/LGPD, Admin de usuários). O mock de `src/data` e
-> os resíduos de `lib/insights.ts`/`status.ts` só são **apagados** quando a última tela migrar (Fase 9).
+> **10 das 12 telas já largaram o `src/data`** (Login + Fases 3–7). Restam mockadas as telas da
+> Fase 8 (Segurança/LGPD, Admin de usuários). O mock de `src/data` e os resíduos de
+> `lib/insights.ts`/`status.ts` só são **apagados** quando a última tela migrar (Fase 9).
 
 **Endpoints:** `GET /painel` · `/painel/operacional` · `/indicadores` · `/indicadores/resumo` · `/indicadores/{codigo}`.
 
@@ -300,14 +300,42 @@ mocks de previsão/recomendação removidos.
 
 ---
 
-## ⬜ Fase 7 — Dados & Integração (Ingestão, Integração EMSERH, IA)
+## ✅ Fase 7 — Dados & Integração (Ingestão, Integração EMSERH, IA) *(concluída)*
 
 **Objetivo:** telas de governança de dados e saúde das integrações (somente leitura) + assistente de IA.
 
-**Escopo:**
-- **Ingestão (`/ingestao`):** fontes, qualidade por família, resumo. `lib/ingestao.ts`.
-- **Integração EMSERH (`/integracao`):** conexões, resumo, provedores de IA. `lib/integracoes.ts`.
-- **IA (transversal):** `POST /ia/chat` (anonimização é do backend) — assistente onde aplicável.
+**✅ Ingestão (`/ingestao`) — concluída:**
+- Contract-check: coberta 100% por **`/ingestao/fontes|qualidade|resumo`** — fontes (status/volume/
+  qualidade/procedência), maturidade por família e os 4 KPIs **prontos** (o front parou de somar no
+  cliente). **Sem mudança no backend.**
+- `lib/ingestao.ts` (fontes/qualidade/resumo, tipos espelhando os DTOs) + `hooks/use-ingestao.ts`
+  (query keys). `IngestaoPage` reescrita: KPIs do resumo, lista de fontes com `StatusBadge` real,
+  cartões de qualidade por família; estados de carregando/erro/vazio por seção. **Mock removido**
+  (não importa `src/data`).
+- **Decisão de produto:** "Sazonalidade epidemiológica" (RF-DAD-05) e "Linha de base consolidada"
+  (RF-DAD-08) não têm endpoint → mantidas como **dados ilustrativos**, marcadas na UI e com nota no código.
+
+**✅ Integração EMSERH (`/integracao`) — concluída:**
+- Contract-check: coberta 100% por **`/integracoes|/resumo|/provedores-ia`** — conexões (status/latência/
+  modo/buffer), KPIs prontos e provedores do AI Gateway (papel/custo/anonimização). **Sem mudança no backend.**
+- `lib/integracoes.ts` + `hooks/use-integracoes.ts` (query keys). `IntegracaoPage` reescrita: KPIs do
+  resumo, lista de conexões com status+modo reais, cards de provedores; carregando/erro/vazio por seção.
+  **Mock removido** (não importa `src/data`). Os toggles de "Resiliência" e o botão "Exportar OpenAPI"
+  (sem endpoint) viraram **read-only** (status, não controle falso), marcados "Dados ilustrativos"; o
+  estado `ativo`/`anonimização` do provedor é exibido como selo (não há mutation).
+
+**✅ IA — assistente flutuante (RF-INT-06) — concluída:**
+- `lib/ia.ts` (`chat`) + `hooks/use-ia.ts` (**mutation** — cada turno envia o histórico). Novo
+  componente **`AssistenteIa`** flutuante no `AppShell` (presente em toda tela autenticada): painel de
+  chat consumindo `POST /ia/chat`, com estado inicial/sugestões, indicador "pensando", **selo "Modo demo"**
+  quando o backend responde sem provedor, e tratamento de erro (toast + devolve a pergunta ao campo).
+  A anonimização LGPD (RF-SEG-04) é do backend; a UI sinaliza isso.
+
+- **Limpeza:** `fontes`/`qualidadeFamilias`/`integracoes`/`provedoresIA` saíram de `src/data` e os tipos
+  órfãos (`FonteDado`/`QualidadeFamilia`/`IntegracaoAPI`/`ProvedorIA`) saíram de `src/types`.
+- **Testes (+26):** serviços (`ingestao`, `integracoes`, `ia` — request certa, erro), hooks (ingestão +
+  integração), páginas (KPIs reais, listas com status do backend, marcação de mock, erro) e o
+  `AssistenteIa` (abre, envia→resposta+selo demo, erro devolve a pergunta). Front verde: `tsc -b`, `lint`, `vitest`.
 
 **Endpoints:** `GET /ingestao/fontes|qualidade|resumo` · `GET /integracoes|/resumo|/provedores-ia` · `POST /ia/chat`.
 

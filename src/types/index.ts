@@ -144,26 +144,6 @@ export interface IndicadorMeta {
   historico: { periodo: string; valor: number }[]
 }
 
-export interface FonteDado {
-  id: string
-  nome: string
-  geracao: string // ex.: "Legado SIH", "API EMSERH v2"
-  status: "Sincronizado" | "Atrasado" | "Erro"
-  ultimaIngestao: string
-  registros: number
-  qualidade: number // 0-100 (RF-DAD-04)
-  procedencia: string // RF-DAD-07
-}
-
-export interface QualidadeFamilia {
-  familia: FamiliaTerapeutica
-  maturidade: number // 0-100
-  completude: number
-  consistencia: number
-  granularidade: "Diária" | "Semanal" | "Mensal"
-  lacunas: number
-}
-
 export interface LogAuditoria {
   id: string
   data: string
@@ -186,23 +166,3 @@ export interface Usuario {
   ultimoAcesso: string
 }
 
-export interface IntegracaoAPI {
-  id: string
-  nome: string
-  versao: string
-  status: "Operacional" | "Degradada" | "Indisponível"
-  latenciaMs: number
-  ultimaSync: string
-  modo: "Online" | "Offline (buffer)" | "Reconciliando"
-  registrosBuffer: number
-}
-
-export interface ProvedorIA {
-  id: string
-  nome: string // DeepSeek, OpenAI, Gemini
-  ativo: boolean
-  papel: "Primário" | "Fallback" | "Standby"
-  custoPor1kTokens: number
-  chamadasMes: number
-  anonimizacao: boolean // RF-SEG-04
-}

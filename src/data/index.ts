@@ -1,8 +1,6 @@
 import type {
   Alerta,
-  FonteDado,
   IndicadorMeta,
-  IntegracaoAPI,
   Lote,
   LogAuditoria,
   Medicamento,
@@ -10,13 +8,11 @@ import type {
   PontoSerie,
   PosicaoEstoque,
   Previsao,
-  ProvedorIA,
-  QualidadeFamilia,
   Recomendacao,
   Unidade,
   Usuario,
 } from "@/types"
-import { medicamentos, familiasTerapeuticas } from "./medicines"
+import { medicamentos } from "./medicines"
 import { unidades, unidadesAtendidas } from "./units"
 
 export { medicamentos, familiasTerapeuticas } from "./medicines"
@@ -414,43 +410,6 @@ export const indicadores: IndicadorMeta[] = [
 ]
 
 export const getIndicador = (id: string) => indicadores.find((i) => i.id === id)
-
-// ---------------- Ingestão de dados (RF-DAD) ----------------
-export const fontes: FonteDado[] = [
-  { id: "f-sih", nome: "SIH — Sistema de Internação", geracao: "Legado (2009)", status: "Sincronizado", ultimaIngestao: "2026-06-08T03:10:00", registros: 1284500, qualidade: 82, procedencia: "EMSERH/DTI · export diário" },
-  { id: "f-farmaweb", nome: "FarmaWeb — Dispensação", geracao: "API EMSERH v2", status: "Sincronizado", ultimaIngestao: "2026-06-08T04:00:00", registros: 962300, qualidade: 91, procedencia: "API REST · webhook" },
-  { id: "f-almox", nome: "Almoxarifado Central", geracao: "Planilhas (CSV)", status: "Atrasado", ultimaIngestao: "2026-06-06T18:30:00", registros: 145800, qualidade: 64, procedencia: "Upload manual semanal" },
-  { id: "f-compras", nome: "Sistema de Compras", geracao: "Legado (2014)", status: "Sincronizado", ultimaIngestao: "2026-06-08T02:40:00", registros: 73400, qualidade: 77, procedencia: "Replicação ETL noturna" },
-  { id: "f-epidemio", nome: "Vigilância Epidemiológica", geracao: "API SES-MA", status: "Erro", ultimaIngestao: "2026-06-05T11:00:00", registros: 28900, qualidade: 70, procedencia: "Boletins dengue/lepto · API" },
-  { id: "f-cnes", nome: "CNES — Cadastro de Unidades", geracao: "API DATASUS", status: "Sincronizado", ultimaIngestao: "2026-06-07T22:15:00", registros: 12, qualidade: 96, procedencia: "Datasus · mensal" },
-]
-
-export const qualidadeFamilias: QualidadeFamilia[] = familiasTerapeuticas.map((familia, i) => {
-  const r = rng(hash("qf" + familia))
-  return {
-    familia,
-    maturidade: 55 + Math.round(r() * 42),
-    completude: 60 + Math.round(r() * 38),
-    consistencia: 58 + Math.round(r() * 40),
-    granularidade: i % 3 === 0 ? "Diária" : i % 3 === 1 ? "Semanal" : "Mensal",
-    lacunas: Math.round(r() * 14),
-  }
-})
-
-// ---------------- Integração (RF-INT) ----------------
-export const integracoes: IntegracaoAPI[] = [
-  { id: "api-farmaweb", nome: "FarmaWeb API", versao: "v2.3", status: "Operacional", latenciaMs: 142, ultimaSync: "2026-06-08T04:00:00", modo: "Online", registrosBuffer: 0 },
-  { id: "api-sih", nome: "SIH Gateway", versao: "v1.0", status: "Degradada", latenciaMs: 1840, ultimaSync: "2026-06-08T03:10:00", modo: "Online", registrosBuffer: 0 },
-  { id: "api-balsas", nome: "Edge · HRB Balsas", versao: "v2.3", status: "Indisponível", latenciaMs: 0, ultimaSync: "2026-06-07T19:22:00", modo: "Offline (buffer)", registrosBuffer: 2140 },
-  { id: "api-chapadinha", nome: "Edge · HCH Chapadinha", versao: "v2.3", status: "Operacional", latenciaMs: 410, ultimaSync: "2026-06-08T01:05:00", modo: "Reconciliando", registrosBuffer: 318 },
-  { id: "api-compras", nome: "Compras EMSERH", versao: "v1.4", status: "Operacional", latenciaMs: 220, ultimaSync: "2026-06-08T02:40:00", modo: "Online", registrosBuffer: 0 },
-]
-
-export const provedoresIA: ProvedorIA[] = [
-  { id: "ia-deepseek", nome: "DeepSeek", ativo: true, papel: "Primário", custoPor1kTokens: 0.0014, chamadasMes: 48200, anonimizacao: true },
-  { id: "ia-openai", nome: "OpenAI", ativo: true, papel: "Fallback", custoPor1kTokens: 0.005, chamadasMes: 9100, anonimizacao: true },
-  { id: "ia-gemini", nome: "Google Gemini", ativo: false, papel: "Standby", custoPor1kTokens: 0.0035, chamadasMes: 0, anonimizacao: true },
-]
 
 // ---------------- Segurança / Auditoria (RF-SEG) ----------------
 const acoesAudit = [

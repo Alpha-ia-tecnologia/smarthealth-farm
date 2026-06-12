@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { UnidadeSelect } from "@/components/shared/UnidadeSelect"
+import { AssistenteIa } from "@/components/shared/AssistenteIa"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +128,9 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      {/* Assistente de IA transversal (RF-INT-06): flutua sobre qualquer tela autenticada. */}
+      <AssistenteIa />
     </div>
   )
 }

@@ -19,6 +19,9 @@ import type {
 } from "@/lib/recomendacoes"
 import type { PainelGerencial, PainelOperacional } from "@/lib/painel"
 import type { Indicador, ResumoIndicadores } from "@/lib/indicadores"
+import type { FonteDado, QualidadeFamilia, ResumoIngestao } from "@/lib/ingestao"
+import type { IntegracaoApi, ProvedorIa, ResumoIntegracao } from "@/lib/integracoes"
+import type { ChatResposta, MensagemChat } from "@/lib/ia"
 
 /** Usuário padrão devolvido pelos handlers de sucesso. */
 export const usuarioTeste: Usuario = {
@@ -514,6 +517,137 @@ export const painelOperacionalTeste: PainelOperacional = {
   recomendacoesAbertas: recomendacoesTeste,
 }
 
+/** Fontes de dados de teste (uma sincronizada, uma atrasada, uma com erro). */
+export const fontesTeste: FonteDado[] = [
+  {
+    id: "f-sih",
+    codigo: "SIH",
+    nome: "SIH — Sistema de Internação",
+    geracao: "Legado (2009)",
+    status: "Sincronizado",
+    ultimaIngestao: "2026-06-08T03:10:00Z",
+    registros: 1284500,
+    qualidade: 82,
+    procedencia: "EMSERH/DTI · export diário",
+  },
+  {
+    id: "f-almox",
+    codigo: "ALMOX",
+    nome: "Almoxarifado Central",
+    geracao: "Planilhas (CSV)",
+    status: "Atrasado",
+    ultimaIngestao: "2026-06-06T18:30:00Z",
+    registros: 145800,
+    qualidade: 64,
+    procedencia: "Upload manual semanal",
+  },
+  {
+    id: "f-epidemio",
+    codigo: "EPIDEMIO",
+    nome: "Vigilância Epidemiológica",
+    geracao: "API SES-MA",
+    status: "Erro",
+    ultimaIngestao: "2026-06-05T11:00:00Z",
+    registros: 28900,
+    qualidade: 70,
+    procedencia: "Boletins dengue/lepto · API",
+  },
+]
+
+export const qualidadeFamiliasTeste: QualidadeFamilia[] = [
+  {
+    id: "qf-1",
+    familia: "Antibióticos",
+    maturidade: 88,
+    completude: 91,
+    consistencia: 84,
+    granularidade: "Diária",
+    lacunas: 2,
+  },
+  {
+    id: "qf-2",
+    familia: "Analgésicos",
+    maturidade: 72,
+    completude: 80,
+    consistencia: 75,
+    granularidade: "Semanal",
+    lacunas: 5,
+  },
+]
+
+export const resumoIngestaoTeste: ResumoIngestao = {
+  registrosIngeridos: 1459200,
+  totalFontes: 3,
+  fontesSincronizadas: 1,
+  qualidadeMedia: 72,
+  anonimizacaoAtiva: true,
+}
+
+/** Integrações de teste (uma operacional online, uma indisponível com buffer offline). */
+export const integracoesTeste: IntegracaoApi[] = [
+  {
+    id: "api-farmaweb",
+    codigo: "FARMAWEB",
+    nome: "FarmaWeb API",
+    versao: "v2.3",
+    status: "Operacional",
+    latenciaMs: 142,
+    ultimaSync: "2026-06-08T04:00:00Z",
+    modo: "Online",
+    registrosBuffer: 0,
+  },
+  {
+    id: "api-balsas",
+    codigo: "EDGE-BALSAS",
+    nome: "Edge · HRB Balsas",
+    versao: "v2.3",
+    status: "Indisponível",
+    latenciaMs: 0,
+    ultimaSync: "2026-06-07T19:22:00Z",
+    modo: "Offline (buffer)",
+    registrosBuffer: 2140,
+  },
+]
+
+export const provedoresIaTeste: ProvedorIa[] = [
+  {
+    id: "ia-deepseek",
+    codigo: "DEEPSEEK",
+    nome: "DeepSeek",
+    ativo: true,
+    papel: "Primário",
+    custoPor1kTokens: 0.0014,
+    chamadasMes: 48200,
+    anonimizacao: true,
+  },
+  {
+    id: "ia-gemini",
+    codigo: "GEMINI",
+    nome: "Google Gemini",
+    ativo: false,
+    papel: "Standby",
+    custoPor1kTokens: 0.0035,
+    chamadasMes: 0,
+    anonimizacao: true,
+  },
+]
+
+export const resumoIntegracaoTeste: ResumoIntegracao = {
+  operacionais: 1,
+  totalIntegracoes: 2,
+  latenciaMediaMs: 142,
+  registrosBuffer: 2140,
+  provedoresIa: 2,
+}
+
+/** Resposta de teste do AI Gateway em modo demo (sem provedor configurado). */
+export const chatRespostaTeste: ChatResposta = {
+  content: "Posso ajudar com estoque, previsões, alertas e indicadores da rede CAHOSP.",
+  model: "demo",
+  mode: "demo",
+  provider: "demo",
+}
+
 /** Monta o envelope de sucesso da API (`{ success, data, total? }`). */
 export function ok<T>(data: T, total?: number) {
   return total === undefined
@@ -630,4 +764,24 @@ export const handlers = [
       : HttpResponse.json(erro("Indicador nao encontrado.", "NAO_ENCONTRADO"), { status: 404 })
   }),
   http.get("*/indicadores", () => HttpResponse.json(ok(indicadoresTeste, indicadoresTeste.length))),
+  // Ingestão (RF-DAD).
+  http.get("*/ingestao/fontes", () => HttpResponse.json(ok(fontesTeste, fontesTeste.length))),
+  http.get("*/ingestao/qualidade", () =>
+    HttpResponse.json(ok(qualidadeFamiliasTeste, qualidadeFamiliasTeste.length)),
+  ),
+  http.get("*/ingestao/resumo", () => HttpResponse.json(ok(resumoIngestaoTeste))),
+  // Integração (RF-INT) — específicos antes do genérico.
+  http.get("*/integracoes/resumo", () => HttpResponse.json(ok(resumoIntegracaoTeste))),
+  http.get("*/integracoes/provedores-ia", () =>
+    HttpResponse.json(ok(provedoresIaTeste, provedoresIaTeste.length)),
+  ),
+  http.get("*/integracoes", () => HttpResponse.json(ok(integracoesTeste, integracoesTeste.length))),
+  // IA — AI Gateway (RF-INT-06). Ecoa a última pergunta para os testes de conversa.
+  http.post("*/ia/chat", async ({ request }) => {
+    const corpo = (await request.json()) as { mensagens: MensagemChat[] }
+    const ultima = corpo.mensagens.at(-1)
+    return HttpResponse.json(
+      ok({ ...chatRespostaTeste, content: `Resposta para: ${ultima?.conteudo ?? ""}` }),
+    )
+  }),
 ]
