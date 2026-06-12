@@ -115,8 +115,9 @@ export default function RelatoriosPage() {
         </div>
       )}
 
-      {/* Filtros (RF-DASH-06) — unidade vem da API; demais são opções de domínio */}
-      <Section title="Filtros" rf="RF-DASH-06" icon={<Filter className="size-4" />}>
+      {/* Filtros (RF-DASH-06) — ilustrativos: aplicam-se ao catálogo/exportação, que não têm
+          endpoint. A lista de unidades é real (API); a aplicação do filtro virá com o gerador. */}
+      <Section title="Filtros" rf="RF-DASH-06" icon={<Filter className="size-4" />} action={BADGE_ILUSTRATIVO}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <FilterSelect label="Unidade" itens={["Todas", ...unidadesAtendidas]} />
           <FilterSelect label="Família terapêutica" itens={["Todas", ...FAMILIAS]} />
@@ -148,7 +149,12 @@ export default function RelatoriosPage() {
                   <span className="mt-1 inline-block font-mono text-[10px] text-muted-foreground">{r.rf}</span>
                 </div>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => toast.success("Download iniciado")}>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={`Baixar ${r.nome}`}
+                onClick={() => toast.success("Download iniciado")}
+              >
                 <Download className="size-4" />
               </Button>
             </Card>

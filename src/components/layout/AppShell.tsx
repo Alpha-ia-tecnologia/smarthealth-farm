@@ -1,11 +1,9 @@
 import { useState } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
-import { Bell, LogOut, Menu, Moon, Search, Sun } from "lucide-react"
+import { Bell, LogOut, Menu, Moon, Sun } from "lucide-react"
 import { SidebarContent } from "./Sidebar"
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { UnidadeSelect } from "@/components/shared/UnidadeSelect"
 import { AssistenteIa } from "@/components/shared/AssistenteIa"
 import {
   DropdownMenu,
@@ -18,8 +16,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "@/hooks/use-theme"
 import { useAuth } from "@/context/auth"
+import { useResumoAlertas } from "@/hooks/use-alertas"
 import { navItems } from "@/lib/nav"
-import { totais } from "@/data"
 
 /** Iniciais para o avatar a partir do nome completo (ex.: "Ana Sousa" → "AS"). */
 function iniciais(nome: string): string {
@@ -36,8 +34,8 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const current = navItems.find((n) => n.to === pathname) ?? navItems[0]
-  // Filtro de unidade do header. O consumo por outras telas será ligado nas próximas fases.
-  const [unidade, setUnidade] = useState("todas")
+  const { data: resumoAlertas } = useResumoAlertas()
+  const alertasAtivos = resumoAlertas?.ativos ?? 0
 
   async function aoSair() {
     await logout()
@@ -55,20 +53,19 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
         <p className="truncate text-xs text-muted-foreground">{current.desc}</p>
       </div>
 
-      <div className="relative ml-auto hidden w-full max-w-xs md:block">
-        <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-        <Input placeholder="Buscar medicamento, lote, unidade…" className="pl-8" />
-      </div>
-
-      <UnidadeSelect value={unidade} onValueChange={setUnidade} />
-
-      <Button variant="ghost" size="icon" onClick={toggle} aria-label="Alternar tema">
+      <Button variant="ghost" size="icon" onClick={toggle} className="ml-auto" aria-label="Alternar tema">
         {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
       </Button>
 
-      <Button variant="ghost" size="icon" className="relative" aria-label="Alertas">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="relative"
+        aria-label={alertasAtivos > 0 ? `Alertas — ${alertasAtivos} ativo(s)` : "Alertas"}
+        onClick={() => navigate("/alertas")}
+      >
         <Bell className="size-5" />
-        {totais.alertasAbertos > 0 && (
+        {alertasAtivos > 0 && (
           <span className="absolute right-1.5 top-1.5 flex size-2 rounded-full bg-danger ring-2 ring-background" />
         )}
       </Button>
@@ -90,10 +87,6 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
               {usuario ? `${usuario.perfil} · CAHOSP` : "CAHOSP"}
             </p>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Meu perfil</DropdownMenuItem>
-          <DropdownMenuItem>Preferências</DropdownMenuItem>
-          <DropdownMenuItem>Conformidade LGPD</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onSelect={aoSair}>
             <LogOut className="size-4" />
@@ -134,6 +127,3 @@ export function AppShell() {
     </div>
   )
 }
-
-// trigger usado fora? mantido para conveniência
-export { SheetTrigger }

@@ -103,7 +103,15 @@ export function AssistenteIa() {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="right" className="w-full gap-0 p-0 sm:max-w-md">
+      <SheetContent
+        side="right"
+        className="w-full gap-0 p-0 sm:max-w-md"
+        onOpenAutoFocus={(e) => {
+          // Foco direto no campo de pergunta (em vez do botão de fechar do Radix).
+          e.preventDefault()
+          inputRef.current?.focus()
+        }}
+      >
         <SheetHeader className="border-b">
           <SheetTitle className="flex items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
@@ -140,7 +148,7 @@ export function AssistenteIa() {
                     key={s}
                     type="button"
                     onClick={() => void enviar(s)}
-                    className="rounded-lg border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+                    className="cursor-pointer rounded-lg border px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
                   >
                     {s}
                   </button>

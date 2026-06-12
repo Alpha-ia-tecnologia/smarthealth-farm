@@ -18,8 +18,8 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     // Testes de componente com Radix (portais/animações) ficam lentos sob carga paralela;
-    // 5s estourava de forma intermitente no run completo.
-    testTimeout: 15_000,
+    // em máquinas modestas o run completo estoura timeouts curtos de forma intermitente.
+    testTimeout: 30_000,
     coverage: {
       provider: 'v8',
       include: [

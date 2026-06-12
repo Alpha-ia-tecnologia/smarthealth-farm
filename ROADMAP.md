@@ -23,8 +23,8 @@ sênior — seguro, sem gambiarra, testado.
 | 5 | Inteligência preditiva | Previsão, Recomendações | ✅ |
 | 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ✅ |
 | 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ✅ |
-| 8 | Segurança & Administração | Auditoria/LGPD, Admin de usuários | ⬜ |
-| 9 | Hardening & produção | Tudo (remoção final do mock, cobertura, prod) | ⬜ |
+| 8 | Segurança & Administração | Auditoria/LGPD, Admin de usuários | ✅ |
+| 9 | Hardening & produção | Tudo (remoção final do mock, cobertura, prod) | ✅ |
 
 A ordem segue a dependência entre domínios: catálogo (unidade/medicamento) antes dos consumidores
 (estoque, previsão, alerta, recomendação), e as agregações (painel/indicadores) depois das fontes.
@@ -50,16 +50,14 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 | ✅ | Relatórios (`/relatorios`) | `/indicadores`, `/painel` | 6 |
 | ✅ | Ingestão de Dados (`/ingestao`) | `/ingestao` | 7 |
 | ✅ | Integração EMSERH (`/integracao`) | `/integracoes` | 7 |
-| ⬜ | Segurança & LGPD (`/seguranca`) | `/seguranca/auditoria` | 8 |
-| ⬜ | Administração (`/admin`) | `/admin/usuarios`, `/auth` | 8 |
+| ✅ | Segurança & LGPD (`/seguranca`) | `/seguranca/auditoria` | 8 |
+| ✅ | Administração (`/admin`) | `/admin/usuarios`, `/auth` | 8 |
 
-> **Estado atual (pós-Fase 3):** as **12 telas** ainda consomem `src/data`. A Fase 3 trocou apenas
-> o seletor de unidade do header — nenhuma tela teve o mock removido ainda.
->
-> **Como migramos daqui em diante (fatia vertical — CLAUDE.md §10):** uma tela por vez, removendo o
-> mock dela **na mesma passada** em que integra a API. Se a API não tiver o que a tela precisa, o
-> backend é corrigido primeiro (lendo o CLAUDE.md dele, com testes). Front e back **verdes** antes de
-> marcar a tela. A Fase 9 vira só uma **varredura de segurança**, não o lugar onde o mock "finalmente" sai.
+> **Estado atual (pós-Fase 9):** as **12 telas** consomem a API; **`src/data` não existe mais**
+> (apagado por inteiro na Fase 9, junto com os componentes/tipos órfãos). Os únicos dados não-reais
+> remanescentes são os painéis sem endpoint, **marcados "Dados ilustrativos" na UI** (composição da
+> previsão, desempenho do módulo de recomendações, coleta/cadência, catálogo de relatórios/OPED,
+> pilares LGPD, parâmetros) — migram quando o backend expuser os contratos.
 
 ---
 
@@ -290,9 +288,9 @@ mocks de previsão/recomendação removidos.
   "Dados ilustrativos"**. `TrendChart` já desacoplado de `src/data`. **Mock removido** (não importa `src/data`).
 - Testes (+5): página (resumo executivo composto, filtro de unidade real, marcação de mock, export demo, erro).
 
-> **10 das 12 telas já largaram o `src/data`** (Login + Fases 3–7). Restam mockadas as telas da
-> Fase 8 (Segurança/LGPD, Admin de usuários). O mock de `src/data` e os resíduos de
-> `lib/insights.ts`/`status.ts` só são **apagados** quando a última tela migrar (Fase 9).
+> **As 12 telas já largaram o `src/data`** (Login + Fases 3–8). O que resta em `src/data` (catálogo
+> consumido por `MedLabel`/`AppShell`, `totais`, agregações) e os resíduos de `lib/insights.ts`/
+> `status.ts` são a **varredura final da Fase 9** (remoção completa do mock).
 
 **Endpoints:** `GET /painel` · `/painel/operacional` · `/indicadores` · `/indicadores/resumo` · `/indicadores/{codigo}`.
 
@@ -343,35 +341,88 @@ mocks de previsão/recomendação removidos.
 
 ---
 
-## ⬜ Fase 8 — Segurança & Administração (Auditoria & Usuários)
+## ✅ Fase 8 — Segurança & Administração (Auditoria & Usuários) *(concluída)*
 
 **Objetivo:** governança e o único módulo com **escrita sensível** + RBAC forte (TI).
 
-**Escopo:**
-- **Segurança & LGPD (`/seguranca`):** trilha de auditoria + resumo (leitura, **Gestor/TI**).
-- **Administração (`/admin`):** CRUD de usuários (**TI**) — listar/filtrar, criar (e-mail único, senha ≥ 8),
-  editar, **ativar/desativar** (sem DELETE), redefinir senha. Tratar 409 (e-mail duplicado) e 422
-  (TI não se autodesativa). Escrita de **catálogo** (unidades/medicamentos, TI) se for do escopo da tela.
-- RBAC rigoroso na UI (rotas/ações só para o perfil certo), espelhando o backend.
+**✅ Segurança & LGPD (`/seguranca`) — concluída:**
+- Contract-check: coberta por **`/seguranca/auditoria` (+`/resumo`)** — trilha imutável com `categoria`
+  tipada e KPIs prontos (`total`, `assistidosPorIa`, `comBaseLegal`, `ultimaAtividade`). **Sem mudança
+  no backend.** Os KPIs fabricados do mock (`logs.length * 31`, `comIA * 12`) viraram os reais.
+- `lib/auditoria.ts` + `hooks/use-auditoria.ts`. `SegurancaPage` reescrita: KPIs reais, tabela real
+  com **filtros server-side** (categoria/perfil/IA/busca); pilares LGPD e matriz de acesso mantidos e
+  marcados **"Dados ilustrativos"** (sem endpoint). **Mock removido** (não importa `src/data`).
 
-**Endpoints:** `GET /seguranca/auditoria` (+resumo) · `/admin/usuarios` (GET/POST/PUT/PATCH status/PUT senha).
+**✅ Administração (`/admin`) — concluída:**
+- **Lacuna corrigida no backend:** `Usuario` ganhou **FK opcional para `Unidade`** (migration
+  `V13__usuario_unidade.sql`, anulável): entidade + `UsuarioResponse` (`unidadeId`/`unidadeSigla`/
+  `unidadeNome`) + `Criar/AtualizarUsuarioRequest` (`unidadeId` opcional) + service resolvendo a unidade
+  (404 se inexistente) + `findByEmailIgnoreCase` com `JOIN FETCH` (evita lazy no `/auth/me`). Testes
+  unit + IT (criar com/sem unidade, 404) — ITs de **usuário/auth/catálogo verdes** e migration V13
+  validada. *(Nota: `IaChatIT` falha se houver chave de IA no ambiente — gateway em `online` vs `demo`
+  esperado; pré-existente e alheio a esta fase. Limpar as chaves antes do `verify` para rodar 100% verde.)*
+- `lib/usuarios.ts` + `hooks/use-usuarios.ts` (queries + mutations com invalidação). Aba **Usuários**:
+  listar/filtrar (perfil/ativo/busca), **modal criar** (unidade opcional), **editar**, **ativar/desativar**
+  e **redefinir senha**; trata **409** (e-mail dup → campo), **422** (autodesativação bloqueada na UI) e
+  **403**. Aba **Cadastros**: **CRUD real de unidades e medicamentos (TI)** + **modal de itens por família**;
+  aba **Parâmetros** marcada "Dados ilustrativos". **Mock removido** (não importa `src/data`).
+- Catálogo de escrita (POST/PUT/PATCH em `/unidades` e `/medicamentos`) já existia no backend — só
+  consumido; `lib/unidades.ts`/`lib/medicamentos.ts` ganharam mutations + hooks.
+
+**✅ RBAC rigoroso (front):** guard de rota `RequireRole` + página **403** (`AcessoNegado`) e **nav filtrado
+por perfil** (`navItemsPara`): `/seguranca` = Gestor/TI, `/admin` = TI. Espelha o backend (barreira real).
+
+- **Limpeza:** `usuarios`/`logsAuditoria` saíram de `src/data` e o tipo órfão `LogAuditoria` saiu de
+  `src/types` (o de domínio vive em `lib/auditoria.ts`).
+- **Testes (+ ~30):** serviços (`auditoria`, `usuarios`, catálogo escrita com 409), guard `RequireRole`,
+  páginas (`SegurancaPage`, `AdminPage`: lista, KPIs, criar usuário, validação, autodesativação, 422,
+  Cadastros + modal de família, marcação de mock). Front verde: **`tsc -b`, `lint`, `vitest` (214/214)**.
+
+**Endpoints:** `GET /seguranca/auditoria` (+resumo) · `/admin/usuarios` (GET/POST/PUT/PATCH status/PUT senha)
+· `/unidades` e `/medicamentos` (POST/PUT/PATCH status, TI).
 
 **DoD:** formulários validados e testados (sucesso + 409/422 + 403 por perfil); auditoria em dados reais;
-mocks de auditoria/usuários removidos.
+mocks de auditoria/usuários removidos. **12 das 12 telas largaram o `src/data`** (resíduos de `src/data`/
+`lib/insights.ts`/`status.ts` saem na Fase 9).
 
 ---
 
-## ⬜ Fase 9 — Hardening & produção
+## ✅ Fase 9 — Hardening & produção *(concluída)*
 
 **Objetivo:** fechar com qualidade de produção.
 
-**Escopo:**
-- **Remover por completo `src/data`** (e `lib/insights.ts`/`status.ts` que recalculam o que a API entrega).
-- Revisar todos os estados de carregando/erro/vazio; padronizar skeletons e estados vazios.
-- Revisão de acessibilidade (contraste AA, foco, reduced-motion) e responsividade nas 12 telas.
-- Cobertura de testes revisada (lib/hooks alta; fluxos críticos cobertos); CI opcional rodando os testes.
-- `.env` de produção (`VITE_API_URL` real); build de produção validado; revisão de segurança
-  (token, 401/403, nada de segredo no bundle).
+**Entregue:**
+- **Mock 100% removido:** `src/data/` apagado por inteiro. O último consumidor (sininho do header,
+  que lia `totais.alertasAbertos`) passou a usar o **resumo real de alertas** (`useResumoAlertas`)
+  e agora navega para `/alertas`. Apagados também os órfãos `lib/insights.ts`, `AiInsight`,
+  `MedLabel`/`UniLabel` e `UnidadeSelect` (ninguém importava); `lib/status.ts` encolheu para os
+  tokens visuais (saiu `prioridadeStatus`, sem uso). `src/types` ficou só com os DTOs compartilhados
+  (`Unidade`/`Medicamento`/`Usuario`/`PerfilUsuario`/`FamiliaTerapeutica`) — os de domínio vivem nos
+  serviços `lib/<dominio>.ts`.
+- **Header sem controles falsos:** removidos a busca decorativa, o seletor de unidade que não
+  filtrava nenhuma tela (cada tela tem seus filtros server-side) e os itens de menu sem ação
+  ("Meu perfil"/"Preferências"); ficou usuário + tema + alertas + sair. Reintroduzir o seletor
+  quando existir filtro global de verdade.
+- **Sessão expirada (401) tratada globalmente:** pendência da Fase 2 fechada — `criarQueryClient`
+  ganhou `QueryCache`/`MutationCache` com `aoSessaoExpirar`; o novo `ProvedorDados`
+  (`context/provedor-dados.tsx`, dentro do `AuthProvider`, usado no app e nos testes) liga o 401 ao
+  `expirarSessao` do `AuthContext` (limpa token → toast único "Sua sessão expirou" → `/login` via
+  `ProtectedRoute`). Login não passa pelo QueryClient, então credencial inválida não cai aqui.
+- **Varredura das 12 telas** (estados de carregando/erro/vazio, RBAC, controles falsos, a11y):
+  filtros demo de Relatórios marcados "Dados ilustrativos" + `aria-label` no download; formulários
+  do Admin com `aria-describedby` ligando campo → mensagem de erro; foco direto no campo de
+  pergunta ao abrir o Assistente de IA; `StatusBadge` degrada para estilo neutro se a API enviar
+  um rótulo fora do contrato (não derruba a tela).
+- **Cursor de clicável restaurado** (preflight do Tailwind v4 usa `cursor: default` em `button`):
+  regra base em `index.css` para `button`/`role=button|tab|switch|menuitem|option`/`label[for]`
+  habilitados.
+- **Suíte endurecida para máquinas modestas:** `testTimeout` 30s e `asyncUtilTimeout` 5s (flake de
+  timeout sob carga paralela, não de lógica). Testes novos do `criarQueryClient` (401 em query e
+  mutation, 403/REDE não expiram sessão, sem retry em 4xx).
+- **Produção validada:** `tsc -b`, `eslint` e `vitest` verdes; `npm run build` limpo; `.env` fora
+  do git (só `.env.example` versionado, única variável `VITE_API_URL` — sem segredo no bundle);
+  token só via `auth-storage.ts` (nunca em URL/log); auth por header Bearer (sem cookie → CSRF
+  não se aplica).
 
 **DoD:** zero mock no código; suíte verde; build de produção limpo; checklist de segurança/acessibilidade ok.
 

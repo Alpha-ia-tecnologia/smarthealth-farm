@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 import type { Usuario } from "@/types"
 import { ApiError } from "@/lib/api"
 import { authApi } from "@/lib/auth"
@@ -13,6 +14,11 @@ interface AuthContextValue {
   login: (email: string, password: string, lembrar: boolean) => Promise<Usuario>
   /** Encerra a sessão local e avisa o backend (best-effort). */
   logout: () => Promise<void>
+  /**
+   * Encerra a sessão local quando o token expira no meio do uso (401 vindo de uma query).
+   * Não chama o backend (o token já não vale) e avisa o usuário uma única vez.
+   */
+  expirarSessao: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -64,9 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStatus("anonimo")
   }, [])
 
+  const expirarSessao = useCallback(() => {
+    limparToken()
+    setUsuario(null)
+    setStatus("anonimo")
+    // `id` fixo: várias queries podem falhar com 401 ao mesmo tempo — um único aviso.
+    toast.error("Sua sessão expirou. Entre novamente.", { id: "sessao-expirada" })
+  }, [])
+
   const value = useMemo<AuthContextValue>(
-    () => ({ status, usuario, login, logout }),
-    [status, usuario, login, logout],
+    () => ({ status, usuario, login, logout, expirarSessao }),
+    [status, usuario, login, logout, expirarSessao],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
