@@ -1,9 +1,11 @@
 import { NavLink } from "react-router-dom"
 import { Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { grupos, navItems } from "@/lib/nav"
+import { grupos, navItemsPara } from "@/lib/nav"
+import { usePerfil } from "@/context/auth"
 
 export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+  const itens = navItemsPara(usePerfil())
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       {/* Marca */}
@@ -19,13 +21,15 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Navegação */}
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-2">
-        {grupos.map((grupo) => (
+        {grupos
+          .filter((grupo) => itens.some((i) => i.grupo === grupo))
+          .map((grupo) => (
           <div key={grupo}>
             <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/45">
               {grupo}
             </p>
             <div className="space-y-0.5">
-              {navItems
+              {itens
                 .filter((i) => i.grupo === grupo)
                 .map((item) => (
                   <NavLink

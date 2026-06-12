@@ -54,9 +54,3 @@ export const conectividadeStatus: Record<string, StatusKey> = {
   Intermitente: "atencao",
   Precária: "critico",
 }
-
-export const prioridadeStatus: Record<string, StatusKey> = {
-  Essencial: "critico",
-  Importante: "atencao",
-  Desejável: "info",
-}

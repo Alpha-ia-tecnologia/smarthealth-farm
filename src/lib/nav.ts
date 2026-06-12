@@ -13,6 +13,7 @@ import {
   Settings2,
   Target,
 } from "lucide-react"
+import type { PerfilUsuario } from "@/types"
 
 export interface NavItem {
   to: string
@@ -21,6 +22,8 @@ export interface NavItem {
   rf: string // faixa de RFs cobertos
   grupo: "Visão Geral" | "Operação" | "Governança"
   desc: string
+  /** Perfis que enxergam o item. Ausente = liberado para qualquer logado. RBAC na UI. */
+  perfis?: PerfilUsuario[]
 }
 
 export const navItems: NavItem[] = [
@@ -33,9 +36,14 @@ export const navItems: NavItem[] = [
   { to: "/relatorios", label: "Relatórios", icon: FileBarChart, rf: "RF-DASH-04/07", grupo: "Operação", desc: "Relatórios estratégicos e progresso do projeto" },
   { to: "/ingestao", label: "Ingestão de Dados", icon: DatabaseZap, rf: "RF-DAD", grupo: "Governança", desc: "Fontes, qualidade e anonimização" },
   { to: "/integracao", label: "Integração EMSERH", icon: Plug, rf: "RF-INT", grupo: "Governança", desc: "APIs, sincronização e AI Gateway" },
-  { to: "/seguranca", label: "Segurança & LGPD", icon: ShieldCheck, rf: "RF-SEG", grupo: "Governança", desc: "Auditoria, base legal e acesso" },
-  { to: "/admin", label: "Administração", icon: Settings2, rf: "RF-ADM", grupo: "Governança", desc: "Usuários, perfis e parâmetros" },
+  { to: "/seguranca", label: "Segurança & LGPD", icon: ShieldCheck, rf: "RF-SEG", grupo: "Governança", desc: "Auditoria, base legal e acesso", perfis: ["Gestor", "TI"] },
+  { to: "/admin", label: "Administração", icon: Settings2, rf: "RF-ADM", grupo: "Governança", desc: "Usuários, perfis e parâmetros", perfis: ["TI"] },
   { to: "/indicadores", label: "Indicadores", icon: Target, rf: "RF-IND", grupo: "Governança", desc: "Metas do projeto vs. linha de base" },
 ]
 
 export const grupos: NavItem["grupo"][] = ["Visão Geral", "Operação", "Governança"]
+
+/** Itens de navegação visíveis para o perfil informado (RBAC na UI). */
+export function navItemsPara(perfil: PerfilUsuario | null): NavItem[] {
+  return navItems.filter((i) => !i.perfis || (perfil !== null && i.perfis.includes(perfil)))
+}

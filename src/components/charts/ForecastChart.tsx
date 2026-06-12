@@ -13,21 +13,26 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { rotuloMes } from "@/data"
-import type { PontoSerie } from "@/types"
-import { fmtMilhar } from "@/lib/format"
+import { fmtMilhar, fmtPeriodoMes } from "@/lib/format"
 
 const config: ChartConfig = {
   realizado: { label: "Realizado", color: "var(--chart-1)" },
   previsto: { label: "Previsto", color: "var(--chart-2)" },
 }
 
+/** Mínimo que o gráfico lê — compatível com a série da API e com o mock. */
+export interface PontoForecast {
+  periodo: string
+  realizado: number | null
+  previsto: number | null
+}
+
 /**
  * Comparativo Realizado × Previsto — gráfico de linhas duplas (segmentos retos
  * com marcadores). A região sem dado realizado é destacada como "Previsão".
  */
-export function ForecastChart({ serie, height = 300 }: { serie: PontoSerie[]; height?: number }) {
-  const data = serie.map((p) => ({ ...p, mes: rotuloMes[p.periodo] ?? p.periodo }))
+export function ForecastChart({ serie, height = 300 }: { serie: PontoForecast[]; height?: number }) {
+  const data = serie.map((p) => ({ ...p, mes: fmtPeriodoMes(p.periodo) }))
   const corteIdx = data.findIndex((d) => d.realizado == null)
   const corte = corteIdx >= 0 ? data[corteIdx].mes : undefined
   const ultimo = data[data.length - 1]?.mes
