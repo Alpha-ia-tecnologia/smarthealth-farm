@@ -2,7 +2,6 @@ import type {
   Alerta,
   IndicadorMeta,
   Lote,
-  LogAuditoria,
   Medicamento,
   Movimentacao,
   PontoSerie,
@@ -10,7 +9,6 @@ import type {
   Previsao,
   Recomendacao,
   Unidade,
-  Usuario,
 } from "@/types"
 import { medicamentos } from "./medicines"
 import { unidades, unidadesAtendidas } from "./units"
@@ -410,43 +408,6 @@ export const indicadores: IndicadorMeta[] = [
 ]
 
 export const getIndicador = (id: string) => indicadores.find((i) => i.id === id)
-
-// ---------------- Segurança / Auditoria (RF-SEG) ----------------
-const acoesAudit = [
-  { acao: "Aprovou recomendação de redistribuição", recurso: "RC-0003", ia: true, base: "Execução de contrato (art. 7º, V)" },
-  { acao: "Exportou relatório estratégico (PDF)", recurso: "Relatório CAHOSP Q2", ia: false, base: "Legítimo interesse (art. 7º, IX)" },
-  { acao: "Recalibrou modelo de previsão", recurso: "Previsão m-002@HRI", ia: true, base: "Execução de contrato" },
-  { acao: "Alterou limiar de alerta de desabastecimento", recurso: "Parâmetro ALE-desabastecimento", ia: false, base: "Execução de contrato" },
-  { acao: "Inferência via AI Gateway (dados anonimizados)", recurso: "AI Gateway · DeepSeek", ia: true, base: "Anonimização (art. 12)" },
-  { acao: "Cadastrou novo usuário", recurso: "usuario:operador", ia: false, base: "Execução de contrato" },
-  { acao: "Consultou histórico de lote", recurso: "L-00231", ia: false, base: "Controle sanitário" },
-]
-export const logsAuditoria: LogAuditoria[] = Array.from({ length: 40 }, (_, i) => {
-  const r = rng(hash("log" + i))
-  const a = acoesAudit[i % acoesAudit.length]
-  const perfis: LogAuditoria["perfil"][] = ["Gestor", "Operador", "TI"]
-  return {
-    id: `LG-${String(1000 + i)}`,
-    data: `2026-06-0${1 + (i % 7)}T${String(8 + (i % 10)).padStart(2, "0")}:${String((i * 7) % 59).padStart(2, "0")}:00`,
-    usuario: ["Ana Sousa", "Marcos Lima", "Rita Costa", "João Pereira", "Carla Mendes"][i % 5],
-    perfil: perfis[i % 3],
-    acao: a.acao,
-    recurso: a.recurso,
-    baseLegal: a.base,
-    assistidoPorIA: a.ia,
-    ip: `10.${Math.floor(r() * 255)}.${Math.floor(r() * 255)}.${Math.floor(r() * 255)}`,
-  }
-})
-
-// ---------------- Usuários (RF-ADM) ----------------
-export const usuarios: Usuario[] = [
-  { id: "us-1", nome: "Ana Sousa", email: "ana.sousa@emserh.ma.gov.br", perfil: "Gestor", unidadeId: "u-cahosp", ativo: true, ultimoAcesso: "2026-06-08T07:42:00" },
-  { id: "us-2", nome: "Marcos Lima", email: "marcos.lima@emserh.ma.gov.br", perfil: "Operador", unidadeId: "u-htm", ativo: true, ultimoAcesso: "2026-06-08T06:58:00" },
-  { id: "us-3", nome: "Rita Costa", email: "rita.costa@emserh.ma.gov.br", perfil: "Operador", unidadeId: "u-imperatriz", ativo: true, ultimoAcesso: "2026-06-07T17:20:00" },
-  { id: "us-4", nome: "João Pereira", email: "joao.pereira@emserh.ma.gov.br", perfil: "TI", ativo: true, ultimoAcesso: "2026-06-08T05:10:00" },
-  { id: "us-5", nome: "Carla Mendes", email: "carla.mendes@emserh.ma.gov.br", perfil: "Gestor", unidadeId: "u-caxias", ativo: true, ultimoAcesso: "2026-06-06T14:33:00" },
-  { id: "us-6", nome: "Pedro Rocha", email: "pedro.rocha@emserh.ma.gov.br", perfil: "Operador", unidadeId: "u-balsas", ativo: false, ultimoAcesso: "2026-05-28T09:00:00" },
-]
 
 // ---------------- Agregações p/ dashboards ----------------
 export function resumoUnidade(uniId: string) {

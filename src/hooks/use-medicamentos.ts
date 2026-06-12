@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
-import { medicamentosApi, type MedicamentoFiltros } from "@/lib/medicamentos"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { medicamentosApi, type DadosMedicamento, type MedicamentoFiltros } from "@/lib/medicamentos"
 
 /** Chaves de cache do domínio de medicamentos. */
 export const medicamentosKeys = {
@@ -22,5 +22,34 @@ export function useMedicamento(id: string | undefined) {
     queryKey: medicamentosKeys.detalhe(id ?? ""),
     queryFn: () => medicamentosApi.buscar(id as string),
     enabled: Boolean(id),
+  })
+}
+
+/** Cria um medicamento (TI) e invalida a lista. */
+export function useCriarMedicamento() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DadosMedicamento) => medicamentosApi.criar(body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: medicamentosKeys.raiz }),
+  })
+}
+
+/** Atualiza um medicamento (TI) e invalida a lista. */
+export function useAtualizarMedicamento() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: DadosMedicamento }) =>
+      medicamentosApi.atualizar(id, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: medicamentosKeys.raiz }),
+  })
+}
+
+/** Ativa/desativa um medicamento (TI) e invalida a lista. */
+export function useAlterarStatusMedicamento() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) =>
+      medicamentosApi.alterarStatus(id, ativo),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: medicamentosKeys.raiz }),
   })
 }

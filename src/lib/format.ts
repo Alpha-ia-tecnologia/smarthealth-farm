@@ -18,11 +18,23 @@ export function fmtData(iso: string): string {
   return `${String(d).padStart(2, "0")} ${meses[m - 1]} ${y}`
 }
 
+// Datas-hora vêm do backend como Instant em UTC (ISO com "Z"). Exibimos no fuso de Brasília
+// (America/Sao_Paulo) — converter aqui evita mostrar a hora em UTC (3h adiantada).
+const dtfDataHora = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: "America/Sao_Paulo",
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+})
+
 export function fmtDataHora(iso: string): string {
-  const [datePart, timePart = "00:00:00"] = iso.split("T")
-  const [y, m, d] = datePart.split("-").map(Number)
-  const [hh, mm] = timePart.split(":")
-  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y} ${hh}:${mm}`
+  const data = new Date(iso)
+  if (Number.isNaN(data.getTime())) return iso
+  // pt-BR devolve "dd/mm/aaaa, HH:MM"; removemos a vírgula para "dd/mm/aaaa HH:MM".
+  return dtfDataHora.format(data).replace(",", "")
 }
 
 export const fmtMilhar = (n: number) =>

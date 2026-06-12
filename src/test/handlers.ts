@@ -22,6 +22,7 @@ import type { Indicador, ResumoIndicadores } from "@/lib/indicadores"
 import type { FonteDado, QualidadeFamilia, ResumoIngestao } from "@/lib/ingestao"
 import type { IntegracaoApi, ProvedorIa, ResumoIntegracao } from "@/lib/integracoes"
 import type { ChatResposta, MensagemChat } from "@/lib/ia"
+import type { LogAuditoria, ResumoAuditoria } from "@/lib/auditoria"
 
 /** Usuário padrão devolvido pelos handlers de sucesso. */
 export const usuarioTeste: Usuario = {
@@ -640,6 +641,78 @@ export const resumoIntegracaoTeste: ResumoIntegracao = {
   provedoresIa: 2,
 }
 
+/** Usuários de teste para a Administração. O primeiro é o próprio usuário logado (mesmo id). */
+export const usuariosAdminTeste: Usuario[] = [
+  {
+    id: usuarioTeste.id,
+    nome: "Ana Sousa",
+    email: "ana@cahosp.local",
+    perfil: "TI",
+    ativo: true,
+    unidadeId: null,
+    unidadeSigla: null,
+    unidadeNome: null,
+    ultimoAcesso: "2026-06-10T12:00:00Z",
+  },
+  {
+    id: "22222222-2222-2222-2222-222222222222",
+    nome: "João Operador",
+    email: "joao@cahosp.local",
+    perfil: "Operador",
+    ativo: true,
+    unidadeId: "uni-hto",
+    unidadeSigla: "HTO",
+    unidadeNome: "Hospital de Traumatologia e Ortopedia",
+    ultimoAcesso: null,
+  },
+  {
+    id: "33333333-3333-3333-3333-333333333333",
+    nome: "Maria Gestora",
+    email: "maria@cahosp.local",
+    perfil: "Gestor",
+    ativo: false,
+    unidadeId: null,
+    unidadeSigla: null,
+    unidadeNome: null,
+    ultimoAcesso: "2026-05-01T08:00:00Z",
+  },
+]
+
+/** Trilha de auditoria de teste (uma assistida por IA, uma de gestão de usuário). */
+export const logsAuditoriaTeste: LogAuditoria[] = [
+  {
+    id: "log-1",
+    data: "2026-06-11T14:30:00Z",
+    usuario: "Ana Sousa",
+    perfil: "Gestor",
+    categoria: "Recalibração de previsão",
+    acao: "Recalibrou modelo de previsão",
+    recurso: "/previsoes/recalibrar",
+    baseLegal: "Execução de contrato",
+    assistidoPorIA: true,
+    ip: "10.0.0.5",
+  },
+  {
+    id: "log-2",
+    data: "2026-06-11T10:05:00Z",
+    usuario: "Carlos TI",
+    perfil: "TI",
+    categoria: "Gestão de usuário",
+    acao: "Criou usuário",
+    recurso: "/admin/usuarios",
+    baseLegal: "Execução de contrato",
+    assistidoPorIA: false,
+    ip: "10.0.0.9",
+  },
+]
+
+export const resumoAuditoriaTeste: ResumoAuditoria = {
+  total: 21,
+  assistidosPorIa: 6,
+  comBaseLegal: 18,
+  ultimaAtividade: "2026-06-11T14:30:00Z",
+}
+
 /** Resposta de teste do AI Gateway em modo demo (sem provedor configurado). */
 export const chatRespostaTeste: ChatResposta = {
   content: "Posso ajudar com estoque, previsões, alertas e indicadores da rede CAHOSP.",
@@ -680,7 +753,37 @@ export const handlers = [
   http.post("*/auth/logout", () =>
     HttpResponse.json(ok("Logout efetuado. Descarte o token no cliente.")),
   ),
+  // Catálogo de unidades — escrita (TI) antes/ao lado da leitura.
+  http.post("*/unidades", async ({ request }) => {
+    const b = (await request.json()) as Partial<Unidade>
+    return HttpResponse.json(ok({ id: "nova-unidade-id", ...b, ativo: true }), { status: 201 })
+  }),
+  http.put("*/unidades/:id", async ({ params, request }) => {
+    const b = (await request.json()) as Partial<Unidade>
+    const base = unidadesTeste.find((u) => u.id === params.id) ?? unidadesTeste[0]
+    return HttpResponse.json(ok({ ...base, ...b }))
+  }),
+  http.patch("*/unidades/:id/status", async ({ params, request }) => {
+    const { ativo } = (await request.json()) as { ativo: boolean }
+    const base = unidadesTeste.find((u) => u.id === params.id) ?? unidadesTeste[0]
+    return HttpResponse.json(ok({ ...base, ativo }))
+  }),
   http.get("*/unidades", () => HttpResponse.json(ok(unidadesTeste, unidadesTeste.length))),
+  // Catálogo de medicamentos — escrita (TI) antes/ao lado da leitura.
+  http.post("*/medicamentos", async ({ request }) => {
+    const b = (await request.json()) as Partial<Medicamento>
+    return HttpResponse.json(ok({ id: "novo-medicamento-id", ...b, ativo: true }), { status: 201 })
+  }),
+  http.put("*/medicamentos/:id", async ({ params, request }) => {
+    const b = (await request.json()) as Partial<Medicamento>
+    const base = medicamentosTeste.find((m) => m.id === params.id) ?? medicamentosTeste[0]
+    return HttpResponse.json(ok({ ...base, ...b }))
+  }),
+  http.patch("*/medicamentos/:id/status", async ({ params, request }) => {
+    const { ativo } = (await request.json()) as { ativo: boolean }
+    const base = medicamentosTeste.find((m) => m.id === params.id) ?? medicamentosTeste[0]
+    return HttpResponse.json(ok({ ...base, ativo }))
+  }),
   http.get("*/medicamentos", () =>
     HttpResponse.json(ok(medicamentosTeste, medicamentosTeste.length)),
   ),
@@ -776,6 +879,45 @@ export const handlers = [
     HttpResponse.json(ok(provedoresIaTeste, provedoresIaTeste.length)),
   ),
   http.get("*/integracoes", () => HttpResponse.json(ok(integracoesTeste, integracoesTeste.length))),
+  // Administração de usuários (RF-ADM-01) — específicos antes dos genéricos.
+  http.get("*/admin/usuarios", () =>
+    HttpResponse.json(ok(usuariosAdminTeste, usuariosAdminTeste.length)),
+  ),
+  http.post("*/admin/usuarios", async ({ request }) => {
+    const b = (await request.json()) as Partial<Usuario> & { unidadeId?: string | null }
+    return HttpResponse.json(
+      ok({
+        id: "novo-usuario-id",
+        nome: b.nome,
+        email: b.email,
+        perfil: b.perfil,
+        ativo: true,
+        unidadeId: b.unidadeId ?? null,
+        unidadeSigla: null,
+        unidadeNome: null,
+        ultimoAcesso: null,
+      }),
+      { status: 201 },
+    )
+  }),
+  http.put("*/admin/usuarios/:id/senha", () =>
+    HttpResponse.json(ok("Senha redefinida com sucesso.")),
+  ),
+  http.put("*/admin/usuarios/:id", async ({ params, request }) => {
+    const b = (await request.json()) as Partial<Usuario> & { unidadeId?: string | null }
+    const base = usuariosAdminTeste.find((u) => u.id === params.id) ?? usuariosAdminTeste[0]
+    return HttpResponse.json(ok({ ...base, ...b, unidadeId: b.unidadeId ?? null }))
+  }),
+  http.patch("*/admin/usuarios/:id/status", async ({ params, request }) => {
+    const { ativo } = (await request.json()) as { ativo: boolean }
+    const base = usuariosAdminTeste.find((u) => u.id === params.id) ?? usuariosAdminTeste[0]
+    return HttpResponse.json(ok({ ...base, ativo }))
+  }),
+  // Segurança / auditoria (RF-SEG) — específico antes do genérico.
+  http.get("*/seguranca/auditoria/resumo", () => HttpResponse.json(ok(resumoAuditoriaTeste))),
+  http.get("*/seguranca/auditoria", () =>
+    HttpResponse.json(ok(logsAuditoriaTeste, logsAuditoriaTeste.length)),
+  ),
   // IA — AI Gateway (RF-INT-06). Ecoa a última pergunta para os testes de conversa.
   http.post("*/ia/chat", async ({ request }) => {
     const corpo = (await request.json()) as { mensagens: MensagemChat[] }

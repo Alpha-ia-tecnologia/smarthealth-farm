@@ -43,4 +43,44 @@ describe("unidadesApi", () => {
     const unidade = await unidadesApi.buscar("uni-hto")
     expect(unidade.sigla).toBe("HTO")
   })
+
+  it("cria uma unidade (POST)", async () => {
+    const criada = await unidadesApi.criar({
+      nome: "Hospital Novo",
+      sigla: "HNV",
+      municipio: "Caxias",
+      porte: "Médio",
+      leitos: 80,
+      conectividade: "Estável",
+      perfilDemografico: "Geral",
+      hub: false,
+    })
+    expect(criada.sigla).toBe("HNV")
+    expect(criada.ativo).toBe(true)
+  })
+
+  it("ativa/desativa uma unidade (PATCH status)", async () => {
+    const atualizada = await unidadesApi.alterarStatus("uni-hto", false)
+    expect(atualizada.ativo).toBe(false)
+  })
+
+  it("propaga CONFLITO (409) ao criar com sigla duplicada", async () => {
+    server.use(
+      http.post("*/unidades", () =>
+        HttpResponse.json({ success: false, error: "Sigla já existe.", codigo: "CONFLITO" }, { status: 409 }),
+      ),
+    )
+    await expect(
+      unidadesApi.criar({
+        nome: "X",
+        sigla: "HTO",
+        municipio: "Y",
+        porte: "Grande",
+        leitos: 1,
+        conectividade: "Estável",
+        perfilDemografico: "Z",
+        hub: false,
+      }),
+    ).rejects.toMatchObject({ codigo: "CONFLITO" })
+  })
 })

@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query"
-import { unidadesApi, type UnidadeFiltros } from "@/lib/unidades"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { unidadesApi, type DadosUnidade, type UnidadeFiltros } from "@/lib/unidades"
 
 /** Chaves de cache do domínio de unidades. */
 export const unidadesKeys = {
@@ -22,5 +22,34 @@ export function useUnidade(id: string | undefined) {
     queryKey: unidadesKeys.detalhe(id ?? ""),
     queryFn: () => unidadesApi.buscar(id as string),
     enabled: Boolean(id),
+  })
+}
+
+/** Cria uma unidade (TI) e invalida a lista. */
+export function useCriarUnidade() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (body: DadosUnidade) => unidadesApi.criar(body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: unidadesKeys.raiz }),
+  })
+}
+
+/** Atualiza uma unidade (TI) e invalida a lista. */
+export function useAtualizarUnidade() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, body }: { id: string; body: DadosUnidade }) =>
+      unidadesApi.atualizar(id, body),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: unidadesKeys.raiz }),
+  })
+}
+
+/** Ativa/desativa uma unidade (TI) e invalida a lista. */
+export function useAlterarStatusUnidade() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ativo }: { id: string; ativo: boolean }) =>
+      unidadesApi.alterarStatus(id, ativo),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: unidadesKeys.raiz }),
   })
 }

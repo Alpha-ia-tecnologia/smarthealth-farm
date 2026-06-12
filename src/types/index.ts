@@ -144,25 +144,16 @@ export interface IndicadorMeta {
   historico: { periodo: string; valor: number }[]
 }
 
-export interface LogAuditoria {
-  id: string
-  data: string
-  usuario: string
-  perfil: PerfilUsuario
-  acao: string
-  recurso: string
-  baseLegal?: string // RF-SEG-03
-  assistidoPorIA: boolean // RF-SEG-02
-  ip: string
-}
-
+// Espelha o UsuarioResponse do backend. A unidade de lotação é opcional (RF-ADM-01);
+// usuários recém-criados não têm último acesso até o primeiro login.
 export interface Usuario {
   id: string
   nome: string
   email: string
   perfil: PerfilUsuario
-  unidadeId?: string
+  unidadeId?: string | null
+  unidadeSigla?: string | null
+  unidadeNome?: string | null
   ativo: boolean
-  ultimoAcesso: string
+  ultimoAcesso: string | null
 }
-

@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react"
 import { Route, Routes } from "react-router-dom"
 import { AppShell } from "@/components/layout/AppShell"
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute"
+import { RequireRole } from "@/components/auth/RequireRole"
 import { Skeleton } from "@/components/ui/skeleton"
 
 const LoginPage = lazy(() => import("@/pages/LoginPage"))
@@ -65,8 +66,13 @@ export default function App() {
           <Route path="/relatorios" element={<RelatoriosPage />} />
           <Route path="/ingestao" element={<IngestaoPage />} />
           <Route path="/integracao" element={<IntegracaoPage />} />
-          <Route path="/seguranca" element={<SegurancaPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          {/* Governança restrita por perfil (RBAC espelhado do backend). */}
+          <Route element={<RequireRole perfis={["Gestor", "TI"]} />}>
+            <Route path="/seguranca" element={<SegurancaPage />} />
+          </Route>
+          <Route element={<RequireRole perfis={["TI"]} />}>
+            <Route path="/admin" element={<AdminPage />} />
+          </Route>
           <Route path="/indicadores" element={<IndicadoresPage />} />
           <Route path="*" element={<NotFoundPage />} />
           </Route>
