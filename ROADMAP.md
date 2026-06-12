@@ -21,7 +21,7 @@ sênior — seguro, sem gambiarra, testado.
 | 3 | Catálogo base | Unidades, Medicamentos | ✅ |
 | 4 | Núcleo operacional | Estoque & Lotes ✅, Alertas ✅ | ✅ |
 | 5 | Inteligência preditiva | Previsão, Recomendações | ✅ |
-| 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ⬜ |
+| 6 | Visão gerencial | Dashboard, Operacional, Indicadores, Relatórios | ✅ |
 | 7 | Dados & Integração | Ingestão, Integração EMSERH, IA | ⬜ |
 | 8 | Segurança & Administração | Auditoria/LGPD, Admin de usuários | ⬜ |
 | 9 | Hardening & produção | Tudo (remoção final do mock, cobertura, prod) | ⬜ |
@@ -44,10 +44,10 @@ significa: a tela não importa mais de `src/data`, com estados de carregando/err
 | ✅ | Alertas (`/alertas`) | `/alertas` (+ `/limiares`) | 4 |
 | ✅ | Previsão de Demanda (`/previsao`) | `/previsoes` | 5 |
 | ✅ | Reposição & Redistribuição (`/recomendacoes`) | `/recomendacoes` | 5 |
-| ⬜ | Dashboard Gerencial (`/`) | `/painel` | 6 |
-| ⬜ | Painel Operacional (`/operacional`) | `/painel/operacional` | 6 |
-| ⬜ | Indicadores (`/indicadores`) | `/indicadores` | 6 |
-| ⬜ | Relatórios (`/relatorios`) | `/indicadores`, `/painel` | 6 |
+| ✅ | Dashboard Gerencial (`/`) | `/painel` (+ `/indicadores`) | 6 |
+| ✅ | Painel Operacional (`/operacional`) | `/painel/operacional` | 6 |
+| ✅ | Indicadores (`/indicadores`) | `/indicadores` | 6 |
+| ✅ | Relatórios (`/relatorios`) | `/indicadores`, `/painel` | 6 |
 | ⬜ | Ingestão de Dados (`/ingestao`) | `/ingestao` | 7 |
 | ⬜ | Integração EMSERH (`/integracao`) | `/integracoes` | 7 |
 | ⬜ | Segurança & LGPD (`/seguranca`) | `/seguranca/auditoria` | 8 |
@@ -238,15 +238,61 @@ mocks de previsão/recomendação removidos.
 
 ---
 
-## ⬜ Fase 6 — Visão gerencial (Dashboard, Operacional, Indicadores, Relatórios)
+## ✅ Fase 6 — Visão gerencial (Dashboard, Operacional, Indicadores, Relatórios) *(concluída)*
 
 **Objetivo:** as agregações de gestão, que dependem dos domínios anteriores.
 
-**Escopo:**
-- **Dashboard (`/`)** e **Operacional (`/operacional`)** via `/painel` e `/painel/operacional`
-  (totais da rede, cobertura, série agregada, filas de alertas/recomendações).
-- **Indicadores (`/indicadores`)** via `/indicadores` (+resumo, +drill-down).
-- **Relatórios (`/relatorios`):** compõe `/indicadores` + `/painel` (sem endpoint próprio).
+**✅ Dashboard Gerencial (`/`) — concluída:**
+- Contract-check: a tela é coberta por **`/painel`** (totais da rede, cobertura por unidade, série
+  agregada, filas de alertas/recomendações) **+ `/indicadores`** (os 4 KPIs do topo + o gauge MAPE).
+  **Sem mudança no backend.** Os "147 desabastecimentos evitados" antes cravados viram o indicador
+  real `ind-rupturas-evitadas`; sumiram os `AiInsight`/`insights` que recalculavam no cliente.
+- `lib/painel.ts` (dashboard) + `lib/indicadores.ts` (listar/resumo/detalhar + `formatarValorIndicador`)
+  + `hooks/use-painel.ts` e `hooks/use-indicadores.ts` (query keys; detalhe `enabled` por código).
+- `DashboardPage` reescrita: KPIs de `/indicadores` (delta a partir do `variacaoPct` real), gráfico
+  da série agregada, gauge de assertividade, cobertura por unidade, filas de alertas e recomendações
+  com nomes denormalizados; estados de carregando/erro por seção. **Mock removido** (não importa `src/data`).
+- Testes (+16): serviços (`painel`, `indicadores` com 404 e formatador), hooks (painel, indicadores
+  com `enabled`), página (KPIs, série, evitados reais, cobertura/alertas, erro de `/painel` e `/indicadores`).
+
+**✅ Painel Operacional (`/operacional`) — concluída:**
+- Contract-check: coberto 100% por **`/painel/operacional`** (`PainelOperacionalResponse`: totais,
+  situação por unidade `ResumoUnidadeResponse`, fila de alertas ativos e recomendações em aberto).
+  **Sem mudança no backend.** Listas são top-N de painel (sem paginação, como as filas do dashboard);
+  o `statusUnidade` vem pronto (some o `criticos > 3 ? ...` que o mock recalculava).
+- Estendido `lib/painel.ts` (`operacional()` + tipos `PainelOperacional`/`ResumoUnidade`) e
+  `hooks/use-painel.ts` (`usePainelOperacional`). `OperacionalPage` reescrita: KPIs reais (KPI de
+  alertas usa **`alertasAtivos`**, coerente com Dashboard e tela de Alertas), situação por unidade,
+  filas de alertas/recomendações com nomes denormalizados; estados carregando/erro/vazio; ações de
+  decisão linkam para `/alertas` e `/recomendacoes` (leitura aqui). **Mock removido** (não importa `src/data`).
+- Testes (+5): serviço (`operacional`), hook, página (KPIs, unidades com status pronto, filas, erro).
+
+**✅ Indicadores (`/indicadores`) — concluída:**
+- Contract-check: coberto por **`/indicadores`** (lista com `progresso`/`atingiu`/`variacaoPct`/`historico`
+  **prontos** — o front para de recalcular) + **`/indicadores/resumo`** (KPIs total/atingidas/em progresso).
+  **Sem mudança no backend.** O `lib/indicadores.ts` já existia (da etapa do Dashboard) — só faltava UI.
+- `IndicadoresPage` reescrita: KPIs do resumo, cards por indicador (valor/base/meta + série `TrendChart`
+  + progresso do backend), e o **comparativo piloto × sistema atual (RF-IND-06)** agora usa **dados reais**
+  (baseline × atual × `variacaoPct`), não mais valores hardcoded. `TrendChart` desacoplado de `src/data`
+  (via `fmtPeriodoMes`); saiu o `AiInsight`/`insights`. **Mock removido** (não importa `src/data`).
+- **Decisão de produto:** painel "Coleta e consolidação" (cadência, sem endpoint) mantido como
+  **dados ilustrativos**, marcado na UI e com nota no código.
+- Testes (+6): página (KPIs do resumo, cards com status do backend, comparativo com variação real,
+  marcação de mock, erro da lista e do resumo).
+
+**✅ Relatórios (`/relatorios`) — concluída:**
+- Contract-check: a tela é majoritariamente **demo** (catálogo de relatórios, exportação e marcos OPED
+  **não têm endpoint**). O dado real cabível é a **composição** de `/painel` (totais) + `/indicadores/resumo`.
+  **Sem mudança no backend.** Reaproveita `lib/painel.ts`, `lib/indicadores.ts` e `useUnidades`.
+- `RelatoriosPage` reescrita: novo **Resumo executivo** real (metas atingidas, economia potencial, itens
+  críticos, alertas ativos — de `/painel` + `/indicadores/resumo`), filtro de unidade alimentado por
+  `/unidades`; catálogo de relatórios, exportação (toasts demo) e painel OPED **mantidos e marcados
+  "Dados ilustrativos"**. `TrendChart` já desacoplado de `src/data`. **Mock removido** (não importa `src/data`).
+- Testes (+5): página (resumo executivo composto, filtro de unidade real, marcação de mock, export demo, erro).
+
+> **8 das 12 telas já largaram o `src/data`** (Login + Fases 3–6). Restam mockadas as telas das
+> Fases 7–8 (Ingestão, Integração EMSERH, Segurança/LGPD, Admin de usuários). O mock de `src/data` e
+> os resíduos de `lib/insights.ts`/`status.ts` só são **apagados** quando a última tela migrar (Fase 9).
 
 **Endpoints:** `GET /painel` · `/painel/operacional` · `/indicadores` · `/indicadores/resumo` · `/indicadores/{codigo}`.
 

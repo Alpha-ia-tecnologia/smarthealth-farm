@@ -17,6 +17,8 @@ import type {
   Recomendacao,
   ResumoRecomendacoes,
 } from "@/lib/recomendacoes"
+import type { PainelGerencial, PainelOperacional } from "@/lib/painel"
+import type { Indicador, ResumoIndicadores } from "@/lib/indicadores"
 
 /** Usuário padrão devolvido pelos handlers de sucesso. */
 export const usuarioTeste: Usuario = {
@@ -355,6 +357,163 @@ export const resumoRecomendacoesTeste: ResumoRecomendacoes = {
   total: 2,
 }
 
+/** Indicadores de teste (códigos usados pelo dashboard + lista de indicadores). */
+export const indicadoresTeste: Indicador[] = [
+  {
+    id: "ind-1",
+    codigo: "ind-ruptura",
+    nome: "Taxa de desabastecimento de essenciais",
+    unidade: "%",
+    baseline: 18.4,
+    atual: 11.2,
+    meta: 11.96,
+    metaReducaoPct: 35,
+    melhorMenor: true,
+    progresso: 112,
+    atingiu: true,
+    variacaoPct: -39,
+    historico: [
+      { periodo: "2026-04", valor: 13.1 },
+      { periodo: "2026-05", valor: 11.2 },
+    ],
+  },
+  {
+    id: "ind-2",
+    codigo: "ind-vencimento",
+    nome: "Perdas por vencimento",
+    unidade: "%",
+    baseline: 6.1,
+    atual: 4.3,
+    meta: 4.58,
+    metaReducaoPct: 25,
+    melhorMenor: true,
+    progresso: 118,
+    atingiu: true,
+    variacaoPct: -30,
+    historico: [{ periodo: "2026-05", valor: 4.3 }],
+  },
+  {
+    id: "ind-3",
+    codigo: "ind-emergencial",
+    nome: "Compras emergenciais",
+    unidade: "R$ mil",
+    baseline: 1240,
+    atual: 812,
+    meta: 868,
+    metaReducaoPct: 30,
+    melhorMenor: true,
+    progresso: 115,
+    atingiu: true,
+    variacaoPct: -35,
+    historico: [{ periodo: "2026-05", valor: 812 }],
+  },
+  {
+    id: "ind-4",
+    codigo: "ind-mape",
+    nome: "Assertividade da previsão (MAPE)",
+    unidade: "%",
+    baseline: 22.0,
+    atual: 11.8,
+    meta: 15,
+    metaReducaoPct: 0,
+    melhorMenor: true,
+    progresso: 140,
+    atingiu: true,
+    variacaoPct: -46,
+    historico: [{ periodo: "2026-05", valor: 11.8 }],
+  },
+  {
+    id: "ind-5",
+    codigo: "ind-rupturas-evitadas",
+    nome: "Desabastecimentos evitados (acum.)",
+    unidade: "un",
+    baseline: 0,
+    atual: 147,
+    meta: 120,
+    metaReducaoPct: 0,
+    melhorMenor: false,
+    progresso: 122,
+    atingiu: true,
+    variacaoPct: null,
+    historico: [{ periodo: "2026-05", valor: 147 }],
+  },
+]
+
+export const resumoIndicadoresTeste: ResumoIndicadores = {
+  total: 5,
+  atingidas: 5,
+  emProgresso: 0,
+}
+
+/** Dashboard gerencial de teste — reusa alertas e recomendações já definidos. */
+export const painelGerencialTeste: PainelGerencial = {
+  totais: {
+    medicamentos: 2,
+    unidades: 2,
+    alertasAbertos: 12,
+    alertasAtivos: 15, // abertos(12) + em tratamento(3) = desabastecimento(6) + vencimento(9)
+    alertasDesabastecimento: 6,
+    alertasVencimento: 9,
+    recomendacoesPendentes: 1,
+    economiaPotencial: 10500,
+    itensCriticos: 1,
+    lotesProximosVencimento: 3,
+  },
+  coberturaPorUnidade: [
+    { nome: "HTO", valor: 58, status: "critico" },
+    { nome: "HRI", valor: 86, status: "ok" },
+  ],
+  serieAgregada: {
+    medicamentoId: "med-001",
+    medicamentoCodigo: "MED-001",
+    medicamentoNome: "Ceftriaxona 1g",
+    serie: [
+      { periodo: "2026-04", realizado: 980, previsto: 950, limiteInferior: 900, limiteSuperior: 1000 },
+      { periodo: "2026-05", realizado: 1040, previsto: 1010, limiteInferior: 960, limiteSuperior: 1060 },
+      { periodo: "2026-06", realizado: null, previsto: 1080, limiteInferior: 1020, limiteSuperior: 1140 },
+    ],
+  },
+  alertasRecentes: alertasTeste,
+  recomendacoesPendentes: [recomendacoesTeste[0]],
+}
+
+/** Painel operacional de teste — reusa totais/alertas/recomendações já definidos. */
+export const painelOperacionalTeste: PainelOperacional = {
+  totais: painelGerencialTeste.totais,
+  unidades: [
+    {
+      unidadeId: "uni-hto",
+      sigla: "HTO",
+      nome: "Hospital de Traumatologia e Ortopedia",
+      municipio: "São Luís",
+      conectividade: "Estável",
+      itens: 18,
+      criticos: 5,
+      atencao: 3,
+      alertasAtivos: 7,
+      cobertura: 58,
+      statusCobertura: "critico",
+      statusUnidade: "critico",
+    },
+    {
+      unidadeId: "uni-hri",
+      sigla: "HRI",
+      nome: "Hospital Regional de Imperatriz",
+      municipio: "Imperatriz",
+      conectividade: "Intermitente",
+      itens: 16,
+      criticos: 0,
+      atencao: 2,
+      alertasAtivos: 2,
+      cobertura: 86,
+      statusCobertura: "ok",
+      statusUnidade: "ok",
+    },
+  ],
+  alertasAtivos: alertasTeste,
+  recomendacoesAbertas: recomendacoesTeste,
+}
+
 /** Monta o envelope de sucesso da API (`{ success, data, total? }`). */
 export function ok<T>(data: T, total?: number) {
   return total === undefined
@@ -459,4 +618,16 @@ export const handlers = [
     ),
   ),
   http.get("*/recomendacoes", ({ request }) => HttpResponse.json(paginar(request, recomendacoesTeste))),
+  // Painel — específico antes do genérico (operacional vs. dashboard).
+  http.get("*/painel/operacional", () => HttpResponse.json(ok(painelOperacionalTeste))),
+  http.get("*/painel", () => HttpResponse.json(ok(painelGerencialTeste))),
+  // Indicadores — específicos antes do genérico (resumo e detalhe vs. lista).
+  http.get("*/indicadores/resumo", () => HttpResponse.json(ok(resumoIndicadoresTeste))),
+  http.get("*/indicadores/:codigo", ({ params }) => {
+    const ind = indicadoresTeste.find((i) => i.codigo === params.codigo)
+    return ind
+      ? HttpResponse.json(ok(ind))
+      : HttpResponse.json(erro("Indicador nao encontrado.", "NAO_ENCONTRADO"), { status: 404 })
+  }),
+  http.get("*/indicadores", () => HttpResponse.json(ok(indicadoresTeste, indicadoresTeste.length))),
 ]
