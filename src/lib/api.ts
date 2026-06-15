@@ -9,7 +9,27 @@
 
 import { lerToken } from "./auth-storage"
 
-const API_URL = (import.meta.env.VITE_API_URL ?? "http://localhost:3002/api").replace(/\/$/, "")
+declare global {
+  interface Window {
+    /** Config injetada em runtime pelo container (public/config.js, regenerado no start). */
+    __APP_CONFIG__?: { VITE_API_URL?: string }
+  }
+}
+
+/**
+ * URL base da API, resolvida na seguinte ordem:
+ *   1. `window.__APP_CONFIG__` — injetada em runtime pelo container (config.js gerado a partir
+ *      da env VITE_API_URL no start). Permite trocar a API por ambiente sem reconstruir o bundle.
+ *   2. `import.meta.env.VITE_API_URL` — env de build do Vite (usada em desenvolvimento).
+ *   3. Backend local — fallback.
+ */
+function resolverApiUrl(): string {
+  const runtime = typeof window !== "undefined" ? window.__APP_CONFIG__?.VITE_API_URL : undefined
+  const url = runtime || import.meta.env.VITE_API_URL || "http://localhost:3002/api"
+  return url.replace(/\/$/, "")
+}
+
+const API_URL = resolverApiUrl()
 
 interface ApiEnvelope<T> {
   success: boolean
