@@ -7,7 +7,7 @@ import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
-import { useFontes, useQualidadeFamilias, useResumoIngestao } from "@/hooks/use-ingestao"
+import { useFontes, useQualidadeCategorias, useResumoIngestao } from "@/hooks/use-ingestao"
 import type { StatusFonte } from "@/lib/ingestao"
 import { fmtNum, fmtDataHora } from "@/lib/format"
 import type { StatusKey } from "@/lib/status"
@@ -44,7 +44,7 @@ const linhaBase = [
 export default function IngestaoPage() {
   const resumoQuery = useResumoIngestao()
   const fontesQuery = useFontes()
-  const qualidadeQuery = useQualidadeFamilias()
+  const qualidadeQuery = useQualidadeCategorias()
 
   const resumo = resumoQuery.data
 
@@ -107,7 +107,7 @@ export default function IngestaoPage() {
         </Section>
 
         {/* Sazonalidade epidemiológica (RF-DAD-05) — sem endpoint, demonstrativo */}
-        <Section className="lg:col-span-2 h-fit" title="Sazonalidade epidemiológica local" info="Mostra as épocas do ano em que doenças comuns na região aumentam. Esses períodos ajudam a prever a demanda por medicamentos." description="Variáveis que enriquecem a base preditiva." icon={<Thermometer className="size-4" />} action={BADGE_ILUSTRATIVO}>
+        <Section className="lg:col-span-2 h-fit" title="Sazonalidade epidemiológica local" info="Mostra as épocas do ano em que doenças comuns na região aumentam. Esses períodos ajudam a prever a demanda por insumos." description="Variáveis que enriquecem a base preditiva." icon={<Thermometer className="size-4" />} action={BADGE_ILUSTRATIVO}>
           <div className="space-y-4">
             {epidemias.map((e) => (
               <div key={e.nome}>
@@ -125,20 +125,20 @@ export default function IngestaoPage() {
         </Section>
       </div>
 
-      {/* Qualidade por família (RF-DAD-04) — vinda de /ingestao/qualidade */}
-      <Section title="Maturidade e qualidade por família terapêutica" info="Avalia a confiabilidade dos dados separados por grupo de medicamentos, apontando onde há informações faltando ou incompletas." description="Classificação da base histórica, sinalizando lacunas e granularidade.">
+      {/* Qualidade por categoria (RF-DAD-04) — vinda de /ingestao/qualidade */}
+      <Section title="Maturidade e qualidade por categoria de insumo" info="Avalia a confiabilidade dos dados separados por grupo de insumos, apontando onde há informações faltando ou incompletas." description="Classificação da base histórica, sinalizando lacunas e granularidade.">
         {qualidadeQuery.isError ? (
-          <ErroConsulta mensagem="Não foi possível carregar a qualidade por família." onTentarNovamente={() => qualidadeQuery.refetch()} />
+          <ErroConsulta mensagem="Não foi possível carregar a qualidade por categoria." onTentarNovamente={() => qualidadeQuery.refetch()} />
         ) : qualidadeQuery.isPending ? (
           <div className="flex justify-center py-12"><Spinner size={40} label="Carregando qualidade" /></div>
         ) : qualidadeQuery.data.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma família avaliada.</p>
+          <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma categoria avaliada.</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {qualidadeQuery.data.map((q) => (
               <div key={q.id} className="rounded-xl border p-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">{q.familia}</p>
+                  <p className="text-sm font-semibold">{q.categoria}</p>
                   <Badge variant="outline" className="text-[10px]">{q.granularidade}</Badge>
                 </div>
                 <div className="mt-3 space-y-2">
@@ -173,7 +173,7 @@ function Cabecalho() {
     <PageHeader
       icon={<DatabaseZap className="size-5" />}
       title="Ingestão, Tratamento e Anonimização"
-      info="Tela onde os dados de consumo e distribuição de medicamentos são importados de vários sistemas, padronizados, limpos e têm os dados pessoais protegidos antes do uso."
+      info="Tela onde os dados de consumo e distribuição de insumos são importados de vários sistemas, padronizados, limpos e têm os dados pessoais protegidos antes do uso."
       description="Coleta e padronização das séries históricas de consumo e dispensação de fontes heterogêneas, com anonimização LGPD e enriquecimento epidemiológico."
     />
   )

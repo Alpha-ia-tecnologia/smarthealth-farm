@@ -5,7 +5,7 @@
 // "Admin" é superusuário: acumula os poderes de Gestor e TI (ver src/lib/permissoes.ts).
 export type PerfilUsuario = "Operador" | "Gestor" | "TI" | "Admin"
 
-export type FamiliaTerapeutica =
+export type CategoriaInsumo =
   | "Antibióticos"
   | "Analgésicos"
   | "Antivirais"
@@ -29,13 +29,13 @@ export interface Unidade {
   ativo: boolean
 }
 
-// Espelha o MedicamentoResponse do backend (RF-DAD-06).
-export interface Medicamento {
+// Espelha o InsumoResponse do backend (RF-DAD-06).
+export interface Insumo {
   id: string
-  codigo: string // código de negócio (MED-NNN)
+  codigo: string // código de negócio (INS-NNN)
   nome: string
   apresentacao: string
-  familia: FamiliaTerapeutica
+  categoria: CategoriaInsumo
   unidadeMedida: string
   criticidade: "Alta" | "Média" | "Baixa"
   essencial: boolean

@@ -78,7 +78,7 @@ export function ConfirmarAcaoRecomendacaoDialog({
             <span className="tabular text-xs text-success">economia {fmtMoeda(r.economiaEstimada)}</span>
           </div>
           <p className="text-muted-foreground">
-            {r.medicamentoNome} <span className="text-xs">({r.medicamentoCodigo})</span>
+            {r.insumoNome} <span className="text-xs">({r.insumoCodigo})</span>
           </p>
           <div className="flex flex-wrap items-center gap-1.5 text-xs">
             {r.unidadeOrigemSigla ? (

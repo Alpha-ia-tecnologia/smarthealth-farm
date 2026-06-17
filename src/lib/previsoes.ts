@@ -20,9 +20,9 @@ export interface PontoSerie {
 /** Linha da tabela de previsões (RF-PRV-01) — tudo denormalizado pelo backend. */
 export interface Previsao {
   id: string
-  medicamentoId: string
-  medicamentoCodigo: string
-  medicamentoNome: string
+  insumoId: string
+  insumoCodigo: string
+  insumoNome: string
   criticidade: Criticidade
   unidadeId: string
   unidadeSigla: string
@@ -59,26 +59,26 @@ export interface Recalibracao {
 
 export interface PrevisaoFiltros {
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
   drift?: Drift
   busca?: string
 }
 
 export const previsoesApi = {
-  /** GET /previsoes — paginado (ordenado por medicamento) com filtros opcionais (rótulos pt-BR). */
+  /** GET /previsoes — paginado (ordenado por insumo) com filtros opcionais (rótulos pt-BR). */
   listar: (
     filtros: PrevisaoFiltros = {},
     paginacao: ParamsPaginacao = {},
   ): Promise<Pagina<Previsao>> =>
     api.getPagina<Previsao>(`/previsoes${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
-  /** GET /previsoes/resumo — KPIs do painel (filtros opcionais por unidade/medicamento). */
+  /** GET /previsoes/resumo — KPIs do painel (filtros opcionais por unidade/insumo). */
   resumo: (filtros: FiltrosResumo = {}) =>
     api.get<ResumoPrevisao>(`/previsoes/resumo${montarQuery({ ...filtros })}`),
 
-  /** GET /previsoes/{medicamentoId}/{unidadeId} — série temporal completa do item. */
-  detalhar: (medicamentoId: string, unidadeId: string) =>
-    api.get<PrevisaoDetalhe>(`/previsoes/${medicamentoId}/${unidadeId}`),
+  /** GET /previsoes/{insumoId}/{unidadeId} — série temporal completa do item. */
+  detalhar: (insumoId: string, unidadeId: string) =>
+    api.get<PrevisaoDetalhe>(`/previsoes/${insumoId}/${unidadeId}`),
 
   /** POST /previsoes/recalibrar — recalibra os modelos e estabiliza drift (Gestor; auditado). */
   recalibrar: () => api.post<Recalibracao>("/previsoes/recalibrar"),

@@ -100,8 +100,8 @@ describe("PrevisaoPage", () => {
 
     let detalhePedido: string | null = null
     server.use(
-      http.get("*/previsoes/:medicamentoId/:unidadeId", ({ params }) => {
-        detalhePedido = `${params.medicamentoId}/${params.unidadeId}`
+      http.get("*/previsoes/:insumoId/:unidadeId", ({ params }) => {
+        detalhePedido = `${params.insumoId}/${params.unidadeId}`
         return HttpResponse.json(ok(detalhePrevisaoTeste))
       }),
     )
@@ -111,8 +111,8 @@ describe("PrevisaoPage", () => {
     await usuario.click(screen.getByRole("row", { name: /Dipirona 500mg\/mL/ }))
     // O handler do clique disparou o scroll…
     expect(scrollSpy).toHaveBeenCalled()
-    // …e o detalhe passa a ser pedido para a linha clicada (med-002/uni-hri).
-    await waitFor(() => expect(detalhePedido).toBe("med-002/uni-hri"))
+    // …e o detalhe passa a ser pedido para a linha clicada (ins-002/uni-hri).
+    await waitFor(() => expect(detalhePedido).toBe("ins-002/uni-hri"))
   })
 
   it("pagina no servidor: a lista envia page/size na requisição", async () => {

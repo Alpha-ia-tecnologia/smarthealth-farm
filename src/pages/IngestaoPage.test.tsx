@@ -24,7 +24,7 @@ describe("IngestaoPage", () => {
     expect(screen.getByText("Vigilância Epidemiológica")).toBeInTheDocument()
   })
 
-  it("mostra a qualidade por família terapêutica", async () => {
+  it("mostra a qualidade por categoria de insumo", async () => {
     renderIngestao()
     expect(await screen.findByText("Antibióticos")).toBeInTheDocument()
     expect(screen.getByText("Analgésicos")).toBeInTheDocument()

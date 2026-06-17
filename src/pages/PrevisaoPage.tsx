@@ -8,7 +8,7 @@ import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
-import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
+import { BarraFiltros, FiltroInsumo, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ForecastChart } from "@/components/charts/ForecastChart"
 import { Badge } from "@/components/ui/badge"
@@ -39,10 +39,10 @@ const driftStatus: Record<Previsao["drift"], StatusKey> = {
 
 /** Coluna da tabela (id) → campo de ordenação no backend. */
 const ORDENACAO_BACKEND: Record<string, string> = {
-  medicamentoNome: "medicamento.nome",
+  insumoNome: "insumo.nome",
   unidadeSigla: "unidade.sigla",
   mape: "mape",
-  criticidade: "medicamento.criticidade",
+  criticidade: "insumo.criticidade",
   drift: "drift",
 }
 
@@ -74,13 +74,13 @@ export default function PrevisaoPage() {
   const ehGestor = podeGerir(perfil)
 
   // Guarda só a chave do item escolhido; a linha é derivada da página (default: a primeira).
-  const [selKey, setSelKey] = useState<{ medicamentoId: string; unidadeId: string } | null>(null)
+  const [selKey, setSelKey] = useState<{ insumoId: string; unidadeId: string } | null>(null)
   // Referência ao gráfico de topo: ao clicar numa linha, rolamos até ele (o gráfico troca de item).
   const graficoRef = useRef<HTMLDivElement>(null)
 
-  // Filtros (unidade + medicamento) — repassados ao backend, que já os aceita.
+  // Filtros (unidade + insumo) — repassados ao backend, que já os aceita.
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
-  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+  const [insumoId, setInsumoId] = useState<string | undefined>(undefined)
   // Filtro de status do desvio do modelo (drift), isolado na tabela de previsões.
   const [drift, setDrift] = useState<string | undefined>(undefined)
 
@@ -92,9 +92,9 @@ export default function PrevisaoPage() {
   const buscaDebounced = useDebounce(busca, 350)
 
   const ordenacao = sorting[0]
-  const resumoQuery = useResumoPrevisao({ unidadeId, medicamentoId })
+  const resumoQuery = useResumoPrevisao({ unidadeId, insumoId })
   const previsoesQuery = usePrevisoes(
-    { unidadeId, medicamentoId, drift: drift as Previsao["drift"] | undefined, busca: buscaDebounced || undefined },
+    { unidadeId, insumoId, drift: drift as Previsao["drift"] | undefined, busca: buscaDebounced || undefined },
     {
       pagina,
       tamanho,
@@ -108,8 +108,8 @@ export default function PrevisaoPage() {
     setUnidadeId(v)
     setPagina(0)
   }
-  function aoFiltrarMedicamento(v: string | undefined) {
-    setMedicamentoId(v)
+  function aoFiltrarInsumo(v: string | undefined) {
+    setInsumoId(v)
     setPagina(0)
   }
   function aoFiltrarDrift(v: string | undefined) {
@@ -118,8 +118,8 @@ export default function PrevisaoPage() {
   }
 
   /** Seleciona o item e rola até o gráfico de topo, deixando claro que ele reflete o clique. */
-  function selecionarItem(medicamentoId: string, unidadeId: string) {
-    setSelKey({ medicamentoId, unidadeId })
+  function selecionarItem(insumoId: string, unidadeId: string) {
+    setSelKey({ insumoId, unidadeId })
     const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
     graficoRef.current?.scrollIntoView({ behavior: reduzir ? "auto" : "smooth", block: "start" })
   }
@@ -129,10 +129,10 @@ export default function PrevisaoPage() {
   const sel: Previsao | null =
     itens && itens.length > 0
       ? itens.find(
-          (p) => p.medicamentoId === selKey?.medicamentoId && p.unidadeId === selKey?.unidadeId,
+          (p) => p.insumoId === selKey?.insumoId && p.unidadeId === selKey?.unidadeId,
         ) ?? itens[0]
       : null
-  const detalheQuery = usePrevisaoDetalhe(sel?.medicamentoId, sel?.unidadeId)
+  const detalheQuery = usePrevisaoDetalhe(sel?.insumoId, sel?.unidadeId)
 
   const servidorPrevisoes: ControleServidor = {
     paginaAtual: pagina,
@@ -164,12 +164,12 @@ export default function PrevisaoPage() {
 
   const columns: ColumnDef<Previsao>[] = [
     {
-      accessorKey: "medicamentoNome",
-      header: "Medicamento",
+      accessorKey: "insumoNome",
+      header: "Insumo",
       cell: ({ row }) => (
         <span className="flex flex-col">
-          <span className="font-medium leading-tight">{row.original.medicamentoNome}</span>
-          <span className="text-xs text-muted-foreground">{row.original.medicamentoCodigo}</span>
+          <span className="font-medium leading-tight">{row.original.insumoNome}</span>
+          <span className="text-xs text-muted-foreground">{row.original.insumoCodigo}</span>
         </span>
       ),
     },
@@ -216,8 +216,8 @@ export default function PrevisaoPage() {
       <PageHeader
         icon={<TrendingUp className="size-5" />}
         title="Previsão de Demanda"
-        info="Estima quanto de cada medicamento será consumido em cada unidade nos próximos meses. A assertividade é medida pelo erro MAPE (meta: abaixo de 15% nos itens de maior criticidade). Quanto melhor a previsão, menos faltas e menos desperdício."
-        description="Estima a demanda futura por medicamento, unidade e horizonte, com assertividade aferida (meta de erro MAPE < 15% nos itens de maior criticidade)."
+        info="Estima quanto de cada insumo será consumido em cada unidade nos próximos meses. A assertividade é medida pelo erro MAPE (meta: abaixo de 15% nos itens de maior criticidade). Quanto melhor a previsão, menos faltas e menos desperdício."
+        description="Estima a demanda futura por insumo, unidade e horizonte, com assertividade aferida (meta de erro MAPE < 15% nos itens de maior criticidade)."
         actions={
           ehGestor && (
             <Button variant="outline" disabled={recalibrar.isPending} onClick={aoRecalibrar}>
@@ -230,7 +230,7 @@ export default function PrevisaoPage() {
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={aoFiltrarUnidade} />
-        <FiltroMedicamento valor={medicamentoId} onChange={aoFiltrarMedicamento} unidadeId={unidadeId} />
+        <FiltroInsumo valor={insumoId} onChange={aoFiltrarInsumo} unidadeId={unidadeId} />
       </BarraFiltros>
 
       {/* KPIs */}
@@ -242,8 +242,8 @@ export default function PrevisaoPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard label="Erro médio (MAPE)" value={resumoQuery.data ? fmtPct(resumoQuery.data.mapeMedio) : ""} carregando={resumoQuery.isPending} icon={Target} accent="success" hint="alvo < 15%" info="Erro médio das previsões: o quanto, em média, elas erram para mais ou para menos. Quanto menor, melhor — o alvo é ficar abaixo de 15%." />
-          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" info="Quantos dos medicamentos de maior criticidade já estão com a previsão dentro da meta de erro (abaixo de 15%)." />
-          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" info="Total de previsões geradas automaticamente e em uso no momento, uma para cada combinação de medicamento e unidade." />
+          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" info="Quantos dos insumos de maior criticidade já estão com a previsão dentro da meta de erro (abaixo de 15%)." />
+          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" info="Total de previsões geradas automaticamente e em uso no momento, uma para cada combinação de insumo e unidade." />
           <KpiCard label="Itens com desvio" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensComDesvio) : ""} carregando={resumoQuery.isPending} icon={GitBranch} accent={resumoQuery.data?.itensComDesvio ? "warning" : "success"} hint="monitoramento contínuo" info="Itens cujo consumo recente se afastou do que o modelo previa (desvio). Sinalizam que a previsão pode precisar de recalibração." />
         </div>
       )}
@@ -258,7 +258,7 @@ export default function PrevisaoPage() {
           <Spinner size={40} label="Carregando previsões" />
         </div>
       ) : previsoesQuery.data.itens.length === 0 ? (
-        <Section title="Previsões por item e unidade" info="Lista todas as previsões por medicamento e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa.">
+        <Section title="Previsões por item e unidade" info="Lista todas as previsões por insumo e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa.">
           <p className="py-10 text-center text-sm text-muted-foreground">
             Nenhuma previsão disponível no momento.
           </p>
@@ -268,7 +268,7 @@ export default function PrevisaoPage() {
           <div className={cn("grid gap-6", MOSTRAR_COMPOSICAO && "lg:grid-cols-5")}>
             <div ref={graficoRef} className={cn("scroll-mt-4", MOSTRAR_COMPOSICAO && "lg:col-span-3")}>
             <Section
-              title={sel ? `Previsão — ${sel.medicamentoNome}` : "Previsão"}
+              title={sel ? `Previsão — ${sel.insumoNome}` : "Previsão"}
               info="Série temporal do item selecionado: consumo histórico, previsão e projeção futura. Selecione uma linha na tabela abaixo para trocar o item."
               description={sel ? `${sel.unidadeNome} · horizonte de ${sel.horizonteMeses} meses` : undefined}
               action={sel && <Badge variant="outline" className="font-mono text-[10px]">{sel.modelo}</Badge>}
@@ -371,7 +371,7 @@ export default function PrevisaoPage() {
 
           <Section
             title="Previsões por item e unidade"
-            info="Lista todas as previsões por medicamento e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa."
+            info="Lista todas as previsões por insumo e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa."
             description="Selecione uma linha para visualizar a série completa. Itens de maior criticidade destacados."
             action={
               <SelectFiltro
@@ -387,9 +387,9 @@ export default function PrevisaoPage() {
               <DataTable
                 columns={columns}
                 data={previsoesQuery.data.itens}
-                searchKey="medicamentoNome"
-                searchPlaceholder="Buscar medicamento ou unidade…"
-                onRowClick={(r) => selecionarItem(r.medicamentoId, r.unidadeId)}
+                searchKey="insumoNome"
+                searchPlaceholder="Buscar insumo ou unidade…"
+                onRowClick={(r) => selecionarItem(r.insumoId, r.unidadeId)}
                 dense
                 servidor={servidorPrevisoes}
               />

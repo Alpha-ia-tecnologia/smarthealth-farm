@@ -17,7 +17,7 @@ import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
-import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
+import { BarraFiltros, FiltroInsumo, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import {
   ConfirmarAcaoRecomendacaoDialog,
@@ -99,8 +99,8 @@ function RecCard({
         </div>
 
         <div className="flex items-center gap-2 text-sm">
-          <Badge variant="outline" className="shrink-0 font-mono text-[10px]">{r.medicamentoCodigo}</Badge>
-          <span className="font-medium leading-tight">{r.medicamentoNome}</span>
+          <Badge variant="outline" className="shrink-0 font-mono text-[10px]">{r.insumoCodigo}</Badge>
+          <span className="font-medium leading-tight">{r.insumoNome}</span>
         </div>
 
         {/* Fluxo de movimentação como subtítulo limpo */}
@@ -198,17 +198,17 @@ export default function RecomendacoesPage() {
   const [filtroTipo, setFiltroTipo] = useState<"todas" | TipoRecomendacao>("todas")
   const [filtroStatus, setFiltroStatus] = useState<string | undefined>(undefined)
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
-  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+  const [insumoId, setInsumoId] = useState<string | undefined>(undefined)
   const [pagina, setPagina] = useState(0)
   const [tamanho, setTamanho] = useState(TAMANHO_PAGINA_PADRAO)
 
-  const resumoQuery = useResumoRecomendacoes({ unidadeId, medicamentoId })
+  const resumoQuery = useResumoRecomendacoes({ unidadeId, insumoId })
   const recomendacoesQuery = useRecomendacoes(
     {
       tipo: filtroTipo === "todas" ? undefined : filtroTipo,
       status: filtroStatus as StatusRecomendacao | undefined,
       unidadeId,
-      medicamentoId,
+      insumoId,
     },
     { pagina, tamanho },
   )
@@ -222,8 +222,8 @@ export default function RecomendacoesPage() {
     setUnidadeId(v)
     setPagina(0)
   }
-  function aoFiltrarMedicamento(v: string | undefined) {
-    setMedicamentoId(v)
+  function aoFiltrarInsumo(v: string | undefined) {
+    setInsumoId(v)
     setPagina(0)
   }
 
@@ -307,7 +307,7 @@ export default function RecomendacoesPage() {
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={aoFiltrarUnidade} />
-        <FiltroMedicamento valor={medicamentoId} onChange={aoFiltrarMedicamento} unidadeId={unidadeId} />
+        <FiltroInsumo valor={insumoId} onChange={aoFiltrarInsumo} unidadeId={unidadeId} />
         <SelectFiltro
           label="Status"
           valor={filtroStatus}

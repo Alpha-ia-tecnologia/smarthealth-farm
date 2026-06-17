@@ -76,9 +76,9 @@ export default function DashboardPage() {
       {/* KPIs — sem filtro: indicadores do edital (rede). Com unidade: operacionais da unidade. */}
       {unidadeId ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Itens críticos" value={painel ? fmtNum(painel.totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Medicamentos com estoque abaixo do nível seguro nesta unidade — risco de faltar." />
+          <KpiCard label="Itens críticos" value={painel ? fmtNum(painel.totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Insumos com estoque abaixo do nível seguro nesta unidade — risco de faltar." />
           <KpiCard label="Alertas ativos" value={painel ? fmtNum(painel.totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Avisos de risco ainda não resolvidos nesta unidade (abertos somados aos em tratamento)." />
-          <KpiCard label="Risco de vencimento" value={painel ? fmtNum(painel.totais.alertasVencimento) : ""} carregando={painelQuery.isPending} icon={CalendarClock} accent="warning" info="Medicamentos com lotes perto da validade nesta unidade, que precisam de uso ou remanejamento." />
+          <KpiCard label="Risco de vencimento" value={painel ? fmtNum(painel.totais.alertasVencimento) : ""} carregando={painelQuery.isPending} icon={CalendarClock} accent="warning" info="Insumos com lotes perto da validade nesta unidade, que precisam de uso ou remanejamento." />
           <KpiCard label="Economia potencial" value={painel ? fmtMoeda(painel.totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="success" info="Quanto a unidade pode economizar seguindo as recomendações em aberto (compra programada sai mais barata que a de urgência)." />
         </div>
       ) : indicadoresQuery.isError ? (
@@ -106,7 +106,7 @@ export default function DashboardPage() {
             accent="warning"
             delta={vencimento ? deltaIndicador(vencimento) : undefined}
             hint={vencimento ? `meta −${vencimento.metaReducaoPct}% · base ${fmtPct(vencimento.baseline)}` : undefined}
-            info="Percentual de medicamentos descartados por terem vencido antes de serem usados. Comprar e distribuir na medida certa reduz esse desperdício."
+            info="Percentual de insumos descartados por terem vencido antes de serem usados. Comprar e distribuir na medida certa reduz esse desperdício."
           />
           <KpiCard
             label="Compras emergenciais"
@@ -135,7 +135,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Section
           className="lg:col-span-2"
-          title={painel ? `Demanda × Previsão — ${painel.serieAgregada.medicamentoNome} (rede)` : "Demanda × Previsão (rede)"}
+          title={painel ? `Demanda × Previsão — ${painel.serieAgregada.insumoNome} (rede)` : "Demanda × Previsão (rede)"}
           description="Comparativo entre consumo realizado e previsto, com projeção de 3 meses."
           info="Compara o consumo já realizado (histórico) com o previsto pelo modelo e projeta os próximos meses, ajudando a antecipar quanto será necessário."
           action={<Badge variant="outline" className="text-[10px]">Modelo preditivo híbrido</Badge>}
@@ -254,7 +254,7 @@ export default function DashboardPage() {
                     </Badge>
                     <span className="tabular text-xs font-semibold text-success">{fmtMoeda(r.economiaEstimada)}</span>
                   </div>
-                  <div className="mt-1.5 text-sm font-medium">{r.medicamentoNome}</div>
+                  <div className="mt-1.5 text-sm font-medium">{r.insumoNome}</div>
                   <p className="mt-1 text-xs text-muted-foreground">{r.justificativa}</p>
                 </li>
               ))}

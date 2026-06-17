@@ -24,7 +24,7 @@ describe("EstoquePage", () => {
     const muitas = Array.from({ length: 25 }, (_, i) => ({
       ...posicoesTeste[0],
       id: `pos-${i}`,
-      medicamentoNome: `Pos ${i}`,
+      insumoNome: `Pos ${i}`,
     }))
     server.use(http.get("*/estoque", ({ request }) => HttpResponse.json(paginar(request, muitas))))
 
@@ -41,7 +41,7 @@ describe("EstoquePage", () => {
     const muitas = Array.from({ length: 25 }, (_, i) => ({
       ...posicoesTeste[0],
       id: `pos-${i}`,
-      medicamentoNome: `Pos ${i}`,
+      insumoNome: `Pos ${i}`,
     }))
     server.use(http.get("*/estoque", ({ request }) => HttpResponse.json(paginar(request, muitas))))
 
@@ -62,7 +62,7 @@ describe("EstoquePage", () => {
       ...lotesTeste[0],
       id: `lote-${i}`,
       numeroLote: `LT-${i}`,
-      medicamentoNome: `Med ${i}`,
+      insumoNome: `Med ${i}`,
       diasParaVencer: i + 1,
     }))
     server.use(http.get("*/lotes", ({ request }) => HttpResponse.json(paginar(request, muitos))))

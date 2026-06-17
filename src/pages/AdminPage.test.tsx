@@ -79,11 +79,11 @@ describe("AdminPage", () => {
     expect(await screen.findByText("Unidade criada.")).toBeInTheDocument()
   }, 30000)
 
-  it("aba Cadastros abre o modal de itens da família ao clicar nela", async () => {
+  it("aba Cadastros abre o modal de itens da categoria ao clicar nela", async () => {
     const { usuario } = renderAdmin()
     await usuario.click(await screen.findByRole("tab", { name: /Cadastros/ }))
     await usuario.click(await screen.findByRole("button", { name: /Antibióticos/ }))
-    // O item da família (Ceftriaxona) aparece no modal.
+    // O item da categoria (Ceftriaxona) aparece no modal.
     expect(await screen.findByText("Ceftriaxona 1g")).toBeInTheDocument()
   })
 })

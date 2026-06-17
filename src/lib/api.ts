@@ -122,17 +122,17 @@ export interface Pagina<T> {
   total: number
 }
 
-/** Filtros comuns dos endpoints de resumo (KPIs): unidade e medicamento opcionais. */
+/** Filtros comuns dos endpoints de resumo (KPIs): unidade e insumo opcionais. */
 export interface FiltrosResumo {
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
 }
 
 /** Parâmetros de paginação/ordenação enviados ao servidor (página base 0). */
 export interface ParamsPaginacao {
   pagina?: number
   tamanho?: number
-  /** Campo de ordenação no formato do backend (ex.: "quantidade", "medicamento.nome"). */
+  /** Campo de ordenação no formato do backend (ex.: "quantidade", "insumo.nome"). */
   ordenarPor?: string
   ordem?: "asc" | "desc"
 }

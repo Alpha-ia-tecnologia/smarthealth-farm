@@ -26,16 +26,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { UsuarioFormDialog } from "@/components/admin/UsuarioFormDialog"
 import { RedefinirSenhaDialog } from "@/components/admin/RedefinirSenhaDialog"
 import { UnidadeFormDialog } from "@/components/admin/UnidadeFormDialog"
-import { MedicamentoFormDialog } from "@/components/admin/MedicamentoFormDialog"
-import { ItensFamiliaDialog } from "@/components/admin/ItensFamiliaDialog"
+import { InsumoFormDialog } from "@/components/admin/InsumoFormDialog"
+import { ItensCategoriaDialog } from "@/components/admin/ItensCategoriaDialog"
 import { useAlterarStatusUsuario, useUsuarios } from "@/hooks/use-usuarios"
 import { useAlterarStatusUnidade, useUnidades } from "@/hooks/use-unidades"
-import { useMedicamentos } from "@/hooks/use-medicamentos"
+import { useInsumos } from "@/hooks/use-insumos"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useAuth } from "@/context/auth"
-import { familiasTerapeuticas } from "@/lib/medicamentos"
+import { categoriasInsumo } from "@/lib/insumos"
 import { ApiError } from "@/lib/api"
-import type { FamiliaTerapeutica, PerfilUsuario, Unidade, Usuario } from "@/types"
+import type { CategoriaInsumo, PerfilUsuario, Unidade, Usuario } from "@/types"
 import { fmtNum, fmtDataHora } from "@/lib/format"
 
 /** Painel sem endpoint — sinaliza conteúdo demonstrativo. */
@@ -56,8 +56,8 @@ export default function AdminPage() {
       <PageHeader
         icon={<Settings2 className="size-5" />}
         title="Administração e Gestão de Usuários"
-        info="Área para administrar o sistema: criar e gerenciar usuários e seus perfis de acesso, cadastrar as unidades de saúde, manter o catálogo de medicamentos e ajustar as configurações gerais da plataforma."
-        description="Autenticação, perfis de acesso, cadastro de unidades, itens e famílias terapêuticas, e parametrização institucional."
+        info="Área para administrar o sistema: criar e gerenciar usuários e seus perfis de acesso, cadastrar as unidades de saúde, manter o catálogo de insumos e ajustar as configurações gerais da plataforma."
+        description="Autenticação, perfis de acesso, cadastro de unidades, itens e categorias terapêuticas, e parametrização institucional."
       />
       <KpisAdmin />
       <Tabs defaultValue="usuarios">
@@ -87,7 +87,7 @@ export default function AdminPage() {
 function KpisAdmin() {
   const usuarios = useUsuarios()
   const unidades = useUnidades({ ativo: true })
-  const medicamentos = useMedicamentos({ ativo: true })
+  const insumos = useInsumos({ ativo: true })
 
   const lista = usuarios.data ?? []
   const ativos = lista.filter((u) => u.ativo).length
@@ -96,8 +96,8 @@ function KpisAdmin() {
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard label="Usuários ativos" value={usuarios.data ? `${ativos}/${lista.length}` : ""} carregando={usuarios.isPending} icon={Users} accent="primary" info="Quantos usuários estão habilitados a acessar o sistema, em relação ao total cadastrado. Usuários inativos não conseguem entrar." />
       <KpiCard label="Unidades cadastradas" value={unidades.data ? fmtNum(unidades.data.length) : ""} carregando={unidades.isPending} icon={Building2} accent="teal" info="Número de unidades de saúde (hospitais e estabelecimentos da rede) registradas e ativas no sistema." />
-      <KpiCard label="Itens no catálogo" value={medicamentos.data ? fmtNum(medicamentos.data.length) : ""} carregando={medicamentos.isPending} icon={Boxes} accent="primary" info="Total de medicamentos ativos cadastrados no catálogo da instituição." />
-      <KpiCard label="Famílias terapêuticas" value={fmtNum(familiasTerapeuticas.length)} icon={SlidersHorizontal} accent="teal" info="Quantos grupos de medicamentos com finalidade semelhante (por exemplo, antibióticos ou analgésicos) existem para organizar o catálogo." />
+      <KpiCard label="Itens no catálogo" value={insumos.data ? fmtNum(insumos.data.length) : ""} carregando={insumos.isPending} icon={Boxes} accent="primary" info="Total de insumos ativos cadastrados no catálogo da instituição." />
+      <KpiCard label="Categorias de insumo" value={fmtNum(categoriasInsumo.length)} icon={SlidersHorizontal} accent="teal" info="Quantos grupos de insumos com finalidade semelhante (por exemplo, antibióticos ou analgésicos) existem para organizar o catálogo." />
     </div>
   )
 }
@@ -288,16 +288,16 @@ function AbaUsuarios() {
   )
 }
 
-/** Cadastros do catálogo (RF-DAD-06, perfil TI): CRUD de unidades e de medicamentos por família. */
+/** Cadastros do catálogo (RF-DAD-06, perfil TI): CRUD de unidades e de insumos por categoria. */
 function AbaCadastros() {
   const unidades = useUnidades()
-  const medicamentos = useMedicamentos()
+  const insumos = useInsumos()
   const alterarStatusUnidade = useAlterarStatusUnidade()
 
   const [criandoUnidade, setCriandoUnidade] = useState(false)
   const [editandoUnidade, setEditandoUnidade] = useState<Unidade | null>(null)
-  const [criandoMedicamento, setCriandoMedicamento] = useState(false)
-  const [familiaAberta, setFamiliaAberta] = useState<FamiliaTerapeutica | null>(null)
+  const [criandoInsumo, setCriandoInsumo] = useState(false)
+  const [categoriaAberta, setCategoriaAberta] = useState<CategoriaInsumo | null>(null)
 
   function aoAlterarStatusUnidade(u: Unidade) {
     alterarStatusUnidade.mutate(
@@ -361,31 +361,31 @@ function AbaCadastros() {
       </Section>
 
       <Section
-        title="Famílias terapêuticas & itens"
-        info="Catálogo de medicamentos organizado por família (grupos de remédios com finalidade parecida). Clique numa família para ver e gerenciar os medicamentos dela, ou use o botão para cadastrar um novo item."
-        description="Clique numa família para ver e gerenciar os itens."
+        title="Categorias de insumo & itens"
+        info="Catálogo de insumos organizado por categoria (grupos de remédios com finalidade parecida). Clique numa categoria para ver e gerenciar os insumos dela, ou use o botão para cadastrar um novo item."
+        description="Clique numa categoria para ver e gerenciar os itens."
         action={
-          <Button size="sm" onClick={() => setCriandoMedicamento(true)}>
-            <Plus className="size-4" /> Novo medicamento
+          <Button size="sm" onClick={() => setCriandoInsumo(true)}>
+            <Plus className="size-4" /> Novo insumo
           </Button>
         }
         noPadding
       >
-        {medicamentos.isError ? (
+        {insumos.isError ? (
           <div className="p-5">
-            <ErroConsulta mensagem="Não foi possível carregar o catálogo." onTentarNovamente={() => medicamentos.refetch()} />
+            <ErroConsulta mensagem="Não foi possível carregar o catálogo." onTentarNovamente={() => insumos.refetch()} />
           </div>
-        ) : !medicamentos.data ? (
+        ) : !insumos.data ? (
           <div className="flex justify-center py-12"><Spinner size={32} label="Carregando catálogo" /></div>
         ) : (
           <div className="divide-y">
-            {familiasTerapeuticas.map((f) => {
-              const n = medicamentos.data.filter((m) => m.familia === f).length
+            {categoriasInsumo.map((f) => {
+              const n = insumos.data.filter((m) => m.categoria === f).length
               return (
                 <button
                   key={f}
                   type="button"
-                  onClick={() => setFamiliaAberta(f)}
+                  onClick={() => setCategoriaAberta(f)}
                   className="flex w-full cursor-pointer items-center justify-between px-5 py-3 text-left transition-colors hover:bg-muted/50"
                 >
                   <p className="text-sm font-medium">{f}</p>
@@ -403,11 +403,11 @@ function AbaCadastros() {
         onOpenChange={(aberto) => !aberto && setEditandoUnidade(null)}
         unidade={editandoUnidade}
       />
-      <MedicamentoFormDialog open={criandoMedicamento} onOpenChange={setCriandoMedicamento} />
-      <ItensFamiliaDialog
-        open={familiaAberta !== null}
-        onOpenChange={(aberto) => !aberto && setFamiliaAberta(null)}
-        familia={familiaAberta}
+      <InsumoFormDialog open={criandoInsumo} onOpenChange={setCriandoInsumo} />
+      <ItensCategoriaDialog
+        open={categoriaAberta !== null}
+        onOpenChange={(aberto) => !aberto && setCategoriaAberta(null)}
+        categoria={categoriaAberta}
       />
     </div>
   )

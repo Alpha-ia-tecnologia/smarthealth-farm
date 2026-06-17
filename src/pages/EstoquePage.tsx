@@ -7,7 +7,7 @@ import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
-import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
+import { BarraFiltros, FiltroInsumo, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { Paginacao } from "@/components/shared/Paginacao"
 import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
@@ -30,7 +30,7 @@ import { fmtData, fmtDataHora, fmtNum } from "@/lib/format"
 
 /** Coluna da tabela (id) → campo de ordenação no backend. Status é derivado: não ordenável. */
 const ORDENACAO_BACKEND: Record<string, string> = {
-  medicamentoNome: "medicamento.nome",
+  insumoNome: "insumo.nome",
   unidadeSigla: "unidade.sigla",
   quantidade: "quantidade",
   nivelCritico: "nivelCritico",
@@ -48,9 +48,9 @@ const STATUS_ESTOQUE_OPCOES = [
 export default function EstoquePage() {
   const [sel, setSel] = useState<PosicaoEstoque | null>(null)
 
-  // Filtros compartilhados (unidade + medicamento) e o status isolado da tabela de posições.
+  // Filtros compartilhados (unidade + insumo) e o status isolado da tabela de posições.
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
-  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+  const [insumoId, setInsumoId] = useState<string | undefined>(undefined)
   const [statusEstoque, setStatusEstoque] = useState<string | undefined>(undefined)
 
   // Estado da tabela de posições (paginação/ordenação/busca server-side).
@@ -65,11 +65,11 @@ export default function EstoquePage() {
   const [tamanhoVenc, setTamanhoVenc] = useState(TAMANHO_PAGINA_PADRAO)
 
   const ordenacao = sorting[0]
-  const resumoQuery = useResumoEstoque({ unidadeId, medicamentoId })
+  const resumoQuery = useResumoEstoque({ unidadeId, insumoId })
   const posicoesQuery = usePosicoes(
     {
       unidadeId,
-      medicamentoId,
+      insumoId,
       status: statusEstoque as StatusEstoque | undefined,
       busca: buscaDebounced || undefined,
     },
@@ -81,10 +81,10 @@ export default function EstoquePage() {
     },
   )
   const lotesQuery = useLotes(
-    { comSaldo: true, validadeAteDias: 90, unidadeId, medicamentoId },
+    { comSaldo: true, validadeAteDias: 90, unidadeId, insumoId },
     { pagina: pagVenc, tamanho: tamanhoVenc },
   )
-  const detalheQuery = usePosicaoDetalhe(sel?.medicamentoId, sel?.unidadeId)
+  const detalheQuery = usePosicaoDetalhe(sel?.insumoId, sel?.unidadeId)
 
   /** Mudou um filtro → ambas as listas voltam à primeira página. */
   function aoFiltrarUnidade(v: string | undefined) {
@@ -92,8 +92,8 @@ export default function EstoquePage() {
     setPagina(0)
     setPagVenc(0)
   }
-  function aoFiltrarMedicamento(v: string | undefined) {
-    setMedicamentoId(v)
+  function aoFiltrarInsumo(v: string | undefined) {
+    setInsumoId(v)
     setPagina(0)
     setPagVenc(0)
   }
@@ -104,12 +104,12 @@ export default function EstoquePage() {
 
   const columns: ColumnDef<PosicaoEstoque>[] = [
     {
-      header: "Medicamento",
-      accessorKey: "medicamentoNome",
+      header: "Insumo",
+      accessorKey: "insumoNome",
       cell: ({ row }) => (
         <span className="flex flex-col">
-          <span className="font-medium leading-tight">{row.original.medicamentoNome}</span>
-          <span className="text-xs text-muted-foreground">{row.original.medicamentoCodigo}</span>
+          <span className="font-medium leading-tight">{row.original.insumoNome}</span>
+          <span className="text-xs text-muted-foreground">{row.original.insumoCodigo}</span>
         </span>
       ),
     },
@@ -191,13 +191,13 @@ export default function EstoquePage() {
       <PageHeader
         icon={<Boxes className="size-5" />}
         title="Estoque & Rastreabilidade por Lote"
-        info="Esta tela mostra quanto de cada medicamento existe em cada unidade, permite seguir cada lote (com sua validade) e ver todo o histórico de entradas e saídas. Serve para garantir que nada falte e que nada vença sem ser usado."
+        info="Esta tela mostra quanto de cada insumo existe em cada unidade, permite seguir cada lote (com sua validade) e ver todo o histórico de entradas e saídas. Serve para garantir que nada falte e que nada vença sem ser usado."
         description="Níveis de estoque por unidade, rastreabilidade por lote com controle de validade e histórico de movimentação para auditoria sanitária."
       />
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={aoFiltrarUnidade} />
-        <FiltroMedicamento valor={medicamentoId} onChange={aoFiltrarMedicamento} unidadeId={unidadeId} />
+        <FiltroInsumo valor={insumoId} onChange={aoFiltrarInsumo} unidadeId={unidadeId} />
       </BarraFiltros>
 
       {/* KPIs — cada card mostra um spinner enquanto a API carrega */}
@@ -208,8 +208,8 @@ export default function EstoquePage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Itens abaixo do mínimo" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensCriticos) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos medicamentos estão com estoque abaixo do nível considerado seguro. Esses itens correm risco de acabar e precisam de reposição com prioridade." />
-          <KpiCard label="Lotes próx. do vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.lotesProximosVencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" hint="≤ 60 dias" info="Quantos lotes vão vencer em breve (até 60 dias). Eles devem ser usados ou remanejados antes da validade para evitar desperdício de medicamentos." />
+          <KpiCard label="Itens abaixo do mínimo" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensCriticos) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos insumos estão com estoque abaixo do nível considerado seguro. Esses itens correm risco de acabar e precisam de reposição com prioridade." />
+          <KpiCard label="Lotes próx. do vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.lotesProximosVencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" hint="≤ 60 dias" info="Quantos lotes vão vencer em breve (até 60 dias). Eles devem ser usados ou remanejados antes da validade para evitar desperdício de insumos." />
           <KpiCard label="Tempo médio de ressup." value={resumoQuery.data ? `${resumoQuery.data.tempoMedioRessuprimentoDias} dias` : ""} carregando={resumoQuery.isPending} icon={Clock} accent="teal" info="Em média, quantos dias o estoque leva para ser reposto desde o pedido até a chegada. Quanto maior esse tempo, mais cedo é preciso pedir para não faltar." />
           <KpiCard label="Unidades em estoque" value={resumoQuery.data ? fmtNum(resumoQuery.data.totalUnidadesEstoque) : ""} carregando={resumoQuery.isPending} icon={Layers} accent="primary" info="Quantas unidades hospitalares têm estoque sendo acompanhado por esta plataforma." />
         </div>
@@ -224,7 +224,7 @@ export default function EstoquePage() {
         <TabsContent value="posicoes" className="pt-4">
           <Section
             title="Posição por item e unidade"
-            info="Lista quanto há de cada medicamento em cada unidade, comparado com o estoque mínimo recomendado. A barra colorida indica se o nível está bom, em atenção ou crítico. Clique em uma linha para ver os lotes e a movimentação."
+            info="Lista quanto há de cada insumo em cada unidade, comparado com o estoque mínimo recomendado. A barra colorida indica se o nível está bom, em atenção ou crítico. Clique em uma linha para ver os lotes e a movimentação."
             description="Estoque mínimo calculado a partir da previsão de demanda. Clique para ver os lotes e a movimentação."
             action={
               <SelectFiltro
@@ -250,8 +250,8 @@ export default function EstoquePage() {
                 <DataTable
                   columns={columns}
                   data={posicoesQuery.data.itens}
-                  searchKey="medicamentoNome"
-                  searchPlaceholder="Buscar medicamento ou unidade…"
+                  searchKey="insumoNome"
+                  searchPlaceholder="Buscar insumo ou unidade…"
                   onRowClick={(r) => setSel(r)}
                   dense
                   servidor={servidorPosicoes}
@@ -264,7 +264,7 @@ export default function EstoquePage() {
         <TabsContent value="vencimento" className="pt-4">
           <Section
             title="Lotes próximos do vencimento"
-            info="Mostra os lotes cuja validade vence nos próximos 90 dias, do mais urgente ao menos urgente. Use esta lista para consumir ou redistribuir esses medicamentos antes que estraguem."
+            info="Mostra os lotes cuja validade vence nos próximos 90 dias, do mais urgente ao menos urgente. Use esta lista para consumir ou redistribuir esses insumos antes que estraguem."
             description="Lotes com validade em até 90 dias — priorizados para uso ou redistribuição."
             noPadding
           >
@@ -293,7 +293,7 @@ export default function EstoquePage() {
                       <div key={l.id} className="flex items-center gap-3 px-5 py-3">
                         <span className="font-mono text-xs text-muted-foreground">{l.numeroLote}</span>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium leading-tight">{l.medicamentoNome}</p>
+                          <p className="font-medium leading-tight">{l.insumoNome}</p>
                           <p className="text-xs text-muted-foreground">
                             {l.unidadeSigla} · {l.fabricante} · {fmtNum(l.quantidade)} un
                           </p>
@@ -331,7 +331,7 @@ export default function EstoquePage() {
           {sel && (
             <>
               <DialogHeader>
-                <DialogTitle>{sel.medicamentoNome}</DialogTitle>
+                <DialogTitle>{sel.insumoNome}</DialogTitle>
                 <DialogDescription>
                   {sel.unidadeNome} — rastreabilidade por lote e histórico de movimentação
                 </DialogDescription>

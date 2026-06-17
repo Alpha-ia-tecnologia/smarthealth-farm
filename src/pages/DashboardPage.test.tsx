@@ -18,7 +18,7 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("11,2%")).toBeInTheDocument()
   })
 
-  it("mostra a série agregada com o medicamento mais crítico da rede", async () => {
+  it("mostra a série agregada com o insumo mais crítico da rede", async () => {
     renderDashboard()
     expect(
       await screen.findByText("Demanda × Previsão — Ceftriaxona 1g (rede)"),

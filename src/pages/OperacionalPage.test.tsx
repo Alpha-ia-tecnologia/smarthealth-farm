@@ -31,7 +31,7 @@ describe("OperacionalPage", () => {
     renderOperacional()
     // Alerta de teste (tipo + unidade denormalizada).
     expect(await screen.findByText("Desabastecimento")).toBeInTheDocument()
-    // Recomendação em aberto (medicamento denormalizado).
+    // Recomendação em aberto (insumo denormalizado).
     expect(await screen.findByText("Ceftriaxona 1g")).toBeInTheDocument()
   })
 
