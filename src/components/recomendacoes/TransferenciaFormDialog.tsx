@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useMedicamentos } from "@/hooks/use-medicamentos"
+import { useInsumos } from "@/hooks/use-insumos"
 import { useUnidades } from "@/hooks/use-unidades"
 import { useCriarTransferencia, useEditarRecomendacao } from "@/hooks/use-recomendacoes"
 import { ApiError } from "@/lib/api"
@@ -35,7 +35,7 @@ interface Props {
 
 /**
  * Modal para **criar** uma transferência (redistribuição) entre unidades ou **editar** uma
- * recomendação ainda pendente (ajustar a sugestão da IA): medicamento, origem → destino e
+ * recomendação ainda pendente (ajustar a sugestão da IA): insumo, origem → destino e
  * quantidade. A economia estimada é exibida ao vivo (quantidade × 12) e recalculada no servidor.
  * O formulário vive num componente interno que remonta ao abrir (Radix desmonta ao fechar), então
  * o estado nasce dos dados atuais sem `useEffect`.
@@ -67,19 +67,19 @@ function FormularioTransferencia({
   // Criação é sempre redistribuição; na edição, o tipo da recomendação manda (reposição não tem origem).
   const ehRedistribuicao = recomendacao ? recomendacao.tipo === "Redistribuição" : true
 
-  const medicamentosQuery = useMedicamentos({ ativo: true })
+  const insumosQuery = useInsumos({ ativo: true })
   const unidadesQuery = useUnidades({ ativo: true })
   const criar = useCriarTransferencia()
   const editar = useEditarRecomendacao()
 
-  const [medicamentoId, setMedicamentoId] = useState(recomendacao?.medicamentoId ?? "")
+  const [insumoId, setInsumoId] = useState(recomendacao?.insumoId ?? "")
   const [origemId, setOrigemId] = useState(recomendacao?.unidadeOrigemId ?? "")
   const [destinoId, setDestinoId] = useState(recomendacao?.unidadeDestinoId ?? "")
   const [quantidadeStr, setQuantidadeStr] = useState(
     recomendacao ? String(recomendacao.quantidade) : "",
   )
   const [erros, setErros] = useState<{
-    medicamento?: string
+    insumo?: string
     origem?: string
     destino?: string
     quantidade?: string
@@ -90,12 +90,12 @@ function FormularioTransferencia({
   const economia = economiaManual(quantidadeValida ? quantidade : 0)
   const salvando = criar.isPending || editar.isPending
 
-  const medicamentos = medicamentosQuery.data ?? []
+  const insumos = insumosQuery.data ?? []
   const unidades = (unidadesQuery.data ?? []).filter((u) => u.ativo)
 
   function validar(): boolean {
     const novos: typeof erros = {}
-    if (!medicamentoId) novos.medicamento = "Selecione o medicamento."
+    if (!insumoId) novos.insumo = "Selecione o insumo."
     if (!destinoId) novos.destino = "Selecione a unidade de destino."
     if (ehRedistribuicao) {
       if (!origemId) novos.origem = "Selecione a unidade de origem."
@@ -119,7 +119,7 @@ function FormularioTransferencia({
       editar.mutate(
         {
           id: recomendacao.id,
-          body: { medicamentoId, unidadeOrigemId: origem, unidadeDestinoId: destinoId, quantidade },
+          body: { insumoId, unidadeOrigemId: origem, unidadeDestinoId: destinoId, quantidade },
         },
         {
           onSuccess: () => {
@@ -131,7 +131,7 @@ function FormularioTransferencia({
       )
     } else {
       criar.mutate(
-        { medicamentoId, unidadeOrigemId: origemId, unidadeDestinoId: destinoId, quantidade },
+        { insumoId, unidadeOrigemId: origemId, unidadeDestinoId: destinoId, quantidade },
         {
           onSuccess: () => {
             toast.success("Transferência criada (pendente de aprovação).")
@@ -149,27 +149,27 @@ function FormularioTransferencia({
         <DialogTitle>{ehEdicao ? "Editar transferência" : "Nova transferência"}</DialogTitle>
         <DialogDescription>
           {ehEdicao
-            ? "Ajuste a recomendação (medicamento, unidades e quantidade). Ela segue pendente de aprovação."
+            ? "Ajuste a recomendação (insumo, unidades e quantidade). Ela segue pendente de aprovação."
             : "Crie uma transferência entre unidades. Ela é registrada como pendente, para aprovação."}
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={aoSubmeter} className="space-y-4" noValidate>
         <div className="space-y-1.5">
-          <Label htmlFor="transf-medicamento">Medicamento</Label>
-          <Select value={medicamentoId} onValueChange={setMedicamentoId}>
-            <SelectTrigger id="transf-medicamento" className="w-full" aria-invalid={Boolean(erros.medicamento)}>
-              <SelectValue placeholder="Selecione o medicamento" />
+          <Label htmlFor="transf-insumo">Insumo</Label>
+          <Select value={insumoId} onValueChange={setInsumoId}>
+            <SelectTrigger id="transf-insumo" className="w-full" aria-invalid={Boolean(erros.insumo)}>
+              <SelectValue placeholder="Selecione o insumo" />
             </SelectTrigger>
             <SelectContent>
-              {medicamentos.map((m) => (
+              {insumos.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.nome} <span className="text-muted-foreground">({m.codigo})</span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {erros.medicamento && <p className="text-xs text-destructive">{erros.medicamento}</p>}
+          {erros.insumo && <p className="text-xs text-destructive">{erros.insumo}</p>}
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">

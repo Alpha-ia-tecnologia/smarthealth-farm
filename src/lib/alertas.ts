@@ -11,9 +11,9 @@ export interface Alerta {
   id: string
   tipo: TipoAlerta
   severidade: SeveridadeAlerta
-  medicamentoId: string
-  medicamentoCodigo: string
-  medicamentoNome: string
+  insumoId: string
+  insumoCodigo: string
+  insumoNome: string
   unidadeId: string
   unidadeSigla: string
   unidadeNome: string
@@ -66,7 +66,7 @@ export interface AlertaFiltros {
   severidade?: SeveridadeAlerta
   status?: StatusAlerta
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
   busca?: string
 }
 
@@ -75,7 +75,7 @@ export const alertasApi = {
   listar: (filtros: AlertaFiltros = {}, paginacao: ParamsPaginacao = {}): Promise<Pagina<Alerta>> =>
     api.getPagina<Alerta>(`/alertas${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
-  /** GET /alertas/resumo — KPIs do painel (filtros opcionais por unidade/medicamento). */
+  /** GET /alertas/resumo — KPIs do painel (filtros opcionais por unidade/insumo). */
   resumo: (filtros: FiltrosResumo = {}) =>
     api.get<ResumoAlertas>(`/alertas/resumo${montarQuery({ ...filtros })}`),
 

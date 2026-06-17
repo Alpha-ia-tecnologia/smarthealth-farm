@@ -26,7 +26,7 @@ describe("hooks de previsões", () => {
     expect(result.current.data?.total).toBe(previsoesTeste.length)
   })
 
-  it("usePrevisaoDetalhe não dispara sem medicamento/unidade", async () => {
+  it("usePrevisaoDetalhe não dispara sem insumo/unidade", async () => {
     const { wrapper } = criarAmbiente()
     const { result } = renderHook(() => usePrevisaoDetalhe(undefined, undefined), { wrapper })
     expect(result.current.fetchStatus).toBe("idle")
@@ -35,7 +35,7 @@ describe("hooks de previsões", () => {
 
   it("usePrevisaoDetalhe busca a série quando os ids existem", async () => {
     const { wrapper } = criarAmbiente()
-    const { result } = renderHook(() => usePrevisaoDetalhe("med-001", "uni-hto"), { wrapper })
+    const { result } = renderHook(() => usePrevisaoDetalhe("ins-001", "uni-hto"), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.serie.length).toBeGreaterThan(0)
   })

@@ -16,7 +16,7 @@ describe("hooks de painel", () => {
     const { wrapper } = criarAmbiente()
     const { result } = renderHook(() => usePainelGerencial(), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data?.serieAgregada.medicamentoNome).toBe("Ceftriaxona 1g")
+    expect(result.current.data?.serieAgregada.insumoNome).toBe("Ceftriaxona 1g")
   })
 
   it("usePainelOperacional carrega o painel operacional", async () => {

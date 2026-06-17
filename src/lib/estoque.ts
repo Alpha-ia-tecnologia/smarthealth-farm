@@ -12,9 +12,9 @@ export type TipoMovimentacao = "Entrada" | "Saída" | "Transferência" | "Ajuste
 
 export interface PosicaoEstoque {
   id: string
-  medicamentoId: string
-  medicamentoCodigo: string
-  medicamentoNome: string
+  insumoId: string
+  insumoCodigo: string
+  insumoNome: string
   unidadeId: string
   unidadeSigla: string
   unidadeNome: string
@@ -28,8 +28,8 @@ export interface PosicaoEstoque {
 
 export interface Lote {
   id: string
-  medicamentoId: string
-  medicamentoNome: string
+  insumoId: string
+  insumoNome: string
   unidadeId: string
   unidadeSigla: string
   numeroLote: string
@@ -43,8 +43,8 @@ export interface Movimentacao {
   id: string
   loteId: string
   numeroLote: string
-  medicamentoId: string
-  medicamentoNome: string
+  insumoId: string
+  insumoNome: string
   unidadeId: string
   unidadeSigla: string
   tipo: TipoMovimentacao
@@ -69,14 +69,14 @@ export interface PosicaoEstoqueDetalhe {
 
 export interface PosicaoFiltros {
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
   status?: StatusEstoque
   busca?: string
 }
 
 export interface LoteFiltros {
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
   comSaldo?: boolean
   validadeAteDias?: number
 }
@@ -89,13 +89,13 @@ export const estoqueApi = {
   ): Promise<Pagina<PosicaoEstoque>> =>
     api.getPagina<PosicaoEstoque>(`/estoque${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
-  /** GET /estoque/resumo — KPIs da tela (filtros opcionais por unidade/medicamento). */
+  /** GET /estoque/resumo — KPIs da tela (filtros opcionais por unidade/insumo). */
   resumo: (filtros: FiltrosResumo = {}) =>
     api.get<ResumoEstoque>(`/estoque/resumo${montarQuery({ ...filtros })}`),
 
-  /** GET /estoque/{medicamentoId}/{unidadeId} — drill-down: lotes + movimentações. */
-  detalhar: (medicamentoId: string, unidadeId: string) =>
-    api.get<PosicaoEstoqueDetalhe>(`/estoque/${medicamentoId}/${unidadeId}`),
+  /** GET /estoque/{insumoId}/{unidadeId} — drill-down: lotes + movimentações. */
+  detalhar: (insumoId: string, unidadeId: string) =>
+    api.get<PosicaoEstoqueDetalhe>(`/estoque/${insumoId}/${unidadeId}`),
 
   /** GET /lotes — lotes paginados com dias para vencer (+ filtros). */
   listarLotes: (

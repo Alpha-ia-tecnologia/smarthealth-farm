@@ -23,9 +23,9 @@ export function economiaManual(quantidade: number): number {
 export interface Recomendacao {
   id: string
   tipo: TipoRecomendacao
-  medicamentoId: string
-  medicamentoCodigo: string
-  medicamentoNome: string
+  insumoId: string
+  insumoCodigo: string
+  insumoNome: string
   unidadeDestinoId: string
   unidadeDestinoSigla: string
   unidadeDestinoNome: string
@@ -68,13 +68,13 @@ export interface RecomendacaoFiltros {
   origemMotor?: OrigemMotor
   prioridade?: Prioridade
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
   busca?: string
 }
 
 /** Corpo do POST /recomendacoes — cria uma transferência manual (redistribuição). */
 export interface CriarTransferencia {
-  medicamentoId: string
+  insumoId: string
   unidadeOrigemId: string
   unidadeDestinoId: string
   quantidade: number
@@ -84,7 +84,7 @@ export interface CriarTransferencia {
 
 /** Corpo do PUT /recomendacoes/{id} — edita uma recomendação pendente. */
 export interface EditarRecomendacao {
-  medicamentoId: string
+  insumoId: string
   /** Obrigatória em redistribuição; null/ausente em reposição. */
   unidadeOrigemId?: string | null
   unidadeDestinoId: string
@@ -101,7 +101,7 @@ export const recomendacoesApi = {
       `/recomendacoes${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`,
     ),
 
-  /** GET /recomendacoes/resumo — KPIs do painel (filtros opcionais por unidade/medicamento). */
+  /** GET /recomendacoes/resumo — KPIs do painel (filtros opcionais por unidade/insumo). */
   resumo: (filtros: FiltrosResumo = {}) =>
     api.get<ResumoRecomendacoes>(`/recomendacoes/resumo${montarQuery({ ...filtros })}`),
 

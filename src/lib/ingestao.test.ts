@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw"
 import { ingestaoApi } from "@/lib/ingestao"
 import { ApiError } from "@/lib/api"
 import { server } from "@/test/server"
-import { erro, fontesTeste, qualidadeFamiliasTeste, resumoIngestaoTeste } from "@/test/handlers"
+import { erro, fontesTeste, qualidadeCategoriasTeste, resumoIngestaoTeste } from "@/test/handlers"
 
 describe("ingestaoApi", () => {
   it("lista as fontes de dados com status e procedência", async () => {
@@ -12,10 +12,10 @@ describe("ingestaoApi", () => {
     expect(fontes[0].codigo).toBe("SIH")
   })
 
-  it("lista a qualidade por família terapêutica", async () => {
+  it("lista a qualidade por categoria de insumo", async () => {
     const qualidade = await ingestaoApi.qualidade()
-    expect(qualidade).toHaveLength(qualidadeFamiliasTeste.length)
-    expect(qualidade[0].familia).toBe("Antibióticos")
+    expect(qualidade).toHaveLength(qualidadeCategoriasTeste.length)
+    expect(qualidade[0].categoria).toBe("Antibióticos")
     expect(qualidade[0].granularidade).toBe("Diária")
   })
 

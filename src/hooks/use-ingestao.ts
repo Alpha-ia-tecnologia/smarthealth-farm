@@ -17,8 +17,8 @@ export function useFontes() {
   })
 }
 
-/** Maturidade e qualidade por família terapêutica. */
-export function useQualidadeFamilias() {
+/** Maturidade e qualidade por categoria de insumo. */
+export function useQualidadeCategorias() {
   return useQuery({
     queryKey: ingestaoKeys.qualidade(),
     queryFn: () => ingestaoApi.qualidade(),

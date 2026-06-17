@@ -8,11 +8,11 @@ export const previsoesKeys = {
   lista: (filtros: PrevisaoFiltros, paginacao: ParamsPaginacao) =>
     ["previsoes", "lista", filtros, paginacao] as const,
   resumo: (filtros: FiltrosResumo) => ["previsoes", "resumo", filtros] as const,
-  detalhe: (medicamentoId?: string, unidadeId?: string) =>
-    ["previsoes", "detalhe", medicamentoId, unidadeId] as const,
+  detalhe: (insumoId?: string, unidadeId?: string) =>
+    ["previsoes", "detalhe", insumoId, unidadeId] as const,
 }
 
-/** Previsões paginadas (ordenadas por medicamento) com filtros opcionais. Mantém a página anterior. */
+/** Previsões paginadas (ordenadas por insumo) com filtros opcionais. Mantém a página anterior. */
 export function usePrevisoes(filtros: PrevisaoFiltros = {}, paginacao: ParamsPaginacao = {}) {
   return useQuery({
     queryKey: previsoesKeys.lista(filtros, paginacao),
@@ -21,7 +21,7 @@ export function usePrevisoes(filtros: PrevisaoFiltros = {}, paginacao: ParamsPag
   })
 }
 
-/** KPIs do painel de previsão (filtros opcionais por unidade/medicamento). */
+/** KPIs do painel de previsão (filtros opcionais por unidade/insumo). */
 export function useResumoPrevisao(filtros: FiltrosResumo = {}) {
   return useQuery({
     queryKey: previsoesKeys.resumo(filtros),
@@ -29,12 +29,12 @@ export function useResumoPrevisao(filtros: FiltrosResumo = {}) {
   })
 }
 
-/** Série temporal de um item (só dispara com medicamento e unidade definidos). */
-export function usePrevisaoDetalhe(medicamentoId?: string, unidadeId?: string) {
+/** Série temporal de um item (só dispara com insumo e unidade definidos). */
+export function usePrevisaoDetalhe(insumoId?: string, unidadeId?: string) {
   return useQuery({
-    queryKey: previsoesKeys.detalhe(medicamentoId, unidadeId),
-    queryFn: () => previsoesApi.detalhar(medicamentoId!, unidadeId!),
-    enabled: !!medicamentoId && !!unidadeId,
+    queryKey: previsoesKeys.detalhe(insumoId, unidadeId),
+    queryFn: () => previsoesApi.detalhar(insumoId!, unidadeId!),
+    enabled: !!insumoId && !!unidadeId,
   })
 }
 

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import type { Medicamento, Unidade, Usuario } from "@/types"
+import type { Insumo, Unidade, Usuario } from "@/types"
 import type {
   Lote,
   Movimentacao,
@@ -19,7 +19,7 @@ import type {
 } from "@/lib/recomendacoes"
 import type { PainelGerencial, PainelOperacional } from "@/lib/painel"
 import type { Indicador, ResumoIndicadores } from "@/lib/indicadores"
-import type { FonteDado, QualidadeFamilia, ResumoIngestao } from "@/lib/ingestao"
+import type { FonteDado, QualidadeCategoria, ResumoIngestao } from "@/lib/ingestao"
 import type { IntegracaoApi, ProvedorIa, ResumoIntegracao } from "@/lib/integracoes"
 import type { ChatResposta, MensagemChat } from "@/lib/ia"
 import type { LogAuditoria, ResumoAuditoria } from "@/lib/auditoria"
@@ -74,25 +74,25 @@ export const unidadesTeste: Unidade[] = [
   },
 ]
 
-/** Medicamentos de teste. */
-export const medicamentosTeste: Medicamento[] = [
+/** Insumos de teste. */
+export const insumosTeste: Insumo[] = [
   {
-    id: "med-001",
-    codigo: "MED-001",
+    id: "ins-001",
+    codigo: "INS-001",
     nome: "Ceftriaxona 1g",
     apresentacao: "Frasco-ampola",
-    familia: "Antibióticos",
+    categoria: "Antibióticos",
     unidadeMedida: "fa",
     criticidade: "Alta",
     essencial: true,
     ativo: true,
   },
   {
-    id: "med-002",
-    codigo: "MED-002",
+    id: "ins-002",
+    codigo: "INS-002",
     nome: "Dipirona 500mg/mL",
     apresentacao: "Ampola 2mL",
-    familia: "Analgésicos",
+    categoria: "Analgésicos",
     unidadeMedida: "amp",
     criticidade: "Média",
     essencial: true,
@@ -104,9 +104,9 @@ export const medicamentosTeste: Medicamento[] = [
 export const posicoesTeste: PosicaoEstoque[] = [
   {
     id: "pos-1",
-    medicamentoId: "med-001",
-    medicamentoCodigo: "MED-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoCodigo: "INS-001",
+    insumoNome: "Ceftriaxona 1g",
     unidadeId: "uni-hto",
     unidadeSigla: "HTO",
     unidadeNome: "Hospital de Traumatologia e Ortopedia",
@@ -119,9 +119,9 @@ export const posicoesTeste: PosicaoEstoque[] = [
   },
   {
     id: "pos-2",
-    medicamentoId: "med-002",
-    medicamentoCodigo: "MED-002",
-    medicamentoNome: "Dipirona 500mg/mL",
+    insumoId: "ins-002",
+    insumoCodigo: "INS-002",
+    insumoNome: "Dipirona 500mg/mL",
     unidadeId: "uni-hri",
     unidadeSigla: "HRI",
     unidadeNome: "Hospital Regional de Imperatriz",
@@ -144,8 +144,8 @@ export const resumoEstoqueTeste: ResumoEstoque = {
 export const lotesTeste: Lote[] = [
   {
     id: "lote-1",
-    medicamentoId: "med-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoNome: "Ceftriaxona 1g",
     unidadeId: "uni-hto",
     unidadeSigla: "HTO",
     numeroLote: "CFX-1001",
@@ -156,8 +156,8 @@ export const lotesTeste: Lote[] = [
   },
   {
     id: "lote-2",
-    medicamentoId: "med-002",
-    medicamentoNome: "Dipirona 500mg/mL",
+    insumoId: "ins-002",
+    insumoNome: "Dipirona 500mg/mL",
     unidadeId: "uni-hri",
     unidadeSigla: "HRI",
     numeroLote: "DIP-2002",
@@ -173,8 +173,8 @@ export const movimentacoesTeste: Movimentacao[] = [
     id: "mov-1",
     loteId: "lote-1",
     numeroLote: "CFX-1001",
-    medicamentoId: "med-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoNome: "Ceftriaxona 1g",
     unidadeId: "uni-hto",
     unidadeSigla: "HTO",
     tipo: "Entrada",
@@ -197,9 +197,9 @@ export const alertasTeste: Alerta[] = [
     id: "ale-1",
     tipo: "Desabastecimento",
     severidade: "Crítico",
-    medicamentoId: "med-001",
-    medicamentoCodigo: "MED-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoCodigo: "INS-001",
+    insumoNome: "Ceftriaxona 1g",
     unidadeId: "uni-hto",
     unidadeSigla: "HTO",
     unidadeNome: "Hospital de Traumatologia e Ortopedia",
@@ -215,9 +215,9 @@ export const alertasTeste: Alerta[] = [
     id: "ale-2",
     tipo: "Vencimento",
     severidade: "Alto",
-    medicamentoId: "med-002",
-    medicamentoCodigo: "MED-002",
-    medicamentoNome: "Dipirona 500mg/mL",
+    insumoId: "ins-002",
+    insumoCodigo: "INS-002",
+    insumoNome: "Dipirona 500mg/mL",
     unidadeId: "uni-hri",
     unidadeSigla: "HRI",
     unidadeNome: "Hospital Regional de Imperatriz",
@@ -258,9 +258,9 @@ export const limiaresTeste: LimiarAlerta = {
 export const previsoesTeste: Previsao[] = [
   {
     id: "pv-1",
-    medicamentoId: "med-001",
-    medicamentoCodigo: "MED-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoCodigo: "INS-001",
+    insumoNome: "Ceftriaxona 1g",
     criticidade: "Alta",
     unidadeId: "uni-hto",
     unidadeSigla: "HTO",
@@ -274,9 +274,9 @@ export const previsoesTeste: Previsao[] = [
   },
   {
     id: "pv-2",
-    medicamentoId: "med-002",
-    medicamentoCodigo: "MED-002",
-    medicamentoNome: "Dipirona 500mg/mL",
+    insumoId: "ins-002",
+    insumoCodigo: "INS-002",
+    insumoNome: "Dipirona 500mg/mL",
     criticidade: "Média",
     unidadeId: "uni-hri",
     unidadeSigla: "HRI",
@@ -312,9 +312,9 @@ export const recomendacoesTeste: Recomendacao[] = [
   {
     id: "rec-1",
     tipo: "Redistribuição",
-    medicamentoId: "med-001",
-    medicamentoCodigo: "MED-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoCodigo: "INS-001",
+    insumoNome: "Ceftriaxona 1g",
     unidadeDestinoId: "uni-hto",
     unidadeDestinoSigla: "HTO",
     unidadeDestinoNome: "Hospital de Traumatologia e Ortopedia",
@@ -332,9 +332,9 @@ export const recomendacoesTeste: Recomendacao[] = [
   {
     id: "rec-2",
     tipo: "Reposição",
-    medicamentoId: "med-002",
-    medicamentoCodigo: "MED-002",
-    medicamentoNome: "Dipirona 500mg/mL",
+    insumoId: "ins-002",
+    insumoCodigo: "INS-002",
+    insumoNome: "Dipirona 500mg/mL",
     unidadeDestinoId: "uni-hri",
     unidadeDestinoSigla: "HRI",
     unidadeDestinoNome: "Hospital Regional de Imperatriz",
@@ -452,7 +452,7 @@ export const resumoIndicadoresTeste: ResumoIndicadores = {
 /** Dashboard gerencial de teste — reusa alertas e recomendações já definidos. */
 export const painelGerencialTeste: PainelGerencial = {
   totais: {
-    medicamentos: 2,
+    insumos: 2,
     unidades: 2,
     alertasAbertos: 12,
     alertasAtivos: 15, // abertos(12) + em tratamento(3) = desabastecimento(6) + vencimento(9)
@@ -468,9 +468,9 @@ export const painelGerencialTeste: PainelGerencial = {
     { nome: "HRI", valor: 86, status: "ok" },
   ],
   serieAgregada: {
-    medicamentoId: "med-001",
-    medicamentoCodigo: "MED-001",
-    medicamentoNome: "Ceftriaxona 1g",
+    insumoId: "ins-001",
+    insumoCodigo: "INS-001",
+    insumoNome: "Ceftriaxona 1g",
     serie: [
       { periodo: "2026-04", realizado: 980, previsto: 950, limiteInferior: 900, limiteSuperior: 1000 },
       { periodo: "2026-05", realizado: 1040, previsto: 1010, limiteInferior: 960, limiteSuperior: 1060 },
@@ -555,10 +555,10 @@ export const fontesTeste: FonteDado[] = [
   },
 ]
 
-export const qualidadeFamiliasTeste: QualidadeFamilia[] = [
+export const qualidadeCategoriasTeste: QualidadeCategoria[] = [
   {
     id: "qf-1",
-    familia: "Antibióticos",
+    categoria: "Antibióticos",
     maturidade: 88,
     completude: 91,
     consistencia: 84,
@@ -567,7 +567,7 @@ export const qualidadeFamiliasTeste: QualidadeFamilia[] = [
   },
   {
     id: "qf-2",
-    familia: "Analgésicos",
+    categoria: "Analgésicos",
     maturidade: 72,
     completude: 80,
     consistencia: 75,
@@ -769,27 +769,27 @@ export const handlers = [
     return HttpResponse.json(ok({ ...base, ativo }))
   }),
   http.get("*/unidades", () => HttpResponse.json(ok(unidadesTeste, unidadesTeste.length))),
-  // Catálogo de medicamentos — escrita (TI) antes/ao lado da leitura.
-  http.post("*/medicamentos", async ({ request }) => {
-    const b = (await request.json()) as Partial<Medicamento>
-    return HttpResponse.json(ok({ id: "novo-medicamento-id", ...b, ativo: true }), { status: 201 })
+  // Catálogo de insumos — escrita (TI) antes/ao lado da leitura.
+  http.post("*/insumos", async ({ request }) => {
+    const b = (await request.json()) as Partial<Insumo>
+    return HttpResponse.json(ok({ id: "novo-insumo-id", ...b, ativo: true }), { status: 201 })
   }),
-  http.put("*/medicamentos/:id", async ({ params, request }) => {
-    const b = (await request.json()) as Partial<Medicamento>
-    const base = medicamentosTeste.find((m) => m.id === params.id) ?? medicamentosTeste[0]
+  http.put("*/insumos/:id", async ({ params, request }) => {
+    const b = (await request.json()) as Partial<Insumo>
+    const base = insumosTeste.find((m) => m.id === params.id) ?? insumosTeste[0]
     return HttpResponse.json(ok({ ...base, ...b }))
   }),
-  http.patch("*/medicamentos/:id/status", async ({ params, request }) => {
+  http.patch("*/insumos/:id/status", async ({ params, request }) => {
     const { ativo } = (await request.json()) as { ativo: boolean }
-    const base = medicamentosTeste.find((m) => m.id === params.id) ?? medicamentosTeste[0]
+    const base = insumosTeste.find((m) => m.id === params.id) ?? insumosTeste[0]
     return HttpResponse.json(ok({ ...base, ativo }))
   }),
-  http.get("*/medicamentos", () =>
-    HttpResponse.json(ok(medicamentosTeste, medicamentosTeste.length)),
+  http.get("*/insumos", () =>
+    HttpResponse.json(ok(insumosTeste, insumosTeste.length)),
   ),
   // Estoque — específicos antes do genérico (resumo e detalhe vs. lista).
   http.get("*/estoque/resumo", () => HttpResponse.json(ok(resumoEstoqueTeste))),
-  http.get("*/estoque/:medicamentoId/:unidadeId", () =>
+  http.get("*/estoque/:insumoId/:unidadeId", () =>
     HttpResponse.json(ok(detalheEstoqueTeste)),
   ),
   http.get("*/estoque", ({ request }) => HttpResponse.json(paginar(request, posicoesTeste))),
@@ -820,7 +820,7 @@ export const handlers = [
   http.get("*/alertas", ({ request }) => HttpResponse.json(paginar(request, alertasTeste))),
   // Previsões — específicos antes do genérico (resumo e detalhe vs. lista).
   http.get("*/previsoes/resumo", () => HttpResponse.json(ok(resumoPrevisaoTeste))),
-  http.get("*/previsoes/:medicamentoId/:unidadeId", () =>
+  http.get("*/previsoes/:insumoId/:unidadeId", () =>
     HttpResponse.json(ok(detalhePrevisaoTeste)),
   ),
   http.post("*/previsoes/recalibrar", () =>
@@ -855,7 +855,7 @@ export const handlers = [
   http.post("*/recomendacoes", async ({ request }) => {
     const b = (await request.json()) as {
       quantidade: number
-      medicamentoId: string
+      insumoId: string
       unidadeOrigemId: string
       unidadeDestinoId: string
     }
@@ -899,7 +899,7 @@ export const handlers = [
   // Ingestão (RF-DAD).
   http.get("*/ingestao/fontes", () => HttpResponse.json(ok(fontesTeste, fontesTeste.length))),
   http.get("*/ingestao/qualidade", () =>
-    HttpResponse.json(ok(qualidadeFamiliasTeste, qualidadeFamiliasTeste.length)),
+    HttpResponse.json(ok(qualidadeCategoriasTeste, qualidadeCategoriasTeste.length)),
   ),
   http.get("*/ingestao/resumo", () => HttpResponse.json(ok(resumoIngestaoTeste))),
   // Integração (RF-INT) — específicos antes do genérico.

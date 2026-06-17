@@ -41,7 +41,7 @@ describe("TransferenciaFormDialog", () => {
 
     await usuario.click(await screen.findByRole("button", { name: "Criar transferência" }))
 
-    expect(await screen.findByText("Selecione o medicamento.")).toBeInTheDocument()
+    expect(await screen.findByText("Selecione o insumo.")).toBeInTheDocument()
     expect(screen.getByText("Informe uma quantidade maior que zero.")).toBeInTheDocument()
   })
 })

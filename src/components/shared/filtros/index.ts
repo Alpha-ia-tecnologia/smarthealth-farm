@@ -2,4 +2,4 @@
 export { BarraFiltros } from "./BarraFiltros"
 export { SelectFiltro, type OpcaoFiltro } from "./SelectFiltro"
 export { FiltroUnidade } from "./FiltroUnidade"
-export { FiltroMedicamento } from "./FiltroMedicamento"
+export { FiltroInsumo } from "./FiltroInsumo"

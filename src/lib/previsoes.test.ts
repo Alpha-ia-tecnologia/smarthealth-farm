@@ -14,7 +14,7 @@ describe("previsoesApi", () => {
     const pagina = await previsoesApi.listar()
     expect(pagina.itens).toHaveLength(previsoesTeste.length)
     expect(pagina.total).toBe(previsoesTeste.length)
-    expect(pagina.itens[0].medicamentoNome).toBe("Ceftriaxona 1g")
+    expect(pagina.itens[0].insumoNome).toBe("Ceftriaxona 1g")
     expect(pagina.itens[0].criticidade).toBe("Alta")
   })
 
@@ -28,13 +28,13 @@ describe("previsoesApi", () => {
     )
     await previsoesApi.listar(
       { unidadeId: "uni-hto", drift: "Degradado", busca: "cef" },
-      { pagina: 2, tamanho: 10, ordenarPor: "medicamento.nome", ordem: "desc" },
+      { pagina: 2, tamanho: 10, ordenarPor: "insumo.nome", ordem: "desc" },
     )
     expect(url?.searchParams.get("unidadeId")).toBe("uni-hto")
     expect(url?.searchParams.get("drift")).toBe("Degradado")
     expect(url?.searchParams.get("busca")).toBe("cef")
     expect(url?.searchParams.get("page")).toBe("2")
-    expect(url?.searchParams.get("sort")).toBe("medicamento.nome,desc")
+    expect(url?.searchParams.get("sort")).toBe("insumo.nome,desc")
   })
 
   it("traz o resumo de KPIs", async () => {
@@ -43,12 +43,12 @@ describe("previsoesApi", () => {
   })
 
   it("detalha a série temporal de um item", async () => {
-    const detalhe = await previsoesApi.detalhar("med-001", "uni-hto")
+    const detalhe = await previsoesApi.detalhar("ins-001", "uni-hto")
     expect(detalhe).toEqual(detalhePrevisaoTeste)
     expect(detalhe.serie.at(-1)?.realizado).toBeNull()
   })
 
-  it("monta a URL do detalhe com medicamento e unidade", async () => {
+  it("monta a URL do detalhe com insumo e unidade", async () => {
     let path: string | undefined
     server.use(
       http.get("*/previsoes/:med/:uni", ({ request }) => {
@@ -56,8 +56,8 @@ describe("previsoesApi", () => {
         return HttpResponse.json(ok(detalhePrevisaoTeste))
       }),
     )
-    await previsoesApi.detalhar("med-001", "uni-hto")
-    expect(path).toContain("/previsoes/med-001/uni-hto")
+    await previsoesApi.detalhar("ins-001", "uni-hto")
+    expect(path).toContain("/previsoes/ins-001/uni-hto")
   })
 
   it("recalibra devolvendo o resultado do motor", async () => {

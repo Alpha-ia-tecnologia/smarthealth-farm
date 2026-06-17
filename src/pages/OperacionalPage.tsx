@@ -7,7 +7,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
-import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
+import { BarraFiltros, FiltroInsumo, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -29,17 +29,17 @@ const STATUS_REC_OPCOES = [
 
 export default function OperacionalPage() {
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
-  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+  const [insumoId, setInsumoId] = useState<string | undefined>(undefined)
   const [statusRec, setStatusRec] = useState<string | undefined>(undefined)
 
   const { data, isPending, isError, isFetching, refetch } = usePainelOperacional({
     unidadeId,
-    medicamentoId,
+    insumoId,
   })
   // Seção "Recomendações em aberto": consome /recomendacoes (suporta filtro de status),
-  // herdando unidade/medicamento da barra de filtros + o status isolado da própria seção.
+  // herdando unidade/insumo da barra de filtros + o status isolado da própria seção.
   const recsQuery = useRecomendacoes(
-    { status: statusRec as StatusRecomendacao | undefined, unidadeId, medicamentoId },
+    { status: statusRec as StatusRecomendacao | undefined, unidadeId, insumoId },
     { tamanho: 6 },
   )
   const recomendacoes = recsQuery.data?.itens ?? []
@@ -62,13 +62,13 @@ export default function OperacionalPage() {
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={setUnidadeId} />
-        <FiltroMedicamento valor={medicamentoId} onChange={setMedicamentoId} unidadeId={unidadeId} />
+        <FiltroInsumo valor={insumoId} onChange={setInsumoId} unidadeId={unidadeId} />
       </BarraFiltros>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="Alertas ativos" value={data ? fmtNum(data.totais.alertasAtivos) : ""} carregando={isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Quantos avisos importantes precisam de atenção agora, somando os que ainda não foram tratados e os que já estão em andamento. Quanto menor, mais sob controle está a operação." />
-        <KpiCard label="Risco de desabastecimento" value={data ? fmtNum(data.totais.alertasDesabastecimento) : ""} carregando={isPending} icon={PackageX} accent="danger" info="Número de medicamentos que correm risco de acabar antes da próxima reposição. São casos que exigem ação rápida para não faltar remédio aos pacientes." />
-        <KpiCard label="Risco de vencimento" value={data ? fmtNum(data.totais.alertasVencimento) : ""} carregando={isPending} icon={CalendarClock} accent="warning" info="Número de medicamentos com data de validade se aproximando que talvez não sejam usados a tempo. Ajuda a evitar desperdício, antecipando o uso ou a transferência desses itens." />
+        <KpiCard label="Risco de desabastecimento" value={data ? fmtNum(data.totais.alertasDesabastecimento) : ""} carregando={isPending} icon={PackageX} accent="danger" info="Número de insumos que correm risco de acabar antes da próxima reposição. São casos que exigem ação rápida para não faltar remédio aos pacientes." />
+        <KpiCard label="Risco de vencimento" value={data ? fmtNum(data.totais.alertasVencimento) : ""} carregando={isPending} icon={CalendarClock} accent="warning" info="Número de insumos com data de validade se aproximando que talvez não sejam usados a tempo. Ajuda a evitar desperdício, antecipando o uso ou a transferência desses itens." />
         <KpiCard label="Recomendações pendentes" value={data ? fmtNum(data.totais.recomendacoesPendentes) : ""} carregando={isPending} icon={ArrowLeftRight} accent="teal" info="Sugestões do sistema para repor ou remanejar estoque entre unidades que ainda aguardam uma decisão. Avaliá-las mantém o abastecimento equilibrado na rede." />
       </div>
 
@@ -162,8 +162,8 @@ export default function OperacionalPage() {
 
           <Section
             title="Recomendações em aberto"
-            info="Sugestões de compra ou de transferência de medicamentos entre unidades que ainda aguardam aprovação. Cada uma indica o item, de onde sai e para onde vai, a quantidade e o motivo, para facilitar a decisão."
-            description="Filtre por situação (pendente, aprovada, recusada…), unidade e medicamento."
+            info="Sugestões de compra ou de transferência de insumos entre unidades que ainda aguardam aprovação. Cada uma indica o item, de onde sai e para onde vai, a quantidade e o motivo, para facilitar a decisão."
+            description="Filtre por situação (pendente, aprovada, recusada…), unidade e insumo."
             action={
               <div className="flex flex-wrap items-center gap-2">
                 <SelectFiltro
@@ -201,8 +201,8 @@ export default function OperacionalPage() {
                       </div>
                       <div className="text-sm">
                         <span className="flex flex-col">
-                          <span className="font-medium leading-tight">{r.medicamentoNome}</span>
-                          <span className="text-xs text-muted-foreground">{r.medicamentoCodigo}</span>
+                          <span className="font-medium leading-tight">{r.insumoNome}</span>
+                          <span className="text-xs text-muted-foreground">{r.insumoCodigo}</span>
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">

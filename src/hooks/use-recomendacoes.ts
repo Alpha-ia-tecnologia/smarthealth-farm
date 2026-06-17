@@ -27,7 +27,7 @@ export function useRecomendacoes(
   })
 }
 
-/** KPIs do painel de recomendações (filtros opcionais por unidade/medicamento). */
+/** KPIs do painel de recomendações (filtros opcionais por unidade/insumo). */
 export function useResumoRecomendacoes(filtros: FiltrosResumo = {}) {
   return useQuery({
     queryKey: recomendacoesKeys.resumo(filtros),

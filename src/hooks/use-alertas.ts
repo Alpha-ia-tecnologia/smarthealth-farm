@@ -25,7 +25,7 @@ export function useAlertas(filtros: AlertaFiltros = {}, paginacao: ParamsPaginac
   })
 }
 
-/** KPIs do painel de alertas (filtros opcionais por unidade/medicamento). */
+/** KPIs do painel de alertas (filtros opcionais por unidade/insumo). */
 export function useResumoAlertas(filtros: FiltrosResumo = {}) {
   return useQuery({
     queryKey: alertasKeys.resumo(filtros),

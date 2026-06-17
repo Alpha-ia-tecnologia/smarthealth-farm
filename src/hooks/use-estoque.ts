@@ -27,7 +27,7 @@ export function usePosicoes(filtros: PosicaoFiltros = {}, paginacao: ParamsPagin
   })
 }
 
-/** KPIs do estoque (filtros opcionais por unidade/medicamento). */
+/** KPIs do estoque (filtros opcionais por unidade/insumo). */
 export function useResumoEstoque(filtros: FiltrosResumo = {}) {
   return useQuery({
     queryKey: estoqueKeys.resumo(filtros),
@@ -36,11 +36,11 @@ export function useResumoEstoque(filtros: FiltrosResumo = {}) {
 }
 
 /** Drill-down de uma posição (lotes + movimentações). Desabilitado sem id. */
-export function usePosicaoDetalhe(medicamentoId: string | undefined, unidadeId: string | undefined) {
+export function usePosicaoDetalhe(insumoId: string | undefined, unidadeId: string | undefined) {
   return useQuery({
-    queryKey: estoqueKeys.detalhe(medicamentoId ?? "", unidadeId ?? ""),
-    queryFn: () => estoqueApi.detalhar(medicamentoId as string, unidadeId as string),
-    enabled: Boolean(medicamentoId && unidadeId),
+    queryKey: estoqueKeys.detalhe(insumoId ?? "", unidadeId ?? ""),
+    queryFn: () => estoqueApi.detalhar(insumoId as string, unidadeId as string),
+    enabled: Boolean(insumoId && unidadeId),
   })
 }
 

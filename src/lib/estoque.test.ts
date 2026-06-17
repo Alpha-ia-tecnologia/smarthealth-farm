@@ -11,7 +11,7 @@ describe("estoqueApi", () => {
     expect(pagina.total).toBe(posicoesTeste.length)
   })
 
-  it("o resumo envia unidadeId/medicamentoId como query params", async () => {
+  it("o resumo envia unidadeId/insumoId como query params", async () => {
     let url: URL | undefined
     server.use(
       http.get("*/estoque/resumo", ({ request }) => {
@@ -19,9 +19,9 @@ describe("estoqueApi", () => {
         return HttpResponse.json(ok(resumoEstoqueTeste))
       }),
     )
-    await estoqueApi.resumo({ unidadeId: "uni-hto", medicamentoId: "med-001" })
+    await estoqueApi.resumo({ unidadeId: "uni-hto", insumoId: "ins-001" })
     expect(url?.searchParams.get("unidadeId")).toBe("uni-hto")
-    expect(url?.searchParams.get("medicamentoId")).toBe("med-001")
+    expect(url?.searchParams.get("insumoId")).toBe("ins-001")
   })
 
   it("envia page/size/sort ao paginar e ordenar", async () => {
@@ -57,7 +57,7 @@ describe("estoqueApi", () => {
   })
 
   it("detalha uma posição com lotes e movimentações", async () => {
-    const detalhe = await estoqueApi.detalhar("med-001", "uni-hto")
+    const detalhe = await estoqueApi.detalhar("ins-001", "uni-hto")
     expect(detalhe.lotes).toHaveLength(1)
     expect(detalhe.movimentacoes[0].tipo).toBe("Entrada")
   })

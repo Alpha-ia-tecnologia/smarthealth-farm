@@ -1,11 +1,11 @@
 // Serviço de Ingestão e qualidade de dados (RF-DAD). Governança da base — somente leitura.
 import { api } from "./api"
-import type { FamiliaTerapeutica } from "@/types"
+import type { CategoriaInsumo } from "@/types"
 
 /** Situação de sincronização de uma fonte (espelha o enum StatusFonte do backend). */
 export type StatusFonte = "Sincronizado" | "Atrasado" | "Erro"
 
-/** Granularidade temporal da base por família (espelha o enum GranularidadeDado do backend). */
+/** Granularidade temporal da base por categoria (espelha o enum GranularidadeDado do backend). */
 export type GranularidadeDado = "Diária" | "Semanal" | "Mensal"
 
 /** Fonte de dados com status, volume, qualidade e procedência (RF-DAD-02/07). */
@@ -21,10 +21,10 @@ export interface FonteDado {
   procedencia: string
 }
 
-/** Cartão de maturidade/qualidade por família terapêutica (RF-DAD-04). */
-export interface QualidadeFamilia {
+/** Cartão de maturidade/qualidade por categoria de insumo (RF-DAD-04). */
+export interface QualidadeCategoria {
   id: string
-  familia: FamiliaTerapeutica
+  categoria: CategoriaInsumo
   maturidade: number // 0-100
   completude: number // 0-100
   consistencia: number // 0-100
@@ -45,8 +45,8 @@ export const ingestaoApi = {
   /** GET /ingestao/fontes — fontes com status, volume, qualidade e procedência. */
   fontes: () => api.get<FonteDado[]>("/ingestao/fontes"),
 
-  /** GET /ingestao/qualidade — maturidade/qualidade por família terapêutica. */
-  qualidade: () => api.get<QualidadeFamilia[]>("/ingestao/qualidade"),
+  /** GET /ingestao/qualidade — maturidade/qualidade por categoria de insumo. */
+  qualidade: () => api.get<QualidadeCategoria[]>("/ingestao/qualidade"),
 
   /** GET /ingestao/resumo — KPIs (registros, fontes sincronizadas, qualidade média, LGPD). */
   resumo: () => api.get<ResumoIngestao>("/ingestao/resumo"),

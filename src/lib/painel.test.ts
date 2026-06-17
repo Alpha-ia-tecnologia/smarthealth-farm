@@ -8,7 +8,7 @@ describe("painelApi", () => {
     const dashboard = await painelApi.dashboard()
     expect(dashboard.totais.alertasAbertos).toBe(painelGerencialTeste.totais.alertasAbertos)
     expect(dashboard.coberturaPorUnidade).toHaveLength(2)
-    expect(dashboard.serieAgregada.medicamentoNome).toBe("Ceftriaxona 1g")
+    expect(dashboard.serieAgregada.insumoNome).toBe("Ceftriaxona 1g")
     expect(dashboard.alertasRecentes.length).toBeGreaterThan(0)
     expect(dashboard.recomendacoesPendentes.length).toBeGreaterThan(0)
   })
@@ -33,7 +33,7 @@ describe("painelApi", () => {
     expect(operacional.recomendacoesAbertas.length).toBeGreaterThan(0)
   })
 
-  it("envia unidadeId e medicamentoId no operacional quando filtrado", async () => {
+  it("envia unidadeId e insumoId no operacional quando filtrado", async () => {
     let url: URL | undefined
     server.use(
       http.get("*/painel/operacional", ({ request }) => {
@@ -41,8 +41,8 @@ describe("painelApi", () => {
         return HttpResponse.json(ok(painelOperacionalTeste))
       }),
     )
-    await painelApi.operacional({ unidadeId: "uni-hto", medicamentoId: "med-001" })
+    await painelApi.operacional({ unidadeId: "uni-hto", insumoId: "ins-001" })
     expect(url?.searchParams.get("unidadeId")).toBe("uni-hto")
-    expect(url?.searchParams.get("medicamentoId")).toBe("med-001")
+    expect(url?.searchParams.get("insumoId")).toBe("ins-001")
   })
 })

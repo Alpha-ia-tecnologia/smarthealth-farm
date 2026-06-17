@@ -7,7 +7,7 @@ import type { StatusEstoque } from "./estoque"
 
 /** Totais consolidados da rede (RF-DASH-01). */
 export interface TotaisRede {
-  medicamentos: number
+  insumos: number
   unidades: number
   /** Apenas status ABERTO. */
   alertasAbertos: number
@@ -28,11 +28,11 @@ export interface CoberturaUnidade {
   status: StatusEstoque
 }
 
-/** Série agregada (soma da rede) do medicamento mais crítico — base do gráfico do dashboard. */
+/** Série agregada (soma da rede) do insumo mais crítico — base do gráfico do dashboard. */
 export interface SerieAgregada {
-  medicamentoId: string
-  medicamentoCodigo: string
-  medicamentoNome: string
+  insumoId: string
+  insumoCodigo: string
+  insumoNome: string
   serie: PontoSerie[]
 }
 
@@ -76,10 +76,10 @@ export interface PainelGerencialFiltros {
   unidadeId?: string
 }
 
-/** Filtros do painel operacional — unidade e medicamento. */
+/** Filtros do painel operacional — unidade e insumo. */
 export interface PainelOperacionalFiltros {
   unidadeId?: string
-  medicamentoId?: string
+  insumoId?: string
 }
 
 export const painelApi = {
@@ -87,7 +87,7 @@ export const painelApi = {
   dashboard: (filtros: PainelGerencialFiltros = {}) =>
     api.get<PainelGerencial>(`/painel${montarQuery({ ...filtros })}`),
 
-  /** GET /painel/operacional — situação por unidade + filas (filtros por unidade/medicamento). */
+  /** GET /painel/operacional — situação por unidade + filas (filtros por unidade/insumo). */
   operacional: (filtros: PainelOperacionalFiltros = {}) =>
     api.get<PainelOperacional>(`/painel/operacional${montarQuery({ ...filtros })}`),
 }

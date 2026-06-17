@@ -2,7 +2,7 @@ import { SlidersHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Props {
-  /** Controles de filtro (SelectFiltro/FiltroUnidade/FiltroMedicamento e afins). */
+  /** Controles de filtro (SelectFiltro/FiltroUnidade/FiltroInsumo e afins). */
   children: React.ReactNode
   /** Esconde o ícone/rótulo "Filtros" à esquerda (quando o contexto já deixa claro). */
   semRotulo?: boolean

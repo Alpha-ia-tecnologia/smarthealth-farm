@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { renderHook, waitFor } from "@testing-library/react"
-import { useFontes, useQualidadeFamilias, useResumoIngestao } from "@/hooks/use-ingestao"
+import { useFontes, useQualidadeCategorias, useResumoIngestao } from "@/hooks/use-ingestao"
 import { useIntegracoes, useProvedoresIa, useResumoIntegracoes } from "@/hooks/use-integracoes"
 
 function criarAmbiente() {
@@ -20,11 +20,11 @@ describe("hooks de ingestão", () => {
     expect(result.current.data?.length).toBeGreaterThan(0)
   })
 
-  it("useQualidadeFamilias carrega a qualidade por família", async () => {
+  it("useQualidadeCategorias carrega a qualidade por categoria", async () => {
     const { wrapper } = criarAmbiente()
-    const { result } = renderHook(() => useQualidadeFamilias(), { wrapper })
+    const { result } = renderHook(() => useQualidadeCategorias(), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data?.[0].familia).toBe("Antibióticos")
+    expect(result.current.data?.[0].categoria).toBe("Antibióticos")
   })
 
   it("useResumoIngestao carrega os KPIs", async () => {

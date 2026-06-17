@@ -17,7 +17,7 @@ import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
-import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
+import { BarraFiltros, FiltroInsumo, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ConfirmarAcaoAlertaDialog } from "@/components/alertas/ConfirmarAcaoAlertaDialog"
 import { Paginacao } from "@/components/shared/Paginacao"
@@ -63,7 +63,7 @@ const SEVERIDADE_OPCOES = [
 const ORDENACAO_BACKEND: Record<string, string> = {
   tipo: "tipo",
   severidade: "severidade",
-  medicamentoNome: "medicamento.nome",
+  insumoNome: "insumo.nome",
   unidadeSigla: "unidade.sigla",
   status: "status",
 }
@@ -77,9 +77,9 @@ export default function AlertasPage() {
   // "Gestor ou Admin" — quem pode gerar alertas e editar limiares.
   const ehGestor = podeGerir(perfil)
 
-  // Filtros compartilhados (unidade + medicamento) — valem para ativos e histórico.
+  // Filtros compartilhados (unidade + insumo) — valem para ativos e histórico.
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
-  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+  const [insumoId, setInsumoId] = useState<string | undefined>(undefined)
 
   // Aba "ativos": filtro por tipo/status/severidade + paginação/ordenação/busca server-side.
   const [filtroTipo, setFiltroTipo] = useState<"Todos" | TipoAlerta>("Todos")
@@ -96,14 +96,14 @@ export default function AlertasPage() {
   const [tamanhoHistorico, setTamanhoHistorico] = useState(TAMANHO_PAGINA_PADRAO)
 
   const ordenacao = sorting[0]
-  const resumoQuery = useResumoAlertas({ unidadeId, medicamentoId })
+  const resumoQuery = useResumoAlertas({ unidadeId, insumoId })
   const alertasQuery = useAlertas(
     {
       tipo: filtroTipo === "Todos" ? undefined : filtroTipo,
       status: filtroStatus as StatusAlerta | undefined,
       severidade: filtroSeveridade as SeveridadeAlerta | undefined,
       unidadeId,
-      medicamentoId,
+      insumoId,
       busca: buscaDebounced || undefined,
     },
     {
@@ -114,19 +114,19 @@ export default function AlertasPage() {
     },
   )
   const historicoQuery = useAlertas(
-    { unidadeId, medicamentoId },
+    { unidadeId, insumoId },
     { pagina: pagHistorico, tamanho: tamanhoHistorico, ordenarPor: "criadoEm", ordem: "desc" },
   )
   const limiaresQuery = useLimiares()
 
-  /** Mudou unidade/medicamento → reseta as duas listas; status/severidade só a de ativos. */
+  /** Mudou unidade/insumo → reseta as duas listas; status/severidade só a de ativos. */
   function aoFiltrarUnidade(v: string | undefined) {
     setUnidadeId(v)
     setPagina(0)
     setPagHistorico(0)
   }
-  function aoFiltrarMedicamento(v: string | undefined) {
-    setMedicamentoId(v)
+  function aoFiltrarInsumo(v: string | undefined) {
+    setInsumoId(v)
     setPagina(0)
     setPagHistorico(0)
   }
@@ -190,12 +190,12 @@ export default function AlertasPage() {
       ),
     },
     {
-      accessorKey: "medicamentoNome",
-      header: "Medicamento",
+      accessorKey: "insumoNome",
+      header: "Insumo",
       cell: ({ row }) => (
         <span className="flex flex-col">
-          <span className="font-medium leading-tight">{row.original.medicamentoNome}</span>
-          <span className="text-xs text-muted-foreground">{row.original.medicamentoCodigo}</span>
+          <span className="font-medium leading-tight">{row.original.insumoNome}</span>
+          <span className="text-xs text-muted-foreground">{row.original.insumoCodigo}</span>
         </span>
       ),
     },
@@ -283,13 +283,13 @@ export default function AlertasPage() {
       <PageHeader
         icon={<BellRing className="size-5" />}
         title="Alertas Operacionais"
-        info="Aqui o sistema avisa, de forma automática, quando algum medicamento corre risco de acabar ou de vencer. Use esta tela para ver os avisos, ajustar quando eles devem disparar e acompanhar o que já foi resolvido."
+        info="Aqui o sistema avisa, de forma automática, quando algum insumo corre risco de acabar ou de vencer. Use esta tela para ver os avisos, ajustar quando eles devem disparar e acompanhar o que já foi resolvido."
         description="Alertas automáticos de risco de desabastecimento e de vencimento, com base nas previsões de demanda, configuração de limiares e direcionamento por perfil."
       />
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={aoFiltrarUnidade} />
-        <FiltroMedicamento valor={medicamentoId} onChange={aoFiltrarMedicamento} unidadeId={unidadeId} />
+        <FiltroInsumo valor={insumoId} onChange={aoFiltrarInsumo} unidadeId={unidadeId} />
       </BarraFiltros>
 
       {/* KPIs */}
@@ -301,8 +301,8 @@ export default function AlertasPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard label="Alertas ativos" value={resumoQuery.data ? fmtNum(resumoQuery.data.ativos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Total de avisos que ainda exigem atenção: os que ninguém começou a tratar somados aos que já estão em tratamento. Quanto maior o número, mais situações de risco aguardam uma providência." />
-          <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos medicamentos estão prestes a faltar no estoque, segundo a previsão de consumo. São os casos mais urgentes, porque a falta afeta diretamente o atendimento." />
-          <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" info="Quantos medicamentos têm lotes perto da data de validade. São itens que precisam ser usados ou remanejados a tempo para não serem descartados." />
+          <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos insumos estão prestes a faltar no estoque, segundo a previsão de consumo. São os casos mais urgentes, porque a falta afeta diretamente o atendimento." />
+          <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" info="Quantos insumos têm lotes perto da data de validade. São itens que precisam ser usados ou remanejados a tempo para não serem descartados." />
           <KpiCard label="Tratados" value={resumoQuery.data ? fmtNum(resumoQuery.data.resolvidos) : ""} carregando={resumoQuery.isPending} icon={SlidersHorizontal} accent="success" hint="alertas resolvidos" info="Quantidade de avisos que já foram resolvidos. Serve para acompanhar o quanto a equipe vem dando conta dos riscos identificados." />
         </div>
       )}
@@ -374,7 +374,7 @@ export default function AlertasPage() {
                 <DataTable
                   columns={columns}
                   data={alertasQuery.data.itens}
-                  searchKey="medicamentoNome"
+                  searchKey="insumoNome"
                   searchPlaceholder="Buscar alerta…"
                   dense
                   servidor={servidorAlertas}

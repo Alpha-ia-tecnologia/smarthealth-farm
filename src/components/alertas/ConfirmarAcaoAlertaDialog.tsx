@@ -50,7 +50,7 @@ export function ConfirmarAcaoAlertaDialog({
             <StatusBadge status={severidadeStatus[alerta.severidade]} label={alerta.severidade} />
           </div>
           <p className="text-muted-foreground">
-            {alerta.medicamentoNome} · {alerta.unidadeSigla}
+            {alerta.insumoNome} · {alerta.unidadeSigla}
           </p>
           <p className="text-xs text-muted-foreground">{alerta.mensagem}</p>
         </>
