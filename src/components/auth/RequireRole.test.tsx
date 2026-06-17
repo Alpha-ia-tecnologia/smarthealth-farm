@@ -36,4 +36,9 @@ describe("RequireRole", () => {
     renderComPerfil("Gestor", ["Gestor", "TI"])
     expect(await screen.findByText("Área restrita")).toBeInTheDocument()
   })
+
+  it("Admin (superusuário) acessa qualquer rota, mesmo fora da lista de perfis", async () => {
+    renderComPerfil("Admin", ["TI"])
+    expect(await screen.findByText("Área restrita")).toBeInTheDocument()
+  })
 })

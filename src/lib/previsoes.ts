@@ -1,6 +1,6 @@
 // Serviço de Previsão de Demanda (RF-PRV). Leitura para qualquer autenticado;
 // recalibrar é ação de Gestor (o backend barra; a UI espelha).
-import { api, montarQuery, paramsPaginacao, type Pagina, type ParamsPaginacao } from "./api"
+import { api, montarQuery, paramsPaginacao, type FiltrosResumo, type Pagina, type ParamsPaginacao } from "./api"
 
 export type Drift = "Estável" | "Atenção" | "Degradado"
 export type Criticidade = "Alta" | "Média" | "Baixa"
@@ -72,8 +72,9 @@ export const previsoesApi = {
   ): Promise<Pagina<Previsao>> =>
     api.getPagina<Previsao>(`/previsoes${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
-  /** GET /previsoes/resumo — KPIs do painel (MAPE médio, críticos na meta, drift). */
-  resumo: () => api.get<ResumoPrevisao>("/previsoes/resumo"),
+  /** GET /previsoes/resumo — KPIs do painel (filtros opcionais por unidade/medicamento). */
+  resumo: (filtros: FiltrosResumo = {}) =>
+    api.get<ResumoPrevisao>(`/previsoes/resumo${montarQuery({ ...filtros })}`),
 
   /** GET /previsoes/{medicamentoId}/{unidadeId} — série temporal completa do item. */
   detalhar: (medicamentoId: string, unidadeId: string) =>

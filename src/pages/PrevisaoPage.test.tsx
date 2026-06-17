@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw"
 import PrevisaoPage from "@/pages/PrevisaoPage"
 import { renderizar, screen, waitFor } from "@/test/utils"
 import { server } from "@/test/server"
-import { erro, ok, usuarioTeste } from "@/test/handlers"
+import { detalhePrevisaoTeste, erro, ok, paginar, previsoesTeste, usuarioTeste } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
 
 /** Autentica o usuário de teste (Gestor por padrão) antes de renderizar. */
@@ -70,9 +70,49 @@ describe("PrevisaoPage", () => {
     expect(await screen.findByText("Não foi possível carregar as previsões.")).toBeInTheDocument()
   })
 
-  it("marca o painel de composição como dados ilustrativos (mock)", async () => {
+  it("não exibe mais o painel ilustrativo de 'Composição da previsão'", async () => {
     renderComoGestor()
-    expect(await screen.findByText("Dados ilustrativos")).toBeInTheDocument()
+    // A tela carregou (gráfico de topo presente)…
+    expect(await screen.findByText("Previsão — Ceftriaxona 1g")).toBeInTheDocument()
+    // …mas o painel de composição (dados ilustrativos) ficou oculto.
+    expect(screen.queryByText("Composição da previsão")).not.toBeInTheDocument()
+    expect(screen.queryByText("Dados ilustrativos")).not.toBeInTheDocument()
+  })
+
+  it("filtra por unidade enviando unidadeId ao servidor", async () => {
+    let unidadeIdEnviado: string | null = null
+    server.use(
+      http.get("*/previsoes", ({ request }) => {
+        unidadeIdEnviado = new URL(request.url).searchParams.get("unidadeId")
+        return HttpResponse.json(paginar(request, previsoesTeste))
+      }),
+    )
+    const { usuario } = renderComoGestor()
+    await usuario.click(await screen.findByRole("combobox", { name: "Unidade" }))
+    await usuario.click(await screen.findByRole("option", { name: "HTO · São Luís" }))
+    await waitFor(() => expect(unidadeIdEnviado).toBe("uni-hto"))
+  })
+
+  it("ao clicar numa linha, seleciona o item (detalhe e gráfico passam a refletir a linha)", async () => {
+    const scrollSpy = vi.fn()
+    Element.prototype.scrollIntoView = scrollSpy
+    HTMLElement.prototype.scrollIntoView = scrollSpy
+
+    let detalhePedido: string | null = null
+    server.use(
+      http.get("*/previsoes/:medicamentoId/:unidadeId", ({ params }) => {
+        detalhePedido = `${params.medicamentoId}/${params.unidadeId}`
+        return HttpResponse.json(ok(detalhePrevisaoTeste))
+      }),
+    )
+
+    const { usuario } = renderComoGestor()
+    expect(await screen.findByText("Previsão — Ceftriaxona 1g")).toBeInTheDocument()
+    await usuario.click(screen.getByRole("row", { name: /Dipirona 500mg\/mL/ }))
+    // O handler do clique disparou o scroll…
+    expect(scrollSpy).toHaveBeenCalled()
+    // …e o detalhe passa a ser pedido para a linha clicada (med-002/uni-hri).
+    await waitFor(() => expect(detalhePedido).toBe("med-002/uni-hri"))
   })
 
   it("pagina no servidor: a lista envia page/size na requisição", async () => {

@@ -31,16 +31,16 @@ const BADGE_ILUSTRATIVO = (
   </Badge>
 )
 
-const PERFIS: PerfilUsuario[] = ["Operador", "Gestor", "TI"]
+const PERFIS: PerfilUsuario[] = ["Operador", "Gestor", "TI", "Admin"]
 const TODOS = "__todos__"
 
 const matrizAcesso: { recurso: string; perfis: Record<PerfilUsuario, string> }[] = [
-  { recurso: "Dashboards e relatórios", perfis: { Operador: "Leitura", Gestor: "Total", TI: "Leitura" } },
-  { recurso: "Aprovar recomendações", perfis: { Operador: "—", Gestor: "Total", TI: "—" } },
-  { recurso: "Parâmetros e limiares", perfis: { Operador: "—", Gestor: "Edição", TI: "Edição" } },
-  { recurso: "Recalibrar modelos de previsão", perfis: { Operador: "—", Gestor: "Total", TI: "—" } },
-  { recurso: "Gestão de usuários", perfis: { Operador: "—", Gestor: "—", TI: "Total" } },
-  { recurso: "Dados sensíveis (PII)", perfis: { Operador: "Anonimizado", Gestor: "Anonimizado", TI: "Auditoria" } },
+  { recurso: "Dashboards e relatórios", perfis: { Operador: "Leitura", Gestor: "Total", TI: "Leitura", Admin: "Total" } },
+  { recurso: "Aprovar recomendações", perfis: { Operador: "—", Gestor: "Total", TI: "—", Admin: "Total" } },
+  { recurso: "Parâmetros e limiares", perfis: { Operador: "—", Gestor: "Edição", TI: "Edição", Admin: "Total" } },
+  { recurso: "Recalibrar modelos de previsão", perfis: { Operador: "—", Gestor: "Total", TI: "—", Admin: "Total" } },
+  { recurso: "Gestão de usuários", perfis: { Operador: "—", Gestor: "—", TI: "Total", Admin: "Total" } },
+  { recurso: "Dados sensíveis (PII)", perfis: { Operador: "Anonimizado", Gestor: "Anonimizado", TI: "Auditoria", Admin: "Total" } },
 ]
 
 export default function SegurancaPage() {
@@ -120,7 +120,7 @@ export default function SegurancaPage() {
       <PageHeader
         icon={<ShieldCheck className="size-5" />}
         title="Segurança, Auditoria e Conformidade LGPD"
-        rf="RF-SEG"
+        info="Esta tela reúne os controles de proteção de dados do sistema: o histórico de tudo o que foi feito (trilha de auditoria), quais dados pessoais são tratados e quem pode acessar cada parte, seguindo a lei de proteção de dados (LGPD)."
         description="Proteção de dados sensíveis de saúde, logs de auditoria persistidos, base legal de tratamento e controle de acesso por perfil (Lei nº 13.709/2018)."
       />
 
@@ -132,10 +132,10 @@ export default function SegurancaPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Eventos auditados" value={resumo ? fmtNum(resumo.total) : ""} carregando={resumoQuery.isPending} icon={ScrollText} accent="primary" hint="logs persistidos" rf="RF-SEG-02" />
-          <KpiCard label="Decisões assistidas por IA" value={resumo ? fmtNum(resumo.assistidosPorIa) : ""} carregando={resumoQuery.isPending} icon={Sparkles} accent="teal" hint="inferências registradas" rf="RF-SEG-02" />
-          <KpiCard label="Eventos com base legal" value={resumo ? fmtNum(resumo.comBaseLegal) : ""} carregando={resumoQuery.isPending} icon={FileLock2} accent="success" hint="LGPD (art. 7º/12)" rf="RF-SEG-03" />
-          <KpiCard label="Última atividade" value={resumo?.ultimaAtividade ? fmtData(resumo.ultimaAtividade) : "—"} carregando={resumoQuery.isPending} icon={ShieldCheck} accent="primary" hint="evento mais recente" rf="RF-SEG-05" />
+          <KpiCard label="Eventos auditados" value={resumo ? fmtNum(resumo.total) : ""} carregando={resumoQuery.isPending} icon={ScrollText} accent="primary" hint="logs persistidos" info="Quantidade total de ações registradas no sistema (cada acesso ou operação relevante vira um registro guardado para conferência posterior)." />
+          <KpiCard label="Decisões assistidas por IA" value={resumo ? fmtNum(resumo.assistidosPorIa) : ""} carregando={resumoQuery.isPending} icon={Sparkles} accent="teal" hint="inferências registradas" info="Quantas dessas ações registradas contaram com apoio da inteligência artificial, como sugestões e previsões geradas pelo sistema." />
+          <KpiCard label="Eventos com base legal" value={resumo ? fmtNum(resumo.comBaseLegal) : ""} carregando={resumoQuery.isPending} icon={FileLock2} accent="success" hint="LGPD (art. 7º/12)" info="Número de registros que indicam o motivo legal que autoriza tratar aquele dado pessoal, como exige a lei de proteção de dados (LGPD)." />
+          <KpiCard label="Última atividade" value={resumo?.ultimaAtividade ? fmtData(resumo.ultimaAtividade) : "—"} carregando={resumoQuery.isPending} icon={ShieldCheck} accent="primary" hint="evento mais recente" info="Data do evento mais recente registrado, indicando até quando o histórico de auditoria está atualizado." />
         </div>
       )}
 
@@ -144,22 +144,21 @@ export default function SegurancaPage() {
         <Section
           className="lg:col-span-2 h-fit"
           title="Pilares de conformidade"
-          rf="RF-SEG-01 · RF-SEG-03 · RF-SEG-04"
+          info="Os principais cuidados que o sistema adota para proteger dados pessoais: esconder dados sensíveis antes de enviá-los a serviços externos, registrar o motivo legal de cada uso e limitar o acesso conforme o cargo de cada pessoa."
           action={BADGE_ILUSTRATIVO}
         >
           <div className="space-y-3">
             {[
-              { i: FileLock2, t: "Anonimização de dados sensíveis", d: "Obrigatória antes de qualquer envio a provedores externos de IA.", rf: "RF-SEG-01" },
-              { i: KeyRound, t: "AI Gateway desacopla PII", d: "Impede exposição de dados pessoais a serviços externos.", rf: "RF-SEG-04" },
-              { i: ScrollText, t: "Base legal e Termo de Compartilhamento", d: "Registra base legal aplicável (item 16.19 do edital).", rf: "RF-SEG-03" },
-              { i: UserCog, t: "Controle de acesso por perfil", d: "Conforme política de acesso da EMSERH.", rf: "RF-SEG-06" },
+              { i: FileLock2, t: "Anonimização de dados sensíveis", d: "Obrigatória antes de qualquer envio a provedores externos de IA." },
+              { i: KeyRound, t: "AI Gateway desacopla PII", d: "Impede exposição de dados pessoais a serviços externos." },
+              { i: ScrollText, t: "Base legal e Termo de Compartilhamento", d: "Registra base legal aplicável (item 16.19 do edital)." },
+              { i: UserCog, t: "Controle de acesso por perfil", d: "Conforme política de acesso da EMSERH." },
             ].map((p) => (
               <div key={p.t} className="flex gap-3 rounded-lg border p-3">
                 <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success"><p.i className="size-4" /></span>
                 <div>
                   <p className="text-sm font-medium">{p.t}</p>
                   <p className="text-xs text-muted-foreground">{p.d}</p>
-                  <span className="font-mono text-[10px] text-muted-foreground">{p.rf}</span>
                 </div>
               </div>
             ))}
@@ -170,7 +169,7 @@ export default function SegurancaPage() {
         <Section
           className="lg:col-span-3"
           title="Matriz de controle de acesso"
-          rf="RF-SEG-06"
+          info="Tabela que mostra o que cada tipo de usuário (Operador, Gestor, TI e Admin) pode ver ou fazer em cada parte do sistema, garantindo que cada pessoa acesse apenas o necessário para sua função. O Admin é superusuário, com acesso total."
           description="Permissões por perfil de usuário conforme a política da EMSERH."
           action={BADGE_ILUSTRATIVO}
           noPadding
@@ -183,6 +182,7 @@ export default function SegurancaPage() {
                   <th className="px-3 py-2.5 text-left font-semibold">Operador</th>
                   <th className="px-3 py-2.5 text-left font-semibold">Gestor</th>
                   <th className="px-3 py-2.5 text-left font-semibold">TI</th>
+                  <th className="px-3 py-2.5 text-left font-semibold">Admin</th>
                 </tr>
               </thead>
               <tbody>
@@ -205,7 +205,7 @@ export default function SegurancaPage() {
       {/* Logs de auditoria (RF-SEG-02) — dados reais com filtros server-side */}
       <Section
         title="Logs de auditoria"
-        rf="RF-SEG-02 · RF-SEG-05"
+        info="Lista detalhada de cada ação registrada: quem fez, quando, o que foi feito e se houve apoio da inteligência artificial. Serve para conferir e comprovar o uso correto do sistema."
         description="Registros persistidos de decisões assistidas por IA e operações relevantes, disponíveis para revisão de conformidade."
       >
         <div className="mb-4 flex flex-wrap items-center gap-2">

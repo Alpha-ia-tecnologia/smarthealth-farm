@@ -1,7 +1,7 @@
 // Serviço de Alertas (RF-ALE). Leitura/tratamento para qualquer autenticado;
 // gerar e alterar limiares são ações de Gestor (o backend barra; a UI espelha).
 import type { PerfilUsuario } from "@/types"
-import { api, montarQuery, paramsPaginacao, type Pagina, type ParamsPaginacao } from "./api"
+import { api, montarQuery, paramsPaginacao, type FiltrosResumo, type Pagina, type ParamsPaginacao } from "./api"
 
 export type TipoAlerta = "Desabastecimento" | "Vencimento"
 export type SeveridadeAlerta = "Crítico" | "Alto" | "Médio"
@@ -75,8 +75,9 @@ export const alertasApi = {
   listar: (filtros: AlertaFiltros = {}, paginacao: ParamsPaginacao = {}): Promise<Pagina<Alerta>> =>
     api.getPagina<Alerta>(`/alertas${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
-  /** GET /alertas/resumo — KPIs do painel. */
-  resumo: () => api.get<ResumoAlertas>("/alertas/resumo"),
+  /** GET /alertas/resumo — KPIs do painel (filtros opcionais por unidade/medicamento). */
+  resumo: (filtros: FiltrosResumo = {}) =>
+    api.get<ResumoAlertas>(`/alertas/resumo${montarQuery({ ...filtros })}`),
 
   /** PATCH /alertas/{id}/status — tratamento (Aberto → Em tratamento → Resolvido). */
   atualizarStatus: (id: string, status: StatusAlerta) =>

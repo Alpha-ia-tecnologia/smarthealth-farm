@@ -50,10 +50,10 @@ const PERIODOS = ["Últimos 3 meses", "Últimos 6 meses", "Últimos 12 meses"]
 
 /** Catálogo de relatórios — ilustrativo (não há endpoint de geração/export). */
 const RELATORIOS = [
-  { id: "r1", nome: "Relatório Estratégico CAHOSP — 2º Trimestre", desc: "Visão consolidada para a direção da EMSERH: desabastecimentos, perdas, compras e assertividade.", tipo: "Estratégico", rf: "RF-DASH-04" },
-  { id: "r2", nome: "Demanda prevista por família terapêutica", desc: "Projeção de consumo dos próximos 3 meses por família e unidade.", tipo: "Tático", rf: "RF-DASH-01" },
-  { id: "r3", nome: "Lotes e rastreabilidade sanitária", desc: "Movimentação por lote para controle sanitário e auditoria.", tipo: "Operacional", rf: "RF-DASH-03" },
-  { id: "r4", nome: "Indicadores vs. linha de base", desc: "Comparativo das metas do projeto frente ao baseline consolidado.", tipo: "Estratégico", rf: "RF-IND-01" },
+  { id: "r1", nome: "Relatório Estratégico CAHOSP — 2º Trimestre", desc: "Visão consolidada para a direção da EMSERH: desabastecimentos, perdas, compras e assertividade.", tipo: "Estratégico" },
+  { id: "r2", nome: "Demanda prevista por família terapêutica", desc: "Projeção de consumo dos próximos 3 meses por família e unidade.", tipo: "Tático" },
+  { id: "r3", nome: "Lotes e rastreabilidade sanitária", desc: "Movimentação por lote para controle sanitário e auditoria.", tipo: "Operacional" },
+  { id: "r4", nome: "Indicadores vs. linha de base", desc: "Comparativo das metas do projeto frente ao baseline consolidado.", tipo: "Estratégico" },
 ]
 
 /** Marcos do projeto (OPED) — ilustrativo (não há endpoint de progresso). */
@@ -87,7 +87,7 @@ export default function RelatoriosPage() {
       <PageHeader
         icon={<FileBarChart className="size-5" />}
         title="Relatórios & Visualização"
-        rf="RF-DASH-04 · RF-DASH-07"
+        info="Reúne relatórios executivos para a direção, acompanha o progresso do projeto e permite baixar os dados em planilha ou PDF."
         description="Relatórios estratégicos para a direção da EMSERH, painel de progresso do projeto (OPED) e exportação em formatos estruturados."
         actions={
           <>
@@ -108,16 +108,16 @@ export default function RelatoriosPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Metas atingidas" value={resumoInd ? `${resumoInd.atingidas}/${resumoInd.total}` : ""} carregando={resumoIndQuery.isPending} icon={BadgeCheck} accent="success" rf="RF-IND-04" />
-          <KpiCard label="Economia potencial" value={totais ? fmtMoeda(totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="teal" rf="RF-REC-02" />
-          <KpiCard label="Itens críticos" value={totais ? fmtNum(totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" rf="RF-EST-04" />
-          <KpiCard label="Alertas ativos" value={totais ? fmtNum(totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="warning" rf="RF-ALE-04" />
+          <KpiCard label="Metas atingidas" value={resumoInd ? `${resumoInd.atingidas}/${resumoInd.total}` : ""} carregando={resumoIndQuery.isPending} icon={BadgeCheck} accent="success" info="Quantas metas do projeto já foram alcançadas em relação ao total acompanhado." />
+          <KpiCard label="Economia potencial" value={totais ? fmtMoeda(totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="teal" info="Valor que pode ser economizado seguindo as recomendações de redistribuição e compra." />
+          <KpiCard label="Itens críticos" value={totais ? fmtNum(totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Número de medicamentos em situação crítica de estoque, com risco de faltar." />
+          <KpiCard label="Alertas ativos" value={totais ? fmtNum(totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="warning" info="Quantidade de avisos abertos que ainda precisam de atenção da equipe." />
         </div>
       )}
 
       {/* Filtros (RF-DASH-06) — ilustrativos: aplicam-se ao catálogo/exportação, que não têm
           endpoint. A lista de unidades é real (API); a aplicação do filtro virá com o gerador. */}
-      <Section title="Filtros" rf="RF-DASH-06" icon={<Filter className="size-4" />} action={BADGE_ILUSTRATIVO}>
+      <Section title="Filtros" info="Permite refinar os relatórios por unidade, família de medicamentos, período e tipo, mostrando só o que interessa." icon={<Filter className="size-4" />} action={BADGE_ILUSTRATIVO}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <FilterSelect label="Unidade" itens={["Todas", ...unidadesAtendidas]} />
           <FilterSelect label="Família terapêutica" itens={["Todas", ...FAMILIAS]} />
@@ -146,7 +146,6 @@ export default function RelatoriosPage() {
                     <Badge variant="outline" className="text-[10px]">{r.tipo}</Badge>
                   </div>
                   <p className="mt-0.5 text-xs text-muted-foreground">{r.desc}</p>
-                  <span className="mt-1 inline-block font-mono text-[10px] text-muted-foreground">{r.rf}</span>
                 </div>
               </div>
               <Button
@@ -165,7 +164,7 @@ export default function RelatoriosPage() {
         <Section
           className="lg:col-span-2 h-fit"
           title="Progresso do projeto · OPED"
-          rf="RF-DASH-05"
+          info="Mostra o andamento das etapas do projeto, para que o órgão parceiro acompanhe o quanto já foi entregue."
           description="Indicadores de progresso acessíveis ao Órgão Parceiro de Estado Demandante."
           action={BADGE_ILUSTRATIVO}
         >

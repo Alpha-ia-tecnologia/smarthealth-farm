@@ -1,9 +1,11 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   AlertTriangle,
   ArrowRight,
+  BellRing,
   CalendarClock,
+  Coins,
   LayoutDashboard,
   PackageX,
   Target,
@@ -12,6 +14,7 @@ import {
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
+import { BarraFiltros, FiltroUnidade } from "@/components/shared/filtros"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ForecastChart } from "@/components/charts/ForecastChart"
@@ -34,7 +37,8 @@ function deltaIndicador(ind: Indicador) {
 }
 
 export default function DashboardPage() {
-  const painelQuery = usePainelGerencial()
+  const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
+  const painelQuery = usePainelGerencial({ unidadeId })
   const indicadoresQuery = useIndicadores()
 
   const indPorCodigo = useMemo(
@@ -54,7 +58,7 @@ export default function DashboardPage() {
       <PageHeader
         icon={<LayoutDashboard className="size-5" />}
         title="Dashboard Gerencial"
-        rf="RF-DASH-01"
+        info="Visão geral do desempenho da rede: previsão de demanda, situação dos estoques e os principais indicadores comparados às metas do projeto. Use os atalhos de cada bloco para abrir o módulo em detalhe."
         description="Visão consolidada da cadeia farmacêutica da CAHOSP e das unidades da rede EMSERH — previsão, estoque e indicadores frente às metas do projeto."
         actions={
           <Button variant="outline" asChild>
@@ -65,8 +69,19 @@ export default function DashboardPage() {
         }
       />
 
-      {/* KPIs principais (RF-IND-01..04) — vindos de /indicadores */}
-      {indicadoresQuery.isError ? (
+      <BarraFiltros>
+        <FiltroUnidade valor={unidadeId} onChange={setUnidadeId} />
+      </BarraFiltros>
+
+      {/* KPIs — sem filtro: indicadores do edital (rede). Com unidade: operacionais da unidade. */}
+      {unidadeId ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Itens críticos" value={painel ? fmtNum(painel.totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Medicamentos com estoque abaixo do nível seguro nesta unidade — risco de faltar." />
+          <KpiCard label="Alertas ativos" value={painel ? fmtNum(painel.totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Avisos de risco ainda não resolvidos nesta unidade (abertos somados aos em tratamento)." />
+          <KpiCard label="Risco de vencimento" value={painel ? fmtNum(painel.totais.alertasVencimento) : ""} carregando={painelQuery.isPending} icon={CalendarClock} accent="warning" info="Medicamentos com lotes perto da validade nesta unidade, que precisam de uso ou remanejamento." />
+          <KpiCard label="Economia potencial" value={painel ? fmtMoeda(painel.totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="success" info="Quanto a unidade pode economizar seguindo as recomendações em aberto (compra programada sai mais barata que a de urgência)." />
+        </div>
+      ) : indicadoresQuery.isError ? (
         <ErroConsulta
           mensagem="Não foi possível carregar os indicadores do projeto."
           onTentarNovamente={() => indicadoresQuery.refetch()}
@@ -81,7 +96,7 @@ export default function DashboardPage() {
             accent="danger"
             delta={ruptura ? deltaIndicador(ruptura) : undefined}
             hint={ruptura ? `meta −${ruptura.metaReducaoPct}% · base ${fmtPct(ruptura.baseline)}` : undefined}
-            rf="RF-IND-01"
+            info="Percentual de itens que ficaram em falta quando eram necessários. Quanto menor, melhor — a meta é reduzir esse número em relação à linha de base (situação antes do projeto)."
           />
           <KpiCard
             label="Perdas por vencimento"
@@ -91,7 +106,7 @@ export default function DashboardPage() {
             accent="warning"
             delta={vencimento ? deltaIndicador(vencimento) : undefined}
             hint={vencimento ? `meta −${vencimento.metaReducaoPct}% · base ${fmtPct(vencimento.baseline)}` : undefined}
-            rf="RF-IND-02"
+            info="Percentual de medicamentos descartados por terem vencido antes de serem usados. Comprar e distribuir na medida certa reduz esse desperdício."
           />
           <KpiCard
             label="Compras emergenciais"
@@ -101,7 +116,7 @@ export default function DashboardPage() {
             accent="teal"
             delta={emergencial ? deltaIndicador(emergencial) : undefined}
             hint={emergencial ? `meta −${emergencial.metaReducaoPct}% · base ${formatarValorIndicador(emergencial.unidade, emergencial.baseline)}` : undefined}
-            rf="RF-IND-03"
+            info="Volume de compras feitas com urgência, fora do planejamento. Costumam sair mais caras (frete e preço); a meta é reduzi-las com previsão e reposição programada."
           />
           <KpiCard
             label="Assertividade da previsão (MAPE)"
@@ -111,7 +126,7 @@ export default function DashboardPage() {
             accent="success"
             delta={mape ? deltaIndicador(mape) : undefined}
             hint={mape ? `alvo < ${fmtPct(mape.meta)}` : undefined}
-            rf="RF-IND-04"
+            info="MAPE é o erro médio da previsão de demanda: o quanto, em média, ela erra para mais ou para menos. Quanto menor o erro, mais confiável é a previsão (alvo abaixo da meta)."
           />
         </div>
       )}
@@ -122,7 +137,7 @@ export default function DashboardPage() {
           className="lg:col-span-2"
           title={painel ? `Demanda × Previsão — ${painel.serieAgregada.medicamentoNome} (rede)` : "Demanda × Previsão (rede)"}
           description="Comparativo entre consumo realizado e previsto, com projeção de 3 meses."
-          rf="RF-PRV-02"
+          info="Compara o consumo já realizado (histórico) com o previsto pelo modelo e projeta os próximos meses, ajudando a antecipar quanto será necessário."
           action={<Badge variant="outline" className="text-[10px]">Modelo preditivo híbrido</Badge>}
         >
           {painelQuery.isError ? (
@@ -134,14 +149,14 @@ export default function DashboardPage() {
           )}
         </Section>
 
-        <Section title="Assertividade das previsões" rf="RF-PRV-05" description="Erro médio (MAPE) ponderado dos itens de maior criticidade.">
+        <Section title="Assertividade das previsões" info="Mostra o quanto as previsões têm acertado nos itens mais críticos. O ponteiro indica a assertividade média (100% menos o erro); ao lado, os desabastecimentos que foram evitados." description="Erro médio (MAPE) ponderado dos itens de maior criticidade.">
           {indicadoresQuery.isError ? (
             <ErroConsulta mensagem="Não foi possível carregar os indicadores." onTentarNovamente={() => indicadoresQuery.refetch()} />
           ) : !mape ? (
             <div className="flex justify-center py-20"><Spinner size={40} label="Carregando" /></div>
           ) : (
             <div className="flex flex-col items-center gap-4">
-              <Gauge value={Math.round(100 - mape.atual)} label="Assertividade média" suffix="%" color="var(--chart-4)" />
+              <Gauge value={Math.round((100 - mape.atual) * 10) / 10} label="Assertividade média" suffix="%" color="var(--chart-4)" />
               <div className="grid w-full grid-cols-2 gap-2 text-center">
                 <div className="rounded-lg bg-muted/50 p-3">
                   <p className="tabular font-display text-xl font-bold">{fmtPct(mape.atual)}</p>
@@ -161,7 +176,7 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <Section
           title="Cobertura de estoque por unidade"
-          rf="RF-DASH-01"
+          info="Para cada unidade, o percentual de itens com estoque acima do nível de segurança. Quanto maior a cobertura, menor o risco de faltar item."
           description="% de itens com estoque acima do nível de segurança, por unidade."
         >
           {painelQuery.isError ? (
@@ -175,7 +190,7 @@ export default function DashboardPage() {
 
         <Section
           title="Alertas recentes"
-          rf="RF-ALE-01"
+          info="Avisos automáticos de risco na rede — itens em vias de faltar (desabastecimento) ou perto de vencer. A cor indica a gravidade."
           description={painel ? `${fmtNum(painel.totais.alertasAtivos)} alertas ativos na rede` : "Alertas ativos na rede"}
           action={
             <Button variant="ghost" size="sm" asChild>
@@ -214,7 +229,7 @@ export default function DashboardPage() {
 
         <Section
           title="Recomendações pendentes"
-          rf="RF-REC-01"
+          info="Sugestões de compra ou de troca de estoque entre unidades aguardando aprovação. A economia potencial aparece porque comprar de forma programada sai mais barato: compras de urgência pagam frete e preços maiores. Planejar a reposição com antecedência reduz esse custo extra."
           description={painel ? `Economia potencial ${fmtMoeda(painel.totais.economiaPotencial)}` : "Economia potencial da rede"}
           action={
             <Button variant="ghost" size="sm" asChild>
@@ -240,7 +255,7 @@ export default function DashboardPage() {
                     <span className="tabular text-xs font-semibold text-success">{fmtMoeda(r.economiaEstimada)}</span>
                   </div>
                   <div className="mt-1.5 text-sm font-medium">{r.medicamentoNome}</div>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{r.justificativa}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{r.justificativa}</p>
                 </li>
               ))}
             </ul>
@@ -250,7 +265,7 @@ export default function DashboardPage() {
 
       <p className="flex items-center gap-2 text-xs text-muted-foreground">
         <AlertTriangle className="size-3.5" />
-        Indicadores acompanham as metas do edital FAPEMA GovIA (RF-IND).
+        Indicadores acompanham as metas do edital FAPEMA GovIA.
       </p>
     </>
   )

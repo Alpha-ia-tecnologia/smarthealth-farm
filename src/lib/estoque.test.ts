@@ -11,6 +11,19 @@ describe("estoqueApi", () => {
     expect(pagina.total).toBe(posicoesTeste.length)
   })
 
+  it("o resumo envia unidadeId/medicamentoId como query params", async () => {
+    let url: URL | undefined
+    server.use(
+      http.get("*/estoque/resumo", ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(ok(resumoEstoqueTeste))
+      }),
+    )
+    await estoqueApi.resumo({ unidadeId: "uni-hto", medicamentoId: "med-001" })
+    expect(url?.searchParams.get("unidadeId")).toBe("uni-hto")
+    expect(url?.searchParams.get("medicamentoId")).toBe("med-001")
+  })
+
   it("envia page/size/sort ao paginar e ordenar", async () => {
     let url: URL | undefined
     server.use(

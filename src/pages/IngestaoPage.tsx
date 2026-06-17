@@ -60,16 +60,16 @@ export default function IngestaoPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Registros ingeridos" value={resumo ? fmtNum(resumo.registrosIngeridos) : ""} carregando={resumoQuery.isPending} icon={Database} accent="primary" rf="RF-DAD-01" />
-          <KpiCard label="Fontes sincronizadas" value={resumo ? `${fmtNum(resumo.fontesSincronizadas)}/${fmtNum(resumo.totalFontes)}` : ""} carregando={resumoQuery.isPending} icon={Activity} accent="teal" rf="RF-DAD-02" />
-          <KpiCard label="Qualidade média" value={resumo ? `${resumo.qualidadeMedia}%` : ""} carregando={resumoQuery.isPending} icon={FileCheck2} accent={resumo && resumo.qualidadeMedia >= 80 ? "success" : "warning"} rf="RF-DAD-04" />
-          <KpiCard label="Anonimização LGPD" value={resumo ? (resumo.anonimizacaoAtiva ? "Ativa" : "Inativa") : ""} carregando={resumoQuery.isPending} icon={ShieldCheck} accent={resumo && !resumo.anonimizacaoAtiva ? "danger" : "success"} hint="antes de envio à IA" rf="RF-DAD-03" />
+          <KpiCard label="Registros ingeridos" value={resumo ? fmtNum(resumo.registrosIngeridos) : ""} carregando={resumoQuery.isPending} icon={Database} accent="primary" info="Total de registros (linhas de dados) que o sistema já importou das planilhas e sistemas de origem." />
+          <KpiCard label="Fontes sincronizadas" value={resumo ? `${fmtNum(resumo.fontesSincronizadas)}/${fmtNum(resumo.totalFontes)}` : ""} carregando={resumoQuery.isPending} icon={Activity} accent="teal" info="Quantas fontes de dados (sistemas e planilhas) estão atualizadas em relação ao total cadastrado." />
+          <KpiCard label="Qualidade média" value={resumo ? `${resumo.qualidadeMedia}%` : ""} carregando={resumoQuery.isPending} icon={FileCheck2} accent={resumo && resumo.qualidadeMedia >= 80 ? "success" : "warning"} info="Nota geral de quão confiáveis e completos estão os dados importados. Quanto mais perto de 100%, melhor." />
+          <KpiCard label="Anonimização LGPD" value={resumo ? (resumo.anonimizacaoAtiva ? "Ativa" : "Inativa") : ""} carregando={resumoQuery.isPending} icon={ShieldCheck} accent={resumo && !resumo.anonimizacaoAtiva ? "danger" : "success"} hint="antes de envio à IA" info="Indica se os dados pessoais são removidos antes de serem enviados à inteligência artificial, conforme a Lei Geral de Proteção de Dados (LGPD)." />
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Pipeline / fontes (RF-DAD-02/07) — vindas de /ingestao/fontes */}
-        <Section className="lg:col-span-3" title="Fontes de dados & importação" rf="RF-DAD-02 · RF-DAD-07" description="Padronização de sistemas de gerações distintas, com rastreabilidade de origem." noPadding>
+        <Section className="lg:col-span-3" title="Fontes de dados & importação" info="Lista os sistemas e planilhas de onde os dados vêm. Mostra se cada origem está atualizada e a qualidade do que foi importado." description="Padronização de sistemas de gerações distintas, com rastreabilidade de origem." noPadding>
           {fontesQuery.isError ? (
             <div className="p-5">
               <ErroConsulta mensagem="Não foi possível carregar as fontes de dados." onTentarNovamente={() => fontesQuery.refetch()} />
@@ -107,7 +107,7 @@ export default function IngestaoPage() {
         </Section>
 
         {/* Sazonalidade epidemiológica (RF-DAD-05) — sem endpoint, demonstrativo */}
-        <Section className="lg:col-span-2 h-fit" title="Sazonalidade epidemiológica local" rf="RF-DAD-05" description="Variáveis que enriquecem a base preditiva." icon={<Thermometer className="size-4" />} action={BADGE_ILUSTRATIVO}>
+        <Section className="lg:col-span-2 h-fit" title="Sazonalidade epidemiológica local" info="Mostra as épocas do ano em que doenças comuns na região aumentam. Esses períodos ajudam a prever a demanda por medicamentos." description="Variáveis que enriquecem a base preditiva." icon={<Thermometer className="size-4" />} action={BADGE_ILUSTRATIVO}>
           <div className="space-y-4">
             {epidemias.map((e) => (
               <div key={e.nome}>
@@ -120,13 +120,13 @@ export default function IngestaoPage() {
                 </div>
               </div>
             ))}
-            <p className="text-xs text-muted-foreground">Integra calendário de campanhas de saúde pública e boletins da vigilância (RF-DAD-05).</p>
+            <p className="text-xs text-muted-foreground">Integra calendário de campanhas de saúde pública e boletins da vigilância.</p>
           </div>
         </Section>
       </div>
 
       {/* Qualidade por família (RF-DAD-04) — vinda de /ingestao/qualidade */}
-      <Section title="Maturidade e qualidade por família terapêutica" rf="RF-DAD-04" description="Classificação da base histórica, sinalizando lacunas e granularidade.">
+      <Section title="Maturidade e qualidade por família terapêutica" info="Avalia a confiabilidade dos dados separados por grupo de medicamentos, apontando onde há informações faltando ou incompletas." description="Classificação da base histórica, sinalizando lacunas e granularidade.">
         {qualidadeQuery.isError ? (
           <ErroConsulta mensagem="Não foi possível carregar a qualidade por família." onTentarNovamente={() => qualidadeQuery.refetch()} />
         ) : qualidadeQuery.isPending ? (
@@ -154,7 +154,7 @@ export default function IngestaoPage() {
       </Section>
 
       {/* Linha de base consolidada (RF-DAD-08) — sem endpoint, demonstrativo */}
-      <Section title="Linha de base consolidada" rf="RF-DAD-08" description="Indicadores de partida calculados a partir dos dados ingeridos." action={BADGE_ILUSTRATIVO}>
+      <Section title="Linha de base consolidada" info="Resumo da situação atual calculado a partir dos dados importados. Serve como ponto de partida para comparar melhorias ao longo do tempo." description="Indicadores de partida calculados a partir dos dados ingeridos." action={BADGE_ILUSTRATIVO}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {linhaBase.map((b) => (
             <div key={b.l} className="rounded-xl bg-muted/50 p-4">
@@ -173,7 +173,7 @@ function Cabecalho() {
     <PageHeader
       icon={<DatabaseZap className="size-5" />}
       title="Ingestão, Tratamento e Anonimização"
-      rf="RF-DAD"
+      info="Tela onde os dados de consumo e distribuição de medicamentos são importados de vários sistemas, padronizados, limpos e têm os dados pessoais protegidos antes do uso."
       description="Coleta e padronização das séries históricas de consumo e dispensação de fontes heterogêneas, com anonimização LGPD e enriquecimento epidemiológico."
     />
   )

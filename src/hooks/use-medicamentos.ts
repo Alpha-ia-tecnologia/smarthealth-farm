@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { medicamentosApi, type DadosMedicamento, type MedicamentoFiltros } from "@/lib/medicamentos"
 
 /** Chaves de cache do domínio de medicamentos. */
@@ -13,6 +13,8 @@ export function useMedicamentos(filtros: MedicamentoFiltros = {}) {
   return useQuery({
     queryKey: medicamentosKeys.lista(filtros),
     queryFn: () => medicamentosApi.listar(filtros),
+    // Mantém a lista anterior enquanto recarrega ao trocar de unidade (sem piscar p/ vazio).
+    placeholderData: keepPreviousData,
   })
 }
 

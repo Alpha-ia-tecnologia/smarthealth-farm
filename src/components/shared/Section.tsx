@@ -1,11 +1,12 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { RfTag } from "./RfTag"
+import { InfoHint } from "./InfoHint"
 
 interface Props {
   title?: string
   description?: string
-  rf?: string
+  /** Explicação em linguagem simples do que esta seção mostra (ícone ⓘ ao lado do título). */
+  info?: string
   icon?: React.ReactNode
   action?: React.ReactNode
   children: React.ReactNode
@@ -17,7 +18,7 @@ interface Props {
 export function Section({
   title,
   description,
-  rf,
+  info,
   icon,
   action,
   children,
@@ -34,7 +35,7 @@ export function Section({
             <div className="space-y-0.5">
               <div className="flex flex-wrap items-center gap-2">
                 {title && <h3 className="font-display text-sm font-semibold tracking-tight">{title}</h3>}
-                {rf && <RfTag ids={rf} />}
+                {info && <InfoHint texto={info} />}
               </div>
               {description && <p className="text-xs text-muted-foreground">{description}</p>}
             </div>

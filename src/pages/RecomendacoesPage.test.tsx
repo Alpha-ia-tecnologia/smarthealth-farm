@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw"
 import RecomendacoesPage from "@/pages/RecomendacoesPage"
-import { renderizar, screen, waitFor } from "@/test/utils"
+import { renderizar, screen, waitFor, within } from "@/test/utils"
 import { server } from "@/test/server"
 import { erro, ok, usuarioTeste } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
@@ -27,16 +27,57 @@ describe("RecomendacoesPage", () => {
     expect(screen.getByText("Dipirona 500mg/mL")).toBeInTheDocument()
   })
 
-  it("Gestor aprova uma recomendação pendente (mutation + toast)", async () => {
+  it("Gestor aprova uma recomendação: confirma no modal (com quem faz a ação) + toast", async () => {
     const { usuario } = renderComoGestor()
     await usuario.click(await screen.findByRole("button", { name: /Aprovar/ }))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText(/Ana Sousa/)).toBeInTheDocument()
+
+    const confirmar = within(dialog).getByRole("button", { name: /Confirmar aprovação/ })
+    expect(confirmar).toBeDisabled()
+    await usuario.click(within(dialog).getByRole("checkbox"))
+    await usuario.click(confirmar)
+
     expect(await screen.findByText("Recomendação aprovada.")).toBeInTheDocument()
   })
 
-  it("Gestor executa uma recomendação aprovada (mutation + toast)", async () => {
+  it("Gestor executa uma recomendação: confirma no modal + toast", async () => {
     const { usuario } = renderComoGestor()
     await usuario.click(await screen.findByRole("button", { name: /Executar/ }))
+
+    const dialog = await screen.findByRole("dialog")
+    const confirmar = within(dialog).getByRole("button", { name: /Confirmar execução/ })
+    expect(confirmar).toBeDisabled()
+    await usuario.click(within(dialog).getByRole("checkbox"))
+    await usuario.click(confirmar)
+
     expect(await screen.findByText("Recomendação executada.")).toBeInTheDocument()
+  })
+
+  it("'Criar transferência' abre o modal de nova transferência", async () => {
+    const { usuario } = renderComoGestor()
+    await usuario.click(await screen.findByRole("button", { name: /Criar transferência/ }))
+    expect(await screen.findByText("Nova transferência")).toBeInTheDocument()
+  })
+
+  it("clicar num card pendente abre o modal de edição pré-preenchido", async () => {
+    const { usuario } = renderComoGestor()
+    // Ceftriaxona (rec-1) é pendente → o card é clicável para edição.
+    await usuario.click(await screen.findByText("Ceftriaxona 1g"))
+    expect(await screen.findByText("Editar transferência")).toBeInTheDocument()
+  })
+
+  it("Gestor recusa uma pendente: confirma no modal + toast", async () => {
+    const { usuario } = renderComoGestor()
+    await usuario.click(await screen.findByRole("button", { name: /Recusar/ }))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText("Confirmar recusa da recomendação")).toBeInTheDocument()
+    await usuario.click(within(dialog).getByRole("checkbox"))
+    await usuario.click(within(dialog).getByRole("button", { name: /Confirmar recusa/ }))
+
+    expect(await screen.findByText("Recomendação recusada.")).toBeInTheDocument()
   })
 
   it("Gestor vê o botão de gerar e recebe o resultado do motor", async () => {

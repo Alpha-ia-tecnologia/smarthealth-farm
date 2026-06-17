@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import type { FiltrosResumo } from "@/lib/api"
 import {
   estoqueApi,
   type LoteFiltros,
@@ -11,7 +12,7 @@ export const estoqueKeys = {
   raiz: ["estoque"] as const,
   posicoes: (filtros: PosicaoFiltros, paginacao: ParamsPaginacao) =>
     ["estoque", "posicoes", filtros, paginacao] as const,
-  resumo: () => ["estoque", "resumo"] as const,
+  resumo: (filtros: FiltrosResumo) => ["estoque", "resumo", filtros] as const,
   detalhe: (medId: string, uniId: string) => ["estoque", "detalhe", medId, uniId] as const,
   lotes: (filtros: LoteFiltros, paginacao: ParamsPaginacao) =>
     ["estoque", "lotes", filtros, paginacao] as const,
@@ -26,11 +27,11 @@ export function usePosicoes(filtros: PosicaoFiltros = {}, paginacao: ParamsPagin
   })
 }
 
-/** KPIs do estoque. */
-export function useResumoEstoque() {
+/** KPIs do estoque (filtros opcionais por unidade/medicamento). */
+export function useResumoEstoque(filtros: FiltrosResumo = {}) {
   return useQuery({
-    queryKey: estoqueKeys.resumo(),
-    queryFn: () => estoqueApi.resumo(),
+    queryKey: estoqueKeys.resumo(filtros),
+    queryFn: () => estoqueApi.resumo(filtros),
   })
 }
 

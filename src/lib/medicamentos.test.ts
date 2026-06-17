@@ -23,6 +23,19 @@ describe("medicamentosApi", () => {
     expect(url?.searchParams.get("essencial")).toBe("true")
   })
 
+  it("envia unidadeId para listar só os medicamentos da unidade (filtro dependente)", async () => {
+    let url: URL | undefined
+    server.use(
+      http.get("*/medicamentos", ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(ok([]))
+      }),
+    )
+    await medicamentosApi.listar({ unidadeId: "uni-hto", ativo: true })
+    expect(url?.searchParams.get("unidadeId")).toBe("uni-hto")
+    expect(url?.searchParams.get("ativo")).toBe("true")
+  })
+
   it("busca um medicamento por id", async () => {
     server.use(
       http.get("*/medicamentos/med-001", () => HttpResponse.json(ok(medicamentosTeste[0]))),

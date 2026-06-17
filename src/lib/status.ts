@@ -54,3 +54,14 @@ export const conectividadeStatus: Record<string, StatusKey> = {
   Intermitente: "atencao",
   Precária: "critico",
 }
+
+/**
+ * Status de recomendação → token de cor. Recusada é crítico (vermelho); executada, normal (verde);
+ * aprovada, info; pendente, atenção. Centralizado para todas as telas pintarem igual.
+ */
+export const recomendacaoStatus: Record<string, StatusKey> = {
+  Pendente: "atencao",
+  Aprovada: "info",
+  Executada: "ok",
+  Recusada: "critico",
+}

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw"
 import AlertasPage from "@/pages/AlertasPage"
-import { renderizar, screen, waitFor } from "@/test/utils"
+import { renderizar, screen, waitFor, within } from "@/test/utils"
 import { server } from "@/test/server"
 import { erro, ok, usuarioTeste } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
@@ -34,15 +34,47 @@ describe("AlertasPage", () => {
     renderComoGestor()
     // O card e a aba compartilham o rótulo "Alertas ativos"; o card é o que tem o valor numérico.
     const cardAtivos = (await screen.findAllByText("Alertas ativos")).find((el) =>
-      el.parentElement?.textContent?.includes("15"),
+      el.closest("[data-slot=card]")?.textContent?.includes("15"),
     )
     expect(cardAtivos).toBeDefined()
   })
 
-  it("trata um alerta aberto (mutation) e confirma com toast", async () => {
+  it("trata um alerta aberto: confirma no modal (com quem faz a ação) e mostra toast", async () => {
     const { usuario } = renderComoGestor()
     await usuario.click(await screen.findByRole("button", { name: /Tratar/ }))
+
+    // Abre o modal de confirmação mostrando quem está realizando a ação (usuário logado).
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText(/Ana Sousa/)).toBeInTheDocument()
+
+    // Confirmar fica desabilitado até marcar o aceite.
+    const confirmar = within(dialog).getByRole("button", { name: /Confirmar tratamento/ })
+    expect(confirmar).toBeDisabled()
+
+    await usuario.click(within(dialog).getByRole("checkbox"))
+    expect(confirmar).toBeEnabled()
+
+    await usuario.click(confirmar)
     expect(await screen.findByText("Alerta em tratamento.")).toBeInTheDocument()
+  })
+
+  it("se a ação falha, mostra o erro em toast e mantém o modal aberto para nova tentativa", async () => {
+    server.use(
+      http.patch("*/alertas/:id/status", () =>
+        HttpResponse.json(erro("Acesso negado.", "ACESSO_NEGADO"), { status: 403 }),
+      ),
+    )
+    const { usuario } = renderComoGestor()
+    await usuario.click(await screen.findByRole("button", { name: /Tratar/ }))
+
+    const dialog = await screen.findByRole("dialog")
+    await usuario.click(within(dialog).getByRole("checkbox"))
+    await usuario.click(within(dialog).getByRole("button", { name: /Confirmar tratamento/ }))
+
+    // O erro vira toast em pt-BR e o modal segue aberto (deixa tentar de novo ou cancelar).
+    expect(await screen.findByText("Acesso negado.")).toBeInTheDocument()
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(within(screen.getByRole("dialog")).getByRole("button", { name: /Confirmar tratamento/ })).toBeEnabled()
   })
 
   it("Gestor vê o botão de gerar alertas e recebe o resultado do motor", async () => {

@@ -1,13 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { previsoesApi, type PrevisaoFiltros } from "@/lib/previsoes"
-import type { ParamsPaginacao } from "@/lib/api"
+import type { FiltrosResumo, ParamsPaginacao } from "@/lib/api"
 
 /** Chaves de cache do domínio de previsões. */
 export const previsoesKeys = {
   raiz: ["previsoes"] as const,
   lista: (filtros: PrevisaoFiltros, paginacao: ParamsPaginacao) =>
     ["previsoes", "lista", filtros, paginacao] as const,
-  resumo: () => ["previsoes", "resumo"] as const,
+  resumo: (filtros: FiltrosResumo) => ["previsoes", "resumo", filtros] as const,
   detalhe: (medicamentoId?: string, unidadeId?: string) =>
     ["previsoes", "detalhe", medicamentoId, unidadeId] as const,
 }
@@ -21,11 +21,11 @@ export function usePrevisoes(filtros: PrevisaoFiltros = {}, paginacao: ParamsPag
   })
 }
 
-/** KPIs do painel de previsão. */
-export function useResumoPrevisao() {
+/** KPIs do painel de previsão (filtros opcionais por unidade/medicamento). */
+export function useResumoPrevisao(filtros: FiltrosResumo = {}) {
   return useQuery({
-    queryKey: previsoesKeys.resumo(),
-    queryFn: () => previsoesApi.resumo(),
+    queryKey: previsoesKeys.resumo(filtros),
+    queryFn: () => previsoesApi.resumo(filtros),
   })
 }
 

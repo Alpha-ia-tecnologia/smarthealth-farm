@@ -23,6 +23,8 @@ export interface MedicamentoFiltros {
   essencial?: boolean
   ativo?: boolean
   busca?: string
+  /** Restringe aos medicamentos com posição de estoque na unidade (filtro dependente). */
+  unidadeId?: string
 }
 
 /** Dados de escrita de medicamento (criar/atualizar). Enums em rótulo pt-BR (o backend aceita). */

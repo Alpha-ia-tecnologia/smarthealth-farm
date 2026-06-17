@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState } from "react"
 import type { ColumnDef, SortingState } from "@tanstack/react-table"
 import { Boxes, BrainCircuit, GitBranch, RefreshCw, Target, TrendingUp } from "lucide-react"
 import { toast } from "sonner"
@@ -8,6 +8,7 @@ import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
+import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ForecastChart } from "@/components/charts/ForecastChart"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +23,7 @@ import {
 } from "@/hooks/use-previsoes"
 import { useDebounce } from "@/hooks/use-debounce"
 import { usePerfil } from "@/context/auth"
+import { podeGerir } from "@/lib/permissoes"
 import { ApiError } from "@/lib/api"
 import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
 import { META_MAPE, type Previsao } from "@/lib/previsoes"
@@ -53,12 +55,34 @@ function mensagemDeErro(erro: unknown): string {
   return erro instanceof ApiError ? erro.message : "Erro inesperado. Tente novamente."
 }
 
+/**
+ * "Composição da previsão" usa dados ilustrativos (sem endpoint que sirva o ensemble/validação).
+ * Oculta da tela por ora — o código fica preservado para reativar quando o backend expuser.
+ */
+const MOSTRAR_COMPOSICAO = false
+
+/** Opções do filtro de status (desvio do modelo / drift) na tabela de previsões. */
+const DRIFT_OPCOES = [
+  { valor: "Estável", rotulo: "Estável" },
+  { valor: "Atenção", rotulo: "Atenção" },
+  { valor: "Degradado", rotulo: "Degradado" },
+]
+
 export default function PrevisaoPage() {
   const perfil = usePerfil()
-  const ehGestor = perfil === "Gestor"
+  // "Gestor ou Admin" — quem pode tomar decisões de gestão (recalibrar, etc.).
+  const ehGestor = podeGerir(perfil)
 
   // Guarda só a chave do item escolhido; a linha é derivada da página (default: a primeira).
   const [selKey, setSelKey] = useState<{ medicamentoId: string; unidadeId: string } | null>(null)
+  // Referência ao gráfico de topo: ao clicar numa linha, rolamos até ele (o gráfico troca de item).
+  const graficoRef = useRef<HTMLDivElement>(null)
+
+  // Filtros (unidade + medicamento) — repassados ao backend, que já os aceita.
+  const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
+  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+  // Filtro de status do desvio do modelo (drift), isolado na tabela de previsões.
+  const [drift, setDrift] = useState<string | undefined>(undefined)
 
   // Estado da tabela (paginação/ordenação/busca server-side).
   const [pagina, setPagina] = useState(0)
@@ -68,9 +92,9 @@ export default function PrevisaoPage() {
   const buscaDebounced = useDebounce(busca, 350)
 
   const ordenacao = sorting[0]
-  const resumoQuery = useResumoPrevisao()
+  const resumoQuery = useResumoPrevisao({ unidadeId, medicamentoId })
   const previsoesQuery = usePrevisoes(
-    { busca: buscaDebounced || undefined },
+    { unidadeId, medicamentoId, drift: drift as Previsao["drift"] | undefined, busca: buscaDebounced || undefined },
     {
       pagina,
       tamanho,
@@ -78,6 +102,27 @@ export default function PrevisaoPage() {
       ordem: ordenacao?.desc ? "desc" : "asc",
     },
   )
+
+  /** Filtro mudou → volta para a primeira página (evita página vazia). */
+  function aoFiltrarUnidade(v: string | undefined) {
+    setUnidadeId(v)
+    setPagina(0)
+  }
+  function aoFiltrarMedicamento(v: string | undefined) {
+    setMedicamentoId(v)
+    setPagina(0)
+  }
+  function aoFiltrarDrift(v: string | undefined) {
+    setDrift(v)
+    setPagina(0)
+  }
+
+  /** Seleciona o item e rola até o gráfico de topo, deixando claro que ele reflete o clique. */
+  function selecionarItem(medicamentoId: string, unidadeId: string) {
+    setSelKey({ medicamentoId, unidadeId })
+    const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    graficoRef.current?.scrollIntoView({ behavior: reduzir ? "auto" : "smooth", block: "start" })
+  }
   const recalibrar = useRecalibrarPrevisoes()
 
   const itens = previsoesQuery.data?.itens
@@ -171,7 +216,7 @@ export default function PrevisaoPage() {
       <PageHeader
         icon={<TrendingUp className="size-5" />}
         title="Previsão de Demanda"
-        rf="RF-PRV"
+        info="Estima quanto de cada medicamento será consumido em cada unidade nos próximos meses. A assertividade é medida pelo erro MAPE (meta: abaixo de 15% nos itens de maior criticidade). Quanto melhor a previsão, menos faltas e menos desperdício."
         description="Estima a demanda futura por medicamento, unidade e horizonte, com assertividade aferida (meta de erro MAPE < 15% nos itens de maior criticidade)."
         actions={
           ehGestor && (
@@ -183,6 +228,11 @@ export default function PrevisaoPage() {
         }
       />
 
+      <BarraFiltros>
+        <FiltroUnidade valor={unidadeId} onChange={aoFiltrarUnidade} />
+        <FiltroMedicamento valor={medicamentoId} onChange={aoFiltrarMedicamento} unidadeId={unidadeId} />
+      </BarraFiltros>
+
       {/* KPIs */}
       {resumoQuery.isError ? (
         <ErroConsulta
@@ -191,10 +241,10 @@ export default function PrevisaoPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Erro médio (MAPE)" value={resumoQuery.data ? fmtPct(resumoQuery.data.mapeMedio) : ""} carregando={resumoQuery.isPending} icon={Target} accent="success" hint="alvo < 15%" rf="RF-PRV-05" />
-          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" rf="RF-PRV-05" />
-          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" rf="RF-PRV-04" />
-          <KpiCard label="Itens com desvio" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensComDesvio) : ""} carregando={resumoQuery.isPending} icon={GitBranch} accent={resumoQuery.data?.itensComDesvio ? "warning" : "success"} hint="monitoramento contínuo" rf="RF-PRV-06" />
+          <KpiCard label="Erro médio (MAPE)" value={resumoQuery.data ? fmtPct(resumoQuery.data.mapeMedio) : ""} carregando={resumoQuery.isPending} icon={Target} accent="success" hint="alvo < 15%" info="Erro médio das previsões: o quanto, em média, elas erram para mais ou para menos. Quanto menor, melhor — o alvo é ficar abaixo de 15%." />
+          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" info="Quantos dos medicamentos de maior criticidade já estão com a previsão dentro da meta de erro (abaixo de 15%)." />
+          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" info="Total de previsões geradas automaticamente e em uso no momento, uma para cada combinação de medicamento e unidade." />
+          <KpiCard label="Itens com desvio" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensComDesvio) : ""} carregando={resumoQuery.isPending} icon={GitBranch} accent={resumoQuery.data?.itensComDesvio ? "warning" : "success"} hint="monitoramento contínuo" info="Itens cujo consumo recente se afastou do que o modelo previa (desvio). Sinalizam que a previsão pode precisar de recalibração." />
         </div>
       )}
 
@@ -208,18 +258,18 @@ export default function PrevisaoPage() {
           <Spinner size={40} label="Carregando previsões" />
         </div>
       ) : previsoesQuery.data.itens.length === 0 ? (
-        <Section title="Previsões por item e unidade" rf="RF-PRV-01">
+        <Section title="Previsões por item e unidade" info="Lista todas as previsões por medicamento e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa.">
           <p className="py-10 text-center text-sm text-muted-foreground">
             Nenhuma previsão disponível no momento.
           </p>
         </Section>
       ) : (
         <>
-          <div className="grid gap-6 lg:grid-cols-5">
+          <div className={cn("grid gap-6", MOSTRAR_COMPOSICAO && "lg:grid-cols-5")}>
+            <div ref={graficoRef} className={cn("scroll-mt-4", MOSTRAR_COMPOSICAO && "lg:col-span-3")}>
             <Section
-              className="lg:col-span-3"
               title={sel ? `Previsão — ${sel.medicamentoNome}` : "Previsão"}
-              rf="RF-PRV-02"
+              info="Série temporal do item selecionado: consumo histórico, previsão e projeção futura. Selecione uma linha na tabela abaixo para trocar o item."
               description={sel ? `${sel.unidadeNome} · horizonte de ${sel.horizonteMeses} meses` : undefined}
               action={sel && <Badge variant="outline" className="font-mono text-[10px]">{sel.modelo}</Badge>}
             >
@@ -251,11 +301,13 @@ export default function PrevisaoPage() {
                 </AreaAtualizavel>
               )}
             </Section>
+            </div>
 
+            {MOSTRAR_COMPOSICAO && (
             <Section
               className="lg:col-span-2"
               title="Composição da previsão"
-              rf="RF-PRV-03"
+              info="Mostra como a previsão é montada: a combinação de métodos estatísticos e de inteligência artificial, com o peso de cada um, além de métricas de validação e o histórico de versões do modelo."
               description="Combinação de métodos estatísticos e de inteligência artificial."
               action={
                 <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
@@ -289,7 +341,7 @@ export default function PrevisaoPage() {
                       </div>
                     </div>
                   ))}
-                  <p className="pt-1 text-xs text-muted-foreground">Pesos ajustados por validação histórica (RF-PRV-03/08).</p>
+                  <p className="pt-1 text-xs text-muted-foreground">Pesos ajustados por validação histórica.</p>
                 </TabsContent>
                 <TabsContent value="validacao" className="space-y-2 pt-3 text-sm">
                   {[
@@ -303,7 +355,6 @@ export default function PrevisaoPage() {
                       <span className="tabular font-medium">{v}</span>
                     </div>
                   ))}
-                  <RfTagLine rf="RF-PRV-08" />
                 </TabsContent>
                 <TabsContent value="versoes" className="space-y-2 pt-3">
                   {["v4.2 (produção)", "v4.1", "v3.7", "v3.0"].map((v, i) => (
@@ -312,16 +363,25 @@ export default function PrevisaoPage() {
                       {i === 0 ? <StatusBadge status="ok" label="Ativa" /> : <span className="text-[11px] text-muted-foreground">arquivada</span>}
                     </div>
                   ))}
-                  <RfTagLine rf="RF-PRV-09" />
                 </TabsContent>
               </Tabs>
             </Section>
+            )}
           </div>
 
           <Section
             title="Previsões por item e unidade"
-            rf="RF-PRV-01 · RF-PRV-02"
+            info="Lista todas as previsões por medicamento e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa."
             description="Selecione uma linha para visualizar a série completa. Itens de maior criticidade destacados."
+            action={
+              <SelectFiltro
+                valor={drift}
+                onChange={aoFiltrarDrift}
+                opcoes={DRIFT_OPCOES}
+                todosRotulo="Todos os status"
+                className="w-44"
+              />
+            }
           >
             <AreaAtualizavel atualizando={previsoesQuery.isFetching}>
               <DataTable
@@ -329,7 +389,7 @@ export default function PrevisaoPage() {
                 data={previsoesQuery.data.itens}
                 searchKey="medicamentoNome"
                 searchPlaceholder="Buscar medicamento ou unidade…"
-                onRowClick={(r) => setSelKey({ medicamentoId: r.medicamentoId, unidadeId: r.unidadeId })}
+                onRowClick={(r) => selecionarItem(r.medicamentoId, r.unidadeId)}
                 dense
                 servidor={servidorPrevisoes}
               />
@@ -339,8 +399,4 @@ export default function PrevisaoPage() {
       )}
     </>
   )
-}
-
-function RfTagLine({ rf }: { rf: string }) {
-  return <p className="pt-1 font-mono text-[10px] text-muted-foreground">{rf}</p>
 }

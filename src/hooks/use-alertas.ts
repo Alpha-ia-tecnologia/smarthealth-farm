@@ -5,14 +5,14 @@ import {
   type AtualizarLimiares,
   type StatusAlerta,
 } from "@/lib/alertas"
-import type { ParamsPaginacao } from "@/lib/api"
+import type { FiltrosResumo, ParamsPaginacao } from "@/lib/api"
 
 /** Chaves de cache do domínio de alertas. */
 export const alertasKeys = {
   raiz: ["alertas"] as const,
   lista: (filtros: AlertaFiltros, paginacao: ParamsPaginacao) =>
     ["alertas", "lista", filtros, paginacao] as const,
-  resumo: () => ["alertas", "resumo"] as const,
+  resumo: (filtros: FiltrosResumo) => ["alertas", "resumo", filtros] as const,
   limiares: () => ["alertas", "limiares"] as const,
 }
 
@@ -25,11 +25,11 @@ export function useAlertas(filtros: AlertaFiltros = {}, paginacao: ParamsPaginac
   })
 }
 
-/** KPIs do painel de alertas. */
-export function useResumoAlertas() {
+/** KPIs do painel de alertas (filtros opcionais por unidade/medicamento). */
+export function useResumoAlertas(filtros: FiltrosResumo = {}) {
   return useQuery({
-    queryKey: alertasKeys.resumo(),
-    queryFn: () => alertasApi.resumo(),
+    queryKey: alertasKeys.resumo(filtros),
+    queryFn: () => alertasApi.resumo(filtros),
   })
 }
 

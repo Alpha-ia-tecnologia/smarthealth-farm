@@ -17,7 +17,9 @@ import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
+import { BarraFiltros, FiltroMedicamento, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
+import { ConfirmarAcaoAlertaDialog } from "@/components/alertas/ConfirmarAcaoAlertaDialog"
 import { Paginacao } from "@/components/shared/Paginacao"
 import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
 import { Badge } from "@/components/ui/badge"
@@ -37,12 +39,25 @@ import {
 } from "@/hooks/use-alertas"
 import { useDebounce } from "@/hooks/use-debounce"
 import { usePerfil } from "@/context/auth"
+import { podeGerir } from "@/lib/permissoes"
 import { ApiError } from "@/lib/api"
-import type { Alerta, LimiarAlerta, TipoAlerta } from "@/lib/alertas"
+import type { Alerta, LimiarAlerta, SeveridadeAlerta, StatusAlerta, TipoAlerta } from "@/lib/alertas"
 import { fmtDataHora, fmtNum } from "@/lib/format"
 import { severidadeStatus } from "@/lib/status"
 
 const statusMap = { Aberto: "critico", "Em tratamento": "atencao", Resolvido: "ok" } as const
+
+/** Opções dos filtros isolados da seção "Alertas disparados". */
+const STATUS_ALERTA_OPCOES = [
+  { valor: "Aberto", rotulo: "Aberto" },
+  { valor: "Em tratamento", rotulo: "Em tratamento" },
+  { valor: "Resolvido", rotulo: "Resolvido" },
+]
+const SEVERIDADE_OPCOES = [
+  { valor: "Crítico", rotulo: "Crítico" },
+  { valor: "Alto", rotulo: "Alto" },
+  { valor: "Médio", rotulo: "Médio" },
+]
 
 /** Coluna da tabela (id) → campo de ordenação no backend. */
 const ORDENACAO_BACKEND: Record<string, string> = {
@@ -59,10 +74,17 @@ function mensagemDeErro(erro: unknown): string {
 
 export default function AlertasPage() {
   const perfil = usePerfil()
-  const ehGestor = perfil === "Gestor"
+  // "Gestor ou Admin" — quem pode gerar alertas e editar limiares.
+  const ehGestor = podeGerir(perfil)
 
-  // Aba "ativos": filtro por tipo + paginação/ordenação/busca server-side.
+  // Filtros compartilhados (unidade + medicamento) — valem para ativos e histórico.
+  const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
+  const [medicamentoId, setMedicamentoId] = useState<string | undefined>(undefined)
+
+  // Aba "ativos": filtro por tipo/status/severidade + paginação/ordenação/busca server-side.
   const [filtroTipo, setFiltroTipo] = useState<"Todos" | TipoAlerta>("Todos")
+  const [filtroStatus, setFiltroStatus] = useState<string | undefined>(undefined)
+  const [filtroSeveridade, setFiltroSeveridade] = useState<string | undefined>(undefined)
   const [pagina, setPagina] = useState(0)
   const [tamanho, setTamanho] = useState(TAMANHO_PAGINA_PADRAO)
   const [sorting, setSorting] = useState<SortingState>([])
@@ -74,10 +96,14 @@ export default function AlertasPage() {
   const [tamanhoHistorico, setTamanhoHistorico] = useState(TAMANHO_PAGINA_PADRAO)
 
   const ordenacao = sorting[0]
-  const resumoQuery = useResumoAlertas()
+  const resumoQuery = useResumoAlertas({ unidadeId, medicamentoId })
   const alertasQuery = useAlertas(
     {
       tipo: filtroTipo === "Todos" ? undefined : filtroTipo,
+      status: filtroStatus as StatusAlerta | undefined,
+      severidade: filtroSeveridade as SeveridadeAlerta | undefined,
+      unidadeId,
+      medicamentoId,
       busca: buscaDebounced || undefined,
     },
     {
@@ -88,19 +114,47 @@ export default function AlertasPage() {
     },
   )
   const historicoQuery = useAlertas(
-    {},
+    { unidadeId, medicamentoId },
     { pagina: pagHistorico, tamanho: tamanhoHistorico, ordenarPor: "criadoEm", ordem: "desc" },
   )
   const limiaresQuery = useLimiares()
 
+  /** Mudou unidade/medicamento → reseta as duas listas; status/severidade só a de ativos. */
+  function aoFiltrarUnidade(v: string | undefined) {
+    setUnidadeId(v)
+    setPagina(0)
+    setPagHistorico(0)
+  }
+  function aoFiltrarMedicamento(v: string | undefined) {
+    setMedicamentoId(v)
+    setPagina(0)
+    setPagHistorico(0)
+  }
+  function aoFiltrarStatus(v: string | undefined) {
+    setFiltroStatus(v)
+    setPagina(0)
+  }
+  function aoFiltrarSeveridade(v: string | undefined) {
+    setFiltroSeveridade(v)
+    setPagina(0)
+  }
+
   const tratar = useTratarAlerta()
   const gerar = useGerarAlertas()
 
-  function aoTratar(alerta: Alerta, novoStatus: Alerta["status"]) {
+  // Ação de tratamento aguardando confirmação no modal (null = nenhum modal aberto).
+  const [acaoPendente, setAcaoPendente] = useState<{ alerta: Alerta; status: Alerta["status"] } | null>(null)
+
+  function confirmarAcao() {
+    if (!acaoPendente) return
+    const { alerta, status } = acaoPendente
     tratar.mutate(
-      { id: alerta.id, status: novoStatus },
+      { id: alerta.id, status },
       {
-        onSuccess: () => toast.success(`Alerta ${novoStatus === "Resolvido" ? "resolvido" : "em tratamento"}.`),
+        onSuccess: () => {
+          toast.success(`Alerta ${status === "Resolvido" ? "resolvido" : "em tratamento"}.`)
+          setAcaoPendente(null)
+        },
         onError: (erro) => toast.error(mensagemDeErro(erro)),
       },
     )
@@ -185,12 +239,12 @@ export default function AlertasPage() {
         const a = row.original
         if (a.status === "Resolvido") return null
         return a.status === "Aberto" ? (
-          <Button size="xs" variant="outline" disabled={tratar.isPending} onClick={() => aoTratar(a, "Em tratamento")}>
+          <Button size="xs" variant="outline" disabled={tratar.isPending} onClick={() => setAcaoPendente({ alerta: a, status: "Em tratamento" })}>
             <Wrench className="size-3" />
             Tratar
           </Button>
         ) : (
-          <Button size="xs" variant="outline" disabled={tratar.isPending} onClick={() => aoTratar(a, "Resolvido")}>
+          <Button size="xs" variant="outline" disabled={tratar.isPending} onClick={() => setAcaoPendente({ alerta: a, status: "Resolvido" })}>
             <CheckCheck className="size-3" />
             Resolver
           </Button>
@@ -229,9 +283,14 @@ export default function AlertasPage() {
       <PageHeader
         icon={<BellRing className="size-5" />}
         title="Alertas Operacionais"
-        rf="RF-ALE"
+        info="Aqui o sistema avisa, de forma automática, quando algum medicamento corre risco de acabar ou de vencer. Use esta tela para ver os avisos, ajustar quando eles devem disparar e acompanhar o que já foi resolvido."
         description="Alertas automáticos de risco de desabastecimento e de vencimento, com base nas previsões de demanda, configuração de limiares e direcionamento por perfil."
       />
+
+      <BarraFiltros>
+        <FiltroUnidade valor={unidadeId} onChange={aoFiltrarUnidade} />
+        <FiltroMedicamento valor={medicamentoId} onChange={aoFiltrarMedicamento} unidadeId={unidadeId} />
+      </BarraFiltros>
 
       {/* KPIs */}
       {resumoQuery.isError ? (
@@ -241,10 +300,10 @@ export default function AlertasPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Alertas ativos" value={resumoQuery.data ? fmtNum(resumoQuery.data.ativos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" rf="RF-ALE-04" />
-          <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" rf="RF-ALE-01" />
-          <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" rf="RF-ALE-02" />
-          <KpiCard label="Tratados" value={resumoQuery.data ? fmtNum(resumoQuery.data.resolvidos) : ""} carregando={resumoQuery.isPending} icon={SlidersHorizontal} accent="success" hint="alertas resolvidos" rf="RF-ALE-05" />
+          <KpiCard label="Alertas ativos" value={resumoQuery.data ? fmtNum(resumoQuery.data.ativos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Total de avisos que ainda exigem atenção: os que ninguém começou a tratar somados aos que já estão em tratamento. Quanto maior o número, mais situações de risco aguardam uma providência." />
+          <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos medicamentos estão prestes a faltar no estoque, segundo a previsão de consumo. São os casos mais urgentes, porque a falta afeta diretamente o atendimento." />
+          <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" info="Quantos medicamentos têm lotes perto da data de validade. São itens que precisam ser usados ou remanejados a tempo para não serem descartados." />
+          <KpiCard label="Tratados" value={resumoQuery.data ? fmtNum(resumoQuery.data.resolvidos) : ""} carregando={resumoQuery.isPending} icon={SlidersHorizontal} accent="success" hint="alertas resolvidos" info="Quantidade de avisos que já foram resolvidos. Serve para acompanhar o quanto a equipe vem dando conta dos riscos identificados." />
         </div>
       )}
 
@@ -258,8 +317,10 @@ export default function AlertasPage() {
         <TabsContent value="ativos" className="pt-4">
           <Section
             title="Alertas disparados"
-            rf="RF-ALE-01 · RF-ALE-02"
-            action={
+            info="Lista dos avisos que o sistema gerou e que ainda estão em aberto ou em tratamento. Você pode filtrar por tipo (falta de estoque ou risco de vencimento) e, em cada linha, marcar como em tratamento ou resolvido."
+          >
+            {/* Barra de controles: abas de tipo à esquerda; status/severidade e ação à direita. */}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap gap-1">
                 {(["Todos", "Desabastecimento", "Vencimento"] as const).map((f) => (
                   <Button
@@ -274,6 +335,22 @@ export default function AlertasPage() {
                     {f}
                   </Button>
                 ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <SelectFiltro
+                  valor={filtroStatus}
+                  onChange={aoFiltrarStatus}
+                  opcoes={STATUS_ALERTA_OPCOES}
+                  todosRotulo="Todos os status"
+                  className="w-40"
+                />
+                <SelectFiltro
+                  valor={filtroSeveridade}
+                  onChange={aoFiltrarSeveridade}
+                  opcoes={SEVERIDADE_OPCOES}
+                  todosRotulo="Todas as severidades"
+                  className="w-44"
+                />
                 {ehGestor && (
                   <Button size="sm" variant="secondary" disabled={gerar.isPending} onClick={aoGerar}>
                     <RefreshCw className={gerar.isPending ? "size-3.5 animate-spin" : "size-3.5"} />
@@ -281,8 +358,8 @@ export default function AlertasPage() {
                   </Button>
                 )}
               </div>
-            }
-          >
+            </div>
+
             {alertasQuery.isError ? (
               <ErroConsulta
                 mensagem="Não foi possível carregar os alertas."
@@ -310,7 +387,7 @@ export default function AlertasPage() {
         <TabsContent value="config" className="pt-4">
           <Section
             title="Parâmetros e limiares de disparo"
-            rf="RF-ALE-03"
+            info="Aqui se define em que momento o sistema deve disparar um aviso, por exemplo, com quantos dias de estoque restante ou de antecedência da validade. Ajustar esses limites torna os alertas mais ou menos sensíveis."
             description={
               ehGestor
                 ? "Os valores configurados aqui são usados pelo motor na próxima geração de alertas."
@@ -338,7 +415,7 @@ export default function AlertasPage() {
         </TabsContent>
 
         <TabsContent value="historico" className="pt-4">
-          <Section title="Histórico de alertas" rf="RF-ALE-05" description="Quantidade e tratamento dado a cada alerta emitido." noPadding>
+          <Section title="Histórico de alertas" info="Registro de todos os avisos já emitidos, com o tratamento que cada um recebeu. Serve para consultar o que aconteceu antes e como foi resolvido." description="Quantidade e tratamento dado a cada alerta emitido." noPadding>
             {historicoQuery.isError ? (
               <div className="p-5">
                 <ErroConsulta
@@ -384,6 +461,18 @@ export default function AlertasPage() {
           </Section>
         </TabsContent>
       </Tabs>
+
+      <ConfirmarAcaoAlertaDialog
+        aberto={acaoPendente !== null}
+        onOpenChange={(aberto) => {
+          // Não fecha por clique fora/Esc enquanto a mutação está em andamento.
+          if (!aberto && !tratar.isPending) setAcaoPendente(null)
+        }}
+        alerta={acaoPendente?.alerta ?? null}
+        novoStatus={acaoPendente?.status ?? "Em tratamento"}
+        onConfirmar={confirmarAcao}
+        processando={tratar.isPending}
+      />
     </>
   )
 }

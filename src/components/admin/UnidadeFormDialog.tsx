@@ -128,7 +128,7 @@ function Formulario({
     <>
       <DialogHeader>
         <DialogTitle>{ehEdicao ? "Editar unidade" : "Nova unidade"}</DialogTitle>
-        <DialogDescription>Unidade hospitalar da rede EMSERH (RF-DAD-06).</DialogDescription>
+        <DialogDescription>Unidade hospitalar da rede EMSERH.</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={aoSubmeter} className="space-y-4" noValidate>

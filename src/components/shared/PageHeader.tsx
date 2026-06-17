@@ -1,16 +1,17 @@
 import { cn } from "@/lib/utils"
-import { RfTag } from "./RfTag"
+import { InfoHint } from "./InfoHint"
 
 interface Props {
   title: string
   description?: string
-  rf?: string
+  /** Explicação em linguagem simples do que esta tela faz (ícone ⓘ ao lado do título). */
+  info?: string
   icon?: React.ReactNode
   actions?: React.ReactNode
   className?: string
 }
 
-export function PageHeader({ title, description, rf, icon, actions, className }: Props) {
+export function PageHeader({ title, description, info, icon, actions, className }: Props) {
   return (
     <div className={cn("flex flex-col gap-4 pb-2 sm:flex-row sm:items-start sm:justify-between", className)}>
       <div className="flex items-start gap-3">
@@ -22,7 +23,7 @@ export function PageHeader({ title, description, rf, icon, actions, className }:
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="font-display text-2xl font-bold tracking-tight">{title}</h1>
-            {rf && <RfTag ids={rf} />}
+            {info && <InfoHint texto={info} lado="bottom" />}
           </div>
           {description && <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>}
         </div>

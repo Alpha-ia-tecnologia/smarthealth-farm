@@ -12,6 +12,7 @@ import AcessoNegado from "./AcessoNegado"
  */
 export function RequireRole({ perfis }: { perfis: PerfilUsuario[] }) {
   const perfil = usePerfil()
-  if (perfil && perfis.includes(perfil)) return <Outlet />
+  // Admin é superusuário: acessa qualquer rota, independentemente da lista de perfis.
+  if (perfil && (perfil === "Admin" || perfis.includes(perfil))) return <Outlet />
   return <AcessoNegado />
 }

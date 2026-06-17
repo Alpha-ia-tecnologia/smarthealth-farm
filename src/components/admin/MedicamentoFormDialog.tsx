@@ -139,7 +139,7 @@ function Formulario({
     <>
       <DialogHeader>
         <DialogTitle>{ehEdicao ? "Editar medicamento" : "Novo medicamento"}</DialogTitle>
-        <DialogDescription>Item do catálogo farmacêutico (RF-DAD-06).</DialogDescription>
+        <DialogDescription>Item do catálogo farmacêutico.</DialogDescription>
       </DialogHeader>
 
       <form onSubmit={aoSubmeter} className="space-y-4" noValidate>

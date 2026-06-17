@@ -1,5 +1,5 @@
 // Serviço do Painel (RF-DASH). Agregações de dashboard — somente leitura, qualquer autenticado.
-import { api } from "./api"
+import { api, montarQuery } from "./api"
 import type { Alerta } from "./alertas"
 import type { Recomendacao } from "./recomendacoes"
 import type { PontoSerie } from "./previsoes"
@@ -71,10 +71,23 @@ export interface PainelOperacional {
   recomendacoesAbertas: Recomendacao[]
 }
 
-export const painelApi = {
-  /** GET /painel — dashboard gerencial consolidado. */
-  dashboard: () => api.get<PainelGerencial>("/painel"),
+/** Filtro do dashboard gerencial — unidade reaplica em tudo, menos cobertura por unidade. */
+export interface PainelGerencialFiltros {
+  unidadeId?: string
+}
 
-  /** GET /painel/operacional — situação por unidade + filas de alertas/recomendações. */
-  operacional: () => api.get<PainelOperacional>("/painel/operacional"),
+/** Filtros do painel operacional — unidade e medicamento. */
+export interface PainelOperacionalFiltros {
+  unidadeId?: string
+  medicamentoId?: string
+}
+
+export const painelApi = {
+  /** GET /painel — dashboard gerencial consolidado (filtro opcional por unidade). */
+  dashboard: (filtros: PainelGerencialFiltros = {}) =>
+    api.get<PainelGerencial>(`/painel${montarQuery({ ...filtros })}`),
+
+  /** GET /painel/operacional — situação por unidade + filas (filtros por unidade/medicamento). */
+  operacional: (filtros: PainelOperacionalFiltros = {}) =>
+    api.get<PainelOperacional>(`/painel/operacional${montarQuery({ ...filtros })}`),
 }

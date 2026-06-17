@@ -843,6 +843,35 @@ export const handlers = [
     const rec = recomendacoesTeste.find((r) => r.id === params.id) ?? recomendacoesTeste[0]
     return HttpResponse.json(ok({ ...rec, status: "Executada" }))
   }),
+  http.post("*/recomendacoes/:id/recusar", ({ params }) => {
+    const rec = recomendacoesTeste.find((r) => r.id === params.id) ?? recomendacoesTeste[0]
+    return HttpResponse.json(ok({ ...rec, status: "Recusada" }))
+  }),
+  http.put("*/recomendacoes/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Partial<Recomendacao>
+    const rec = recomendacoesTeste.find((r) => r.id === params.id) ?? recomendacoesTeste[0]
+    return HttpResponse.json(ok({ ...rec, ...body, status: "Pendente" }))
+  }),
+  http.post("*/recomendacoes", async ({ request }) => {
+    const b = (await request.json()) as {
+      quantidade: number
+      medicamentoId: string
+      unidadeOrigemId: string
+      unidadeDestinoId: string
+    }
+    return HttpResponse.json(
+      ok({
+        ...recomendacoesTeste[0],
+        id: "nova-rec-id",
+        ...b,
+        tipo: "Redistribuição",
+        origemMotor: "Manual",
+        status: "Pendente",
+        economiaEstimada: b.quantidade * 12,
+      }),
+      { status: 201 },
+    )
+  }),
   http.post("*/recomendacoes/gerar", () =>
     HttpResponse.json(
       ok({

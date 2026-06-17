@@ -23,7 +23,7 @@ import { useAtualizarUsuario, useCriarUsuario } from "@/hooks/use-usuarios"
 import { ApiError } from "@/lib/api"
 import type { PerfilUsuario, Usuario } from "@/types"
 
-const PERFIS: PerfilUsuario[] = ["Operador", "Gestor", "TI"]
+const PERFIS: PerfilUsuario[] = ["Operador", "Gestor", "TI", "Admin"]
 const SEM_UNIDADE = "__sem_unidade__"
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

@@ -56,7 +56,7 @@ export default function AdminPage() {
       <PageHeader
         icon={<Settings2 className="size-5" />}
         title="Administração e Gestão de Usuários"
-        rf="RF-ADM"
+        info="Área para administrar o sistema: criar e gerenciar usuários e seus perfis de acesso, cadastrar as unidades de saúde, manter o catálogo de medicamentos e ajustar as configurações gerais da plataforma."
         description="Autenticação, perfis de acesso, cadastro de unidades, itens e famílias terapêuticas, e parametrização institucional."
       />
       <KpisAdmin />
@@ -94,10 +94,10 @@ function KpisAdmin() {
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard label="Usuários ativos" value={usuarios.data ? `${ativos}/${lista.length}` : ""} carregando={usuarios.isPending} icon={Users} accent="primary" rf="RF-ADM-01" />
-      <KpiCard label="Unidades cadastradas" value={unidades.data ? fmtNum(unidades.data.length) : ""} carregando={unidades.isPending} icon={Building2} accent="teal" rf="RF-ADM-02" />
-      <KpiCard label="Itens no catálogo" value={medicamentos.data ? fmtNum(medicamentos.data.length) : ""} carregando={medicamentos.isPending} icon={Boxes} accent="primary" rf="RF-ADM-02" />
-      <KpiCard label="Famílias terapêuticas" value={fmtNum(familiasTerapeuticas.length)} icon={SlidersHorizontal} accent="teal" rf="RF-ADM-02" />
+      <KpiCard label="Usuários ativos" value={usuarios.data ? `${ativos}/${lista.length}` : ""} carregando={usuarios.isPending} icon={Users} accent="primary" info="Quantos usuários estão habilitados a acessar o sistema, em relação ao total cadastrado. Usuários inativos não conseguem entrar." />
+      <KpiCard label="Unidades cadastradas" value={unidades.data ? fmtNum(unidades.data.length) : ""} carregando={unidades.isPending} icon={Building2} accent="teal" info="Número de unidades de saúde (hospitais e estabelecimentos da rede) registradas e ativas no sistema." />
+      <KpiCard label="Itens no catálogo" value={medicamentos.data ? fmtNum(medicamentos.data.length) : ""} carregando={medicamentos.isPending} icon={Boxes} accent="primary" info="Total de medicamentos ativos cadastrados no catálogo da instituição." />
+      <KpiCard label="Famílias terapêuticas" value={fmtNum(familiasTerapeuticas.length)} icon={SlidersHorizontal} accent="teal" info="Quantos grupos de medicamentos com finalidade semelhante (por exemplo, antibióticos ou analgésicos) existem para organizar o catálogo." />
     </div>
   )
 }
@@ -151,7 +151,7 @@ function AbaUsuarios() {
       accessorKey: "perfil",
       header: "Perfil",
       cell: ({ row }) => (
-        <Badge variant={row.original.perfil === "Gestor" ? "default" : row.original.perfil === "TI" ? "secondary" : "outline"}>
+        <Badge variant={row.original.perfil === "Admin" || row.original.perfil === "Gestor" ? "default" : row.original.perfil === "TI" ? "secondary" : "outline"}>
           {row.original.perfil}
         </Badge>
       ),
@@ -215,7 +215,7 @@ function AbaUsuarios() {
   return (
     <Section
       title="Usuários"
-      rf="RF-ADM-01"
+      info="Lista de pessoas com acesso ao sistema. Aqui você cria novos usuários, edita seus dados, redefine senhas e ativa ou desativa o acesso. Cada usuário tem um perfil que define o que ele pode fazer: operador, gestor ou equipe de TI."
       description="Controle de acesso baseado em perfis (operadores, gestores e equipe de TI)."
       action={
         <Button size="sm" onClick={() => setCriando(true)}>
@@ -314,7 +314,7 @@ function AbaCadastros() {
     <div className="grid gap-6 lg:grid-cols-2">
       <Section
         title="Unidades da rede EMSERH"
-        rf="RF-ADM-02"
+        info="Cadastro das unidades de saúde da rede. Você pode adicionar novas unidades, editar seus dados (como município, porte e número de leitos) e ativar ou desativar cada uma."
         action={
           <Button size="sm" onClick={() => setCriandoUnidade(true)}>
             <Plus className="size-4" /> Nova unidade
@@ -362,7 +362,7 @@ function AbaCadastros() {
 
       <Section
         title="Famílias terapêuticas & itens"
-        rf="RF-ADM-02"
+        info="Catálogo de medicamentos organizado por família (grupos de remédios com finalidade parecida). Clique numa família para ver e gerenciar os medicamentos dela, ou use o botão para cadastrar um novo item."
         description="Clique numa família para ver e gerenciar os itens."
         action={
           <Button size="sm" onClick={() => setCriandoMedicamento(true)}>
@@ -418,7 +418,7 @@ function AbaParametros() {
   return (
     <Section
       title="Parametrização operacional"
-      rf="RF-ADM-03"
+      info="Ajustes que controlam como o sistema faz previsões e dispara alertas — por exemplo, com quantos meses de antecedência prever a demanda ou quando avisar sobre vencimento. Apenas usuários autorizados podem alterar."
       description="Limiares, regras de redistribuição e horizontes de previsão por usuário autorizado."
       action={BADGE_ILUSTRATIVO}
     >

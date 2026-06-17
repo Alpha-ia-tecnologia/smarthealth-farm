@@ -126,7 +126,7 @@ export function AssistenteIa() {
           </SheetTitle>
           <SheetDescription className="flex items-center gap-1.5">
             <ShieldCheck className="size-3.5 text-success" />
-            Dados anonimizados antes do envio à IA (RF-SEG-04).
+            Dados anonimizados antes do envio à IA.
           </SheetDescription>
         </SheetHeader>
 

@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw"
 import OperacionalPage from "@/pages/OperacionalPage"
-import { renderizar, screen } from "@/test/utils"
+import { renderizar, screen, waitFor } from "@/test/utils"
 import { server } from "@/test/server"
-import { erro } from "@/test/handlers"
+import { erro, paginar, recomendacoesTeste } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
 
 function renderOperacional() {
@@ -33,6 +33,34 @@ describe("OperacionalPage", () => {
     expect(await screen.findByText("Desabastecimento")).toBeInTheDocument()
     // Recomendação em aberto (medicamento denormalizado).
     expect(await screen.findByText("Ceftriaxona 1g")).toBeInTheDocument()
+  })
+
+  it("pinta a recomendação Recusada com a cor de status crítico (vermelho), não verde", async () => {
+    server.use(
+      http.get("*/recomendacoes", ({ request }) =>
+        HttpResponse.json(
+          paginar(request, [{ ...recomendacoesTeste[0], id: "rec-recusada", status: "Recusada" }]),
+        ),
+      ),
+    )
+    renderOperacional()
+    const badge = await screen.findByText("Recusada")
+    // recomendacaoStatus.Recusada = "critico" → estilo de perigo (text-danger), não "ok".
+    expect(badge.className).toContain("text-danger")
+  })
+
+  it("filtra a seção de recomendações por status, enviando o rótulo ao /recomendacoes", async () => {
+    let statusEnviado: string | null = null
+    server.use(
+      http.get("*/recomendacoes", ({ request }) => {
+        statusEnviado = new URL(request.url).searchParams.get("status")
+        return HttpResponse.json(paginar(request, recomendacoesTeste))
+      }),
+    )
+    const { usuario } = renderOperacional()
+    await usuario.click(await screen.findByRole("combobox", { name: "Todos os status" }))
+    await usuario.click(await screen.findByRole("option", { name: "Recusada" }))
+    await waitFor(() => expect(statusEnviado).toBe("Recusada"))
   })
 
   it("mostra erro quando o painel falha", async () => {

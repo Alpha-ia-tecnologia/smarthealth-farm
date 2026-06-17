@@ -2,7 +2,8 @@
 // Espelham os DTOs do backend. Tipos específicos de um domínio (estoque, alertas,
 // previsões, recomendações…) vivem no serviço correspondente em src/lib/<dominio>.ts.
 
-export type PerfilUsuario = "Operador" | "Gestor" | "TI"
+// "Admin" é superusuário: acumula os poderes de Gestor e TI (ver src/lib/permissoes.ts).
+export type PerfilUsuario = "Operador" | "Gestor" | "TI" | "Admin"
 
 export type FamiliaTerapeutica =
   | "Antibióticos"

@@ -1,6 +1,6 @@
 // Serviço de Estoque, Lotes e Movimentações (RF-EST). Leitura para qualquer autenticado.
 // Os tipos espelham os DTOs do backend (respostas já denormalizadas e com status derivado).
-import { api, montarQuery, paramsPaginacao, type Pagina, type ParamsPaginacao } from "./api"
+import { api, montarQuery, paramsPaginacao, type FiltrosResumo, type Pagina, type ParamsPaginacao } from "./api"
 
 export type { ParamsPaginacao } from "./api"
 
@@ -89,8 +89,9 @@ export const estoqueApi = {
   ): Promise<Pagina<PosicaoEstoque>> =>
     api.getPagina<PosicaoEstoque>(`/estoque${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`),
 
-  /** GET /estoque/resumo — KPIs da tela. */
-  resumo: () => api.get<ResumoEstoque>("/estoque/resumo"),
+  /** GET /estoque/resumo — KPIs da tela (filtros opcionais por unidade/medicamento). */
+  resumo: (filtros: FiltrosResumo = {}) =>
+    api.get<ResumoEstoque>(`/estoque/resumo${montarQuery({ ...filtros })}`),
 
   /** GET /estoque/{medicamentoId}/{unidadeId} — drill-down: lotes + movimentações. */
   detalhar: (medicamentoId: string, unidadeId: string) =>

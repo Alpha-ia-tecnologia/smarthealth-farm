@@ -21,16 +21,6 @@ import { useIndicadores, useResumoIndicadores } from "@/hooks/use-indicadores"
 import type { Indicador } from "@/lib/indicadores"
 import { fmtDec, fmtNum } from "@/lib/format"
 
-/** Faixa de RF por indicador (cosmético — o backend não carimba RF). */
-const RF_POR_CODIGO: Record<string, string> = {
-  "ind-ruptura": "RF-IND-01",
-  "ind-vencimento": "RF-IND-02",
-  "ind-emergencial": "RF-IND-03",
-  "ind-mape": "RF-IND-04",
-  "ind-ressuprimento": "RF-IND-04",
-  "ind-rupturas-evitadas": "RF-IND-01",
-}
-
 export default function IndicadoresPage() {
   const resumoQuery = useResumoIndicadores()
   const indicadoresQuery = useIndicadores()
@@ -43,7 +33,7 @@ export default function IndicadoresPage() {
       <PageHeader
         icon={<Target className="size-5" />}
         title="Indicadores e Monitoramento de Desempenho"
-        rf="RF-IND"
+        info="Esta tela acompanha, semana a semana, se o projeto está alcançando as metas combinadas. Compara como funcionava antes (sistema atual) com o resultado usando o Smart Health, para mostrar o ganho real."
         description="Medição contínua dos resultados frente às metas do edital, com coleta semanal e comparação direta com o sistema atual durante o piloto."
       />
 
@@ -55,9 +45,9 @@ export default function IndicadoresPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-3">
-          <KpiCard label="Indicadores monitorados" value={resumoQuery.data ? fmtNum(resumoQuery.data.total) : ""} carregando={resumoQuery.isPending} icon={Target} accent="primary" rf="RF-IND" />
-          <KpiCard label="Metas atingidas" value={resumoQuery.data ? fmtNum(resumoQuery.data.atingidas) : ""} carregando={resumoQuery.isPending} icon={CheckCircle2} accent="success" rf="RF-IND-04" />
-          <KpiCard label="Em progresso" value={resumoQuery.data ? fmtNum(resumoQuery.data.emProgresso) : ""} carregando={resumoQuery.isPending} icon={TimerReset} accent="warning" rf="RF-IND-01" />
+          <KpiCard label="Indicadores monitorados" value={resumoQuery.data ? fmtNum(resumoQuery.data.total) : ""} carregando={resumoQuery.isPending} icon={Target} accent="primary" info="Quantas metas de desempenho o projeto está acompanhando no total. É a soma de todos os indicadores medidos nesta tela." />
+          <KpiCard label="Metas atingidas" value={resumoQuery.data ? fmtNum(resumoQuery.data.atingidas) : ""} carregando={resumoQuery.isPending} icon={CheckCircle2} accent="success" info="Quantos indicadores já alcançaram o resultado combinado. Quanto maior este número, melhor: significa mais metas cumpridas." />
+          <KpiCard label="Em progresso" value={resumoQuery.data ? fmtNum(resumoQuery.data.emProgresso) : ""} carregando={resumoQuery.isPending} icon={TimerReset} accent="warning" info="Quantos indicadores ainda não bateram a meta e seguem evoluindo. Tende a diminuir conforme as metas vão sendo atingidas." />
         </div>
       )}
 
@@ -71,7 +61,7 @@ export default function IndicadoresPage() {
           <Spinner size={40} label="Carregando indicadores" />
         </div>
       ) : indicadores.length === 0 ? (
-        <Section title="Indicadores do projeto" rf="RF-IND">
+        <Section title="Indicadores do projeto" info="Lista as metas de desempenho que o projeto se comprometeu a alcançar, como reduzir falta de remédios e perdas por vencimento.">
           <p className="py-10 text-center text-sm text-muted-foreground">Nenhum indicador monitorado.</p>
         </Section>
       ) : (
@@ -87,7 +77,7 @@ export default function IndicadoresPage() {
             <Section
               className="lg:col-span-3"
               title="Operação em paralelo — piloto × sistema atual"
-              rf="RF-IND-06"
+              info="Coloca lado a lado o resultado do jeito antigo (sistema atual) e o do Smart Health para o mesmo período. A variação mostra, em porcentagem, o quanto melhorou."
               description="Comparação direta de indicadores entre as duas operações durante o piloto."
               icon={<GitCompareArrows className="size-4" />}
               noPadding
@@ -126,7 +116,7 @@ export default function IndicadoresPage() {
             <Section
               className="lg:col-span-2 h-fit"
               title="Coleta e consolidação"
-              rf="RF-IND-05"
+              info="Mostra com que frequência os dados são coletados e revisados pela equipe. Garante que os números fiquem sempre atualizados e confiáveis."
               description="Cadência de revisão em comitê de acompanhamento."
               icon={<CalendarDays className="size-4" />}
               action={
@@ -166,7 +156,7 @@ function CartaoIndicador({ ind }: { ind: Indicador }) {
   return (
     <Section
       title={ind.nome}
-      rf={RF_POR_CODIGO[ind.codigo] ?? "RF-IND"}
+      info={`${ind.melhorMenor ? "Aqui, quanto menor o valor, melhor" : "Aqui, quanto maior o valor, melhor"}. O número grande é o resultado atual; "base" é como estava antes de começar; e "meta" é o alvo a alcançar. A barra mostra o quanto do caminho até a meta já foi percorrido.`}
       action={
         <StatusBadge
           status={ind.atingiu ? "ok" : "atencao"}

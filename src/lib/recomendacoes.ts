@@ -1,11 +1,23 @@
 // Serviço de Recomendações (RF-REC). Leitura para qualquer autenticado;
 // aprovar, executar e gerar são ações de Gestor (o backend barra; a UI espelha).
-import { api, montarQuery, paramsPaginacao, type Pagina, type ParamsPaginacao } from "./api"
+import { api, montarQuery, paramsPaginacao, type FiltrosResumo, type Pagina, type ParamsPaginacao } from "./api"
 
 export type TipoRecomendacao = "Reposição" | "Redistribuição"
-export type StatusRecomendacao = "Pendente" | "Aprovada" | "Executada"
-export type OrigemMotor = "Regras" | "Aprendizado de Máquina"
+export type StatusRecomendacao = "Pendente" | "Aprovada" | "Executada" | "Recusada"
+export type OrigemMotor = "Regras" | "Aprendizado de Máquina" | "Manual"
 export type Prioridade = "Essencial" | "Importante" | "Desejável"
+
+/**
+ * Economia (R$) por unidade transferida numa transferência manual. Espelha
+ * `CalculadoraRecomendacao.FATOR_ECONOMIA_MANUAL` no backend (MVP — valor fictício, sem métrica
+ * real de custo). Usado para a prévia ao vivo no modal; o backend é a fonte da verdade ao salvar.
+ */
+export const FATOR_ECONOMIA_MANUAL = 12
+
+/** Economia estimada de uma transferência manual: `quantidade × 12`. */
+export function economiaManual(quantidade: number): number {
+  return Math.max(0, Math.trunc(quantidade)) * FATOR_ECONOMIA_MANUAL
+}
 
 /** Cartão de recomendação (RF-REC-01/02/03/04) — tudo denormalizado pelo backend. */
 export interface Recomendacao {
@@ -60,6 +72,25 @@ export interface RecomendacaoFiltros {
   busca?: string
 }
 
+/** Corpo do POST /recomendacoes — cria uma transferência manual (redistribuição). */
+export interface CriarTransferencia {
+  medicamentoId: string
+  unidadeOrigemId: string
+  unidadeDestinoId: string
+  quantidade: number
+  justificativa?: string
+  prioridade?: Prioridade
+}
+
+/** Corpo do PUT /recomendacoes/{id} — edita uma recomendação pendente. */
+export interface EditarRecomendacao {
+  medicamentoId: string
+  /** Obrigatória em redistribuição; null/ausente em reposição. */
+  unidadeOrigemId?: string | null
+  unidadeDestinoId: string
+  quantidade: number
+}
+
 export const recomendacoesApi = {
   /** GET /recomendacoes — paginado (maior economia primeiro) com filtros opcionais (rótulos pt-BR). */
   listar: (
@@ -70,11 +101,22 @@ export const recomendacoesApi = {
       `/recomendacoes${montarQuery({ ...filtros, ...paramsPaginacao(paginacao) })}`,
     ),
 
-  /** GET /recomendacoes/resumo — KPIs do painel. */
-  resumo: () => api.get<ResumoRecomendacoes>("/recomendacoes/resumo"),
+  /** GET /recomendacoes/resumo — KPIs do painel (filtros opcionais por unidade/medicamento). */
+  resumo: (filtros: FiltrosResumo = {}) =>
+    api.get<ResumoRecomendacoes>(`/recomendacoes/resumo${montarQuery({ ...filtros })}`),
+
+  /** POST /recomendacoes — cria uma transferência manual (Gestor; auditado). */
+  criar: (body: CriarTransferencia) => api.post<Recomendacao>("/recomendacoes", body),
+
+  /** PUT /recomendacoes/{id} — edita uma recomendação pendente (Gestor; auditado). */
+  editar: (id: string, body: EditarRecomendacao) =>
+    api.put<Recomendacao>(`/recomendacoes/${id}`, body),
 
   /** POST /recomendacoes/{id}/aprovar — aprova uma pendente (Gestor; auditado). */
   aprovar: (id: string) => api.post<Recomendacao>(`/recomendacoes/${id}/aprovar`),
+
+  /** POST /recomendacoes/{id}/recusar — recusa (descarta) uma pendente (Gestor; auditado). */
+  recusar: (id: string) => api.post<Recomendacao>(`/recomendacoes/${id}/recusar`),
 
   /** POST /recomendacoes/{id}/executar — marca uma aprovada como executada (Gestor; auditado). */
   executar: (id: string) => api.post<Recomendacao>(`/recomendacoes/${id}/executar`),

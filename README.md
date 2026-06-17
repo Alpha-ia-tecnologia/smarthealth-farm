@@ -58,7 +58,7 @@ src/
   components/ui/        primitivos shadcn/ui
   components/layout/    AppShell, Sidebar, Header
   components/charts/    ForecastChart, TrendChart, Gauge, Sparkline, BarCompare
-  components/shared/    KpiCard, DataTable, StatusBadge, PageHeader, Section, RfTag…
+  components/shared/    KpiCard, DataTable, StatusBadge, PageHeader, Section, InfoHint…
   pages/                uma página por módulo (12 telas)
   data/                 mock data + agregações (substituível por API)
   types/                tipos de domínio

@@ -34,10 +34,10 @@ const BADGE_ILUSTRATIVO = (
 // Capacidades de resiliência (RF-INT-03/04/05) — descrição estática do desenho da plataforma,
 // sem endpoint de configuração. Exibidas como status (read-only), não como controles editáveis.
 const resiliencia = [
-  { l: "Cache local + sync assíncrona", on: true, rf: "RF-INT-04" },
-  { l: "Modo offline com reconciliação", on: true, rf: "RF-INT-05" },
-  { l: "Importação/exportação por arquivos", on: true, rf: "RF-INT-03" },
-  { l: "Buffer persistente por unidade", on: true, rf: "RF-INT-04" },
+  { l: "Cache local + sync assíncrona", on: true },
+  { l: "Modo offline com reconciliação", on: true },
+  { l: "Importação/exportação por arquivos", on: true },
+  { l: "Buffer persistente por unidade", on: true },
 ]
 
 export default function IntegracaoPage() {
@@ -59,16 +59,16 @@ export default function IntegracaoPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Integrações operacionais" value={resumo ? `${fmtNum(resumo.operacionais)}/${fmtNum(resumo.totalIntegracoes)}` : ""} carregando={resumoQuery.isPending} icon={Server} accent="teal" rf="RF-INT-01" />
-          <KpiCard label="Latência média" value={resumo ? `${fmtNum(resumo.latenciaMediaMs)} ms` : ""} carregando={resumoQuery.isPending} icon={GaugeIcon} accent="primary" rf="RF-INT-02" />
-          <KpiCard label="Registros em buffer" value={resumo ? fmtNum(resumo.registrosBuffer) : ""} carregando={resumoQuery.isPending} icon={CloudOff} accent={resumo && resumo.registrosBuffer > 0 ? "warning" : "success"} hint="modo offline" rf="RF-INT-05" />
-          <KpiCard label="Provedores de IA" value={resumo ? fmtNum(resumo.provedoresIa) : ""} carregando={resumoQuery.isPending} icon={Cpu} accent="primary" hint="via AI Gateway" rf="RF-INT-06" />
+          <KpiCard label="Integrações operacionais" value={resumo ? `${fmtNum(resumo.operacionais)}/${fmtNum(resumo.totalIntegracoes)}` : ""} carregando={resumoQuery.isPending} icon={Server} accent="teal" info="Quantas conexões com sistemas externos estão funcionando, do total cadastrado. Exemplo: 4/5 significa que 4 de 5 estão operando normalmente." />
+          <KpiCard label="Latência média" value={resumo ? `${fmtNum(resumo.latenciaMediaMs)} ms` : ""} carregando={resumoQuery.isPending} icon={GaugeIcon} accent="primary" info="Tempo médio que as conexões levam para responder, em milissegundos. Quanto menor, mais rápida é a troca de informações com os outros sistemas." />
+          <KpiCard label="Registros em buffer" value={resumo ? fmtNum(resumo.registrosBuffer) : ""} carregando={resumoQuery.isPending} icon={CloudOff} accent={resumo && resumo.registrosBuffer > 0 ? "warning" : "success"} hint="modo offline" info="Dados que ficaram guardados localmente porque a internet caiu ou o sistema externo estava fora do ar. Eles serão enviados automaticamente quando a conexão voltar." />
+          <KpiCard label="Provedores de IA" value={resumo ? fmtNum(resumo.provedoresIa) : ""} carregando={resumoQuery.isPending} icon={Cpu} accent="primary" hint="via AI Gateway" info="Número de serviços de inteligência artificial conectados à plataforma para gerar análises e previsões." />
         </div>
       )}
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* APIs / conexões (RF-INT-01/04) — vindas de /integracoes */}
-        <Section className="lg:col-span-3" title="Conexões e sincronização" rf="RF-INT-01 · RF-INT-04" description="APIs versionadas com contratos documentados; cache local e buffer persistente nas unidades com conectividade precária." noPadding>
+        <Section className="lg:col-span-3" title="Conexões e sincronização" info="Lista cada sistema externo conectado à plataforma, mostrando se está funcionando e quando trocou dados pela última vez. Em locais com internet instável, as informações ficam guardadas e são sincronizadas depois." description="APIs versionadas com contratos documentados; cache local e buffer persistente nas unidades com conectividade precária." noPadding>
           {integracoesQuery.isError ? (
             <div className="p-5">
               <ErroConsulta mensagem="Não foi possível carregar as conexões." onTentarNovamente={() => integracoesQuery.refetch()} />
@@ -102,13 +102,12 @@ export default function IntegracaoPage() {
         </Section>
 
         {/* Resiliência (RF-INT-03/05) — descrição estática do desenho, sem endpoint */}
-        <Section className="lg:col-span-2 h-fit" title="Resiliência de conectividade" rf="RF-INT-03 · RF-INT-05" description="Tolerância a instabilidade e latência elevada." action={BADGE_ILUSTRATIVO}>
+        <Section className="lg:col-span-2 h-fit" title="Resiliência de conectividade" info="Recursos que mantêm o sistema funcionando mesmo quando a internet está lenta ou cai, como guardar dados localmente e reenviá-los quando a conexão voltar." description="Tolerância a instabilidade e latência elevada." action={BADGE_ILUSTRATIVO}>
           <div className="space-y-3">
             {resiliencia.map((r) => (
               <div key={r.l} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">{r.l}</p>
-                  <span className="font-mono text-[10px] text-muted-foreground">{r.rf}</span>
                 </div>
                 <Switch checked={r.on} disabled aria-label={`${r.l} (ativo)`} />
               </div>
@@ -121,7 +120,7 @@ export default function IntegracaoPage() {
       </div>
 
       {/* AI Gateway (RF-INT-06 / RF-SEG-04) — vindo de /integracoes/provedores-ia */}
-      <Section title="AI Gateway — provedores de IA generativa" rf="RF-INT-06 · RF-SEG-04" description="Abstrai provedores externos, permitindo substituição transparente. Dados sensíveis desacoplados das chamadas." icon={<Cpu className="size-4" />}>
+      <Section title="AI Gateway — provedores de IA generativa" info="Camada que conecta a plataforma aos serviços de inteligência artificial. Permite trocar de fornecedor sem afetar o sistema e protege os dados sensíveis, que não são enviados diretamente para fora." description="Abstrai provedores externos, permitindo substituição transparente. Dados sensíveis desacoplados das chamadas." icon={<Cpu className="size-4" />}>
         {provedoresQuery.isError ? (
           <ErroConsulta mensagem="Não foi possível carregar os provedores de IA." onTentarNovamente={() => provedoresQuery.refetch()} />
         ) : provedoresQuery.isPending ? (
@@ -172,7 +171,7 @@ function Cabecalho() {
     <PageHeader
       icon={<Plug className="size-5" />}
       title="Integração com os Sistemas da EMSERH"
-      rf="RF-INT"
+      info="Esta tela mostra como a plataforma se conecta e troca informações com os outros sistemas da EMSERH de forma automática e segura, mesmo quando a internet falha."
       description="Interoperabilidade via APIs versionadas, sincronização segura, tolerância a instabilidades de rede e AI Gateway para provedores de IA generativa."
     />
   )

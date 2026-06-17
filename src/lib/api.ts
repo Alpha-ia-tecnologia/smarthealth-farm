@@ -122,6 +122,12 @@ export interface Pagina<T> {
   total: number
 }
 
+/** Filtros comuns dos endpoints de resumo (KPIs): unidade e medicamento opcionais. */
+export interface FiltrosResumo {
+  unidadeId?: string
+  medicamentoId?: string
+}
+
 /** Parâmetros de paginação/ordenação enviados ao servidor (página base 0). */
 export interface ParamsPaginacao {
   pagina?: number

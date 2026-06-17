@@ -43,7 +43,9 @@ export const navItems: NavItem[] = [
 
 export const grupos: NavItem["grupo"][] = ["Visão Geral", "Operação", "Governança"]
 
-/** Itens de navegação visíveis para o perfil informado (RBAC na UI). */
+/** Itens de navegação visíveis para o perfil informado (RBAC na UI). Admin enxerga tudo. */
 export function navItemsPara(perfil: PerfilUsuario | null): NavItem[] {
-  return navItems.filter((i) => !i.perfis || (perfil !== null && i.perfis.includes(perfil)))
+  return navItems.filter(
+    (i) => !i.perfis || perfil === "Admin" || (perfil !== null && i.perfis.includes(perfil)),
+  )
 }
