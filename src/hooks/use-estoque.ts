@@ -16,6 +16,7 @@ export const estoqueKeys = {
   detalhe: (medId: string, uniId: string) => ["estoque", "detalhe", medId, uniId] as const,
   lotes: (filtros: LoteFiltros, paginacao: ParamsPaginacao) =>
     ["estoque", "lotes", filtros, paginacao] as const,
+  curvaAbc: () => ["estoque", "curva-abc"] as const,
 }
 
 /** Posições de estoque paginadas com status (+ filtros). Mantém a página anterior ao paginar. */
@@ -41,6 +42,14 @@ export function usePosicaoDetalhe(insumoId: string | undefined, unidadeId: strin
     queryKey: estoqueKeys.detalhe(insumoId ?? "", unidadeId ?? ""),
     queryFn: () => estoqueApi.detalhar(insumoId as string, unidadeId as string),
     enabled: Boolean(insumoId && unidadeId),
+  })
+}
+
+/** Curva ABC dos insumos por valor de consumo (rede) — somente leitura. */
+export function useCurvaAbc() {
+  return useQuery({
+    queryKey: estoqueKeys.curvaAbc(),
+    queryFn: () => estoqueApi.curvaAbc(),
   })
 }
 

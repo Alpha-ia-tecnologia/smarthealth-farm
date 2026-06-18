@@ -51,6 +51,31 @@ describe("DashboardPage", () => {
     expect(await screen.findByText("15 alertas ativos na rede")).toBeInTheDocument()
   })
 
+  it("abre o modal com números reais e análise de IA ao clicar num KPI de indicador", async () => {
+    const { usuario } = renderDashboard()
+    const kpi = await screen.findByRole("button", {
+      name: "Ver números e análise de Taxa de desabastecimento",
+    })
+    await usuario.click(kpi)
+
+    // Modal: nome completo do indicador, números reais e a análise gerada pela IA.
+    expect(await screen.findByText("Taxa de desabastecimento de essenciais")).toBeInTheDocument()
+    expect(screen.getByText("Linha de base")).toBeInTheDocument()
+    expect(await screen.findByText(/Resposta para:/)).toBeInTheDocument()
+  })
+
+  it("abre o modal de análise de um gráfico (cobertura) com detalhe e insight de IA", async () => {
+    const { usuario } = renderDashboard()
+    const botao = await screen.findByRole("button", { name: "Análise IA — Cobertura por unidade" })
+    await usuario.click(botao)
+
+    // Modal: detalhe (tabela com a situação por unidade) + bloco de análise por IA.
+    expect(await screen.findByText("Situação")).toBeInTheDocument()
+    expect(screen.getByText("Análise por IA")).toBeInTheDocument()
+    expect(await screen.findByText(/Resposta para:/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Gerar novamente" })).toBeInTheDocument()
+  })
+
   it("ao filtrar por unidade, troca os KPIs do edital pelos operacionais da unidade", async () => {
     const { usuario } = renderDashboard()
     // Sem filtro: KPI do edital (rede).
@@ -62,6 +87,20 @@ describe("DashboardPage", () => {
     // Com unidade: KPIs operacionais da unidade (do /painel filtrado).
     expect(await screen.findByText("Itens críticos")).toBeInTheDocument()
     expect(screen.queryByText("Taxa de desabastecimento")).not.toBeInTheDocument()
+  })
+
+  it("mostra o resumo da Curva ABC da rede", async () => {
+    renderDashboard()
+    expect(await screen.findByText("Curva ABC da rede — valor de consumo")).toBeInTheDocument()
+    expect(await screen.findByText("Classe A")).toBeInTheDocument()
+  })
+
+  it("gera a análise gerencial da página por IA pelo botão do topo", async () => {
+    const { usuario } = renderDashboard()
+    await usuario.click(await screen.findByRole("button", { name: "Análise IA — Dashboard" }))
+    expect(await screen.findByText("Análise gerencial por IA")).toBeInTheDocument()
+    expect(screen.getByText("Análise por IA")).toBeInTheDocument()
+    expect(await screen.findByText(/Resposta para:/)).toBeInTheDocument()
   })
 
   it("mostra erro quando o /painel falha", async () => {

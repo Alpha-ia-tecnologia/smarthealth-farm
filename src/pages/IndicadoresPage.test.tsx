@@ -39,6 +39,16 @@ describe("IndicadoresPage", () => {
     expect(await screen.findByText("Dados ilustrativos")).toBeInTheDocument()
   })
 
+  it("abre o insight de IA de um indicador ao clicar em Análise IA", async () => {
+    const { usuario } = renderIndicadores()
+    await usuario.click(
+      await screen.findByRole("button", { name: "Análise IA — Taxa de desabastecimento de essenciais" }),
+    )
+    // Modal de insight do indicador: bloco de IA + resposta (o handler ecoa a última mensagem).
+    expect(await screen.findByText("Análise por IA")).toBeInTheDocument()
+    expect(await screen.findByText(/Resposta para:/)).toBeInTheDocument()
+  })
+
   it("mostra erro quando a lista de indicadores falha", async () => {
     server.use(
       http.get("*/indicadores", () =>

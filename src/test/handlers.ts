@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw"
 import type { Insumo, Unidade, Usuario } from "@/types"
 import type {
+  CurvaAbc,
   Lote,
   Movimentacao,
   PosicaoEstoque,
@@ -191,6 +192,50 @@ export const detalheEstoqueTeste: PosicaoEstoqueDetalhe = {
   movimentacoes: movimentacoesTeste,
 }
 
+/** Curva ABC de teste: um item A (concentra o valor), um B e um C. */
+export const curvaAbcTeste: CurvaAbc = {
+  itens: [
+    {
+      insumoId: "ins-001",
+      insumoCodigo: "INS-001",
+      insumoNome: "Ceftriaxona 1g",
+      consumoMedioDiario: 100,
+      custoUnitario: 8,
+      valorConsumo: 800,
+      participacaoPct: 80,
+      acumuladoPct: 80,
+      classe: "A",
+    },
+    {
+      insumoId: "ins-002",
+      insumoCodigo: "INS-002",
+      insumoNome: "Dipirona 500mg/mL",
+      consumoMedioDiario: 150,
+      custoUnitario: 1,
+      valorConsumo: 150,
+      participacaoPct: 15,
+      acumuladoPct: 95,
+      classe: "B",
+    },
+    {
+      insumoId: "ins-016",
+      insumoCodigo: "INS-016",
+      insumoNome: "Soro Fisiológico 0,9% 500mL",
+      consumoMedioDiario: 50,
+      custoUnitario: 1,
+      valorConsumo: 50,
+      participacaoPct: 5,
+      acumuladoPct: 100,
+      classe: "C",
+    },
+  ],
+  resumo: [
+    { classe: "A", itens: 1, valor: 800, itensPct: 33.33, valorPct: 80 },
+    { classe: "B", itens: 1, valor: 150, itensPct: 33.33, valorPct: 15 },
+    { classe: "C", itens: 1, valor: 50, itensPct: 33.33, valorPct: 5 },
+  ],
+}
+
 /** Alertas de teste: um aberto (desabastecimento) e um em tratamento (vencimento). */
 export const alertasTeste: Alerta[] = [
   {
@@ -376,6 +421,9 @@ export const indicadoresTeste: Indicador[] = [
     progresso: 112,
     atingiu: true,
     variacaoPct: -39,
+    numeradorAbsoluto: 9,
+    denominadorAbsoluto: 80,
+    unidadeAbsoluta: "itens essenciais",
     historico: [
       { periodo: "2026-04", valor: 13.1 },
       { periodo: "2026-05", valor: 11.2 },
@@ -394,6 +442,9 @@ export const indicadoresTeste: Indicador[] = [
     progresso: 118,
     atingiu: true,
     variacaoPct: -30,
+    numeradorAbsoluto: 13,
+    denominadorAbsoluto: 302,
+    unidadeAbsoluta: "lotes",
     historico: [{ periodo: "2026-05", valor: 4.3 }],
   },
   {
@@ -409,6 +460,9 @@ export const indicadoresTeste: Indicador[] = [
     progresso: 115,
     atingiu: true,
     variacaoPct: -35,
+    numeradorAbsoluto: null,
+    denominadorAbsoluto: null,
+    unidadeAbsoluta: null,
     historico: [{ periodo: "2026-05", valor: 812 }],
   },
   {
@@ -424,6 +478,9 @@ export const indicadoresTeste: Indicador[] = [
     progresso: 140,
     atingiu: true,
     variacaoPct: -46,
+    numeradorAbsoluto: null,
+    denominadorAbsoluto: null,
+    unidadeAbsoluta: null,
     historico: [{ periodo: "2026-05", valor: 11.8 }],
   },
   {
@@ -439,6 +496,9 @@ export const indicadoresTeste: Indicador[] = [
     progresso: 122,
     atingiu: true,
     variacaoPct: null,
+    numeradorAbsoluto: null,
+    denominadorAbsoluto: null,
+    unidadeAbsoluta: null,
     historico: [{ periodo: "2026-05", valor: 147 }],
   },
 ]
@@ -787,8 +847,9 @@ export const handlers = [
   http.get("*/insumos", () =>
     HttpResponse.json(ok(insumosTeste, insumosTeste.length)),
   ),
-  // Estoque — específicos antes do genérico (resumo e detalhe vs. lista).
+  // Estoque — específicos antes do genérico (resumo, curva ABC e detalhe vs. lista).
   http.get("*/estoque/resumo", () => HttpResponse.json(ok(resumoEstoqueTeste))),
+  http.get("*/estoque/curva-abc", () => HttpResponse.json(ok(curvaAbcTeste))),
   http.get("*/estoque/:insumoId/:unidadeId", () =>
     HttpResponse.json(ok(detalheEstoqueTeste)),
   ),

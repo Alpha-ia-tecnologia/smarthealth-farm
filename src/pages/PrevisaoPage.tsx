@@ -4,6 +4,7 @@ import { Boxes, BrainCircuit, GitBranch, RefreshCw, Target, TrendingUp } from "l
 import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
@@ -26,10 +27,28 @@ import { usePerfil } from "@/context/auth"
 import { podeGerir } from "@/lib/permissoes"
 import { ApiError } from "@/lib/api"
 import { TAMANHO_PAGINA_PADRAO } from "@/lib/paginacao"
-import { META_MAPE, type Previsao } from "@/lib/previsoes"
+import { META_MAPE, type Previsao, type ResumoPrevisao } from "@/lib/previsoes"
 import type { StatusKey } from "@/lib/status"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtData, fmtNum, fmtPct } from "@/lib/format"
 import { cn } from "@/lib/utils"
+
+/** Corpo da análise por IA das previsões: resumo + os piores itens por MAPE. */
+function corpoPrevisao(resumo: ResumoPrevisao, itens: Previsao[]): string {
+  const piores = [...itens].sort((a, b) => b.mape - a.mape).slice(0, 5)
+  const lista = piores
+    .map((p) => `- ${p.insumoNome} @ ${p.unidadeSigla}: MAPE ${fmtPct(p.mape)}, desvio ${p.drift}, criticidade ${p.criticidade}`)
+    .join("\n")
+  return (
+    `Analise a saúde das previsões de demanda da rede. Aponte: (1) onde a previsão está pior ` +
+    `(MAPE/desvio) e o que pode explicar, (2) o impacto nos itens de maior criticidade, ` +
+    `(3) se vale recalibrar e onde focar.\n\n` +
+    `Resumo: MAPE médio ${fmtPct(resumo.mapeMedio)} (alvo < ${fmtPct(META_MAPE)}), ` +
+    `${resumo.criticosNaMeta}/${resumo.totalCriticos} críticos na meta, ` +
+    `${resumo.previsoesAtivas} previsões ativas, ${resumo.itensComDesvio} itens com desvio.\n\n` +
+    `Piores por MAPE:\n${lista || "—"}`
+  )
+}
 
 const driftStatus: Record<Previsao["drift"], StatusKey> = {
   Estável: "ok",
@@ -219,12 +238,22 @@ export default function PrevisaoPage() {
         info="Estima quanto de cada insumo será consumido em cada unidade nos próximos meses. A assertividade é medida pelo erro MAPE (meta: abaixo de 15% nos itens de maior criticidade). Quanto melhor a previsão, menos faltas e menos desperdício."
         description="Estima a demanda futura por insumo, unidade e horizonte, com assertividade aferida (meta de erro MAPE < 15% nos itens de maior criticidade)."
         actions={
-          ehGestor && (
-            <Button variant="outline" disabled={recalibrar.isPending} onClick={aoRecalibrar}>
-              <RefreshCw className={recalibrar.isPending ? "size-4 animate-spin" : "size-4"} />
-              Recalibrar previsões
-            </Button>
-          )
+          <>
+            {resumoQuery.data && (
+              <PaginaIaInsight
+                rotulo="Previsão"
+                titulo="Análise das previsões"
+                descricao="Leitura por IA do erro (MAPE) e do desvio do modelo, com onde recalibrar."
+                mensagens={mensagensAnalise(corpoPrevisao(resumoQuery.data, previsoesQuery.data?.itens ?? []))}
+              />
+            )}
+            {ehGestor && (
+              <Button variant="outline" disabled={recalibrar.isPending} onClick={aoRecalibrar}>
+                <RefreshCw className={recalibrar.isPending ? "size-4 animate-spin" : "size-4"} />
+                Recalibrar previsões
+              </Button>
+            )}
+          </>
         }
       />
 

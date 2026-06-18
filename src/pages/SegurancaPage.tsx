@@ -2,6 +2,7 @@ import { useState } from "react"
 import type { ColumnDef } from "@tanstack/react-table"
 import { FileLock2, KeyRound, ScrollText, ShieldCheck, Sparkles, UserCog } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -20,9 +21,36 @@ import {
 } from "@/components/ui/select"
 import { useAuditoria, useResumoAuditoria } from "@/hooks/use-auditoria"
 import { useDebounce } from "@/hooks/use-debounce"
-import { categoriasAuditoria, type AuditoriaFiltros, type LogAuditoria } from "@/lib/auditoria"
+import {
+  categoriasAuditoria,
+  type AuditoriaFiltros,
+  type LogAuditoria,
+  type ResumoAuditoria,
+} from "@/lib/auditoria"
 import type { PerfilUsuario } from "@/types"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtNum, fmtData, fmtDataHora } from "@/lib/format"
+
+/** Corpo da análise por IA da trilha de auditoria (LGPD/segurança): resumo + eventos recentes. */
+function corpoSeguranca(resumo: ResumoAuditoria, logs: LogAuditoria[]): string {
+  const recentes = logs
+    .slice(0, 8)
+    .map(
+      (l) =>
+        `- ${l.categoria} por ${l.perfil}: ${l.acao}${l.assistidoPorIA ? " (IA)" : ""}, ` +
+        `base legal ${l.baseLegal ?? "—"}`,
+    )
+    .join("\n")
+  return (
+    `Analise a trilha de auditoria sob a ótica de conformidade LGPD e segurança. Aponte: ` +
+    `(1) padrões ou anomalias dignos de atenção, (2) a cobertura de base legal, ` +
+    `(3) uma recomendação de governança.\n\n` +
+    `Resumo: ${fmtNum(resumo.total)} eventos, ${fmtNum(resumo.assistidosPorIa)} assistidos por IA, ` +
+    `${fmtNum(resumo.comBaseLegal)} com base legal, última atividade ` +
+    `${resumo.ultimaAtividade ? fmtData(resumo.ultimaAtividade) : "—"}.\n\n` +
+    `Eventos recentes:\n${recentes || "—"}`
+  )
+}
 
 /** Painel institucional sem endpoint — sinaliza conteúdo de referência. */
 const BADGE_ILUSTRATIVO = (
@@ -122,6 +150,16 @@ export default function SegurancaPage() {
         title="Segurança, Auditoria e Conformidade LGPD"
         info="Esta tela reúne os controles de proteção de dados do sistema: o histórico de tudo o que foi feito (trilha de auditoria), quais dados pessoais são tratados e quem pode acessar cada parte, seguindo a lei de proteção de dados (LGPD)."
         description="Proteção de dados sensíveis de saúde, logs de auditoria persistidos, base legal de tratamento e controle de acesso por perfil (Lei nº 13.709/2018)."
+        actions={
+          resumo ? (
+            <PaginaIaInsight
+              rotulo="Segurança"
+              titulo="Análise da trilha de auditoria"
+              descricao="A IA destaca padrões/anomalias e a cobertura de base legal (LGPD)."
+              mensagens={mensagensAnalise(corpoSeguranca(resumo, auditoriaQuery.data ?? []))}
+            />
+          ) : undefined
+        }
       />
 
       {/* KPIs reais (RF-SEG-02/03/05) */}

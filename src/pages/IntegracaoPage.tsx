@@ -1,5 +1,6 @@
 import { CloudOff, FileJson, Gauge as GaugeIcon, Plug, RefreshCw, Server, Cpu } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -9,9 +10,34 @@ import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { Spinner } from "@/components/ui/spinner"
 import { useIntegracoes, useProvedoresIa, useResumoIntegracoes } from "@/hooks/use-integracoes"
-import type { ModoIntegracao, StatusIntegracao } from "@/lib/integracoes"
+import type {
+  IntegracaoApi,
+  ModoIntegracao,
+  ProvedorIa,
+  ResumoIntegracao,
+  StatusIntegracao,
+} from "@/lib/integracoes"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtNum, fmtDataHora, fmtMoeda } from "@/lib/format"
 import type { StatusKey } from "@/lib/status"
+
+/** Corpo da narrativa de status por IA das integrações EMSERH + AI Gateway. */
+function corpoIntegracao(resumo: ResumoIntegracao, integracoes: IntegracaoApi[], provedores: ProvedorIa[]): string {
+  const problema = integracoes
+    .filter((i) => i.status !== "Operacional" || i.modo !== "Online")
+    .map((i) => `- ${i.nome}: ${i.status}, modo ${i.modo}, ${fmtNum(i.registrosBuffer)} no buffer`)
+    .join("\n")
+  const ia = provedores.map((p) => `- ${p.nome} (${p.papel}, ${p.ativo ? "ativo" : "inativo"})`).join("\n")
+  return (
+    `Faça uma narrativa de status das integrações com os sistemas da EMSERH e do AI Gateway. ` +
+    `Aponte: (1) conexões em risco/offline e o impacto, (2) o que a reconciliação/buffer exige, ` +
+    `(3) uma recomendação.\n\n` +
+    `Resumo: ${resumo.operacionais}/${resumo.totalIntegracoes} operacionais, latência média ` +
+    `${fmtNum(resumo.latenciaMediaMs)} ms, ${fmtNum(resumo.registrosBuffer)} registros em buffer, ` +
+    `${resumo.provedoresIa} provedores de IA.\n\nConexões em atenção:\n${problema || "nenhuma"}\n\n` +
+    `Provedores de IA:\n${ia || "—"}`
+  )
+}
 
 const apiStatus: Record<StatusIntegracao, StatusKey> = {
   Operacional: "ok",
@@ -49,7 +75,20 @@ export default function IntegracaoPage() {
 
   return (
     <>
-      <Cabecalho />
+      <Cabecalho
+        actions={
+          resumo ? (
+            <PaginaIaInsight
+              rotulo="Integração"
+              titulo="Status das integrações por IA"
+              descricao="Narrativa do estado das conexões EMSERH e do AI Gateway."
+              mensagens={mensagensAnalise(
+                corpoIntegracao(resumo, integracoesQuery.data ?? [], provedoresQuery.data ?? []),
+              )}
+            />
+          ) : undefined
+        }
+      />
 
       {/* KPIs (RF-INT-01/02/05/06) — vindos de /integracoes/resumo */}
       {resumoQuery.isError ? (
@@ -166,13 +205,14 @@ export default function IntegracaoPage() {
   )
 }
 
-function Cabecalho() {
+function Cabecalho({ actions }: { actions?: React.ReactNode }) {
   return (
     <PageHeader
       icon={<Plug className="size-5" />}
       title="Integração com os Sistemas da EMSERH"
       info="Esta tela mostra como a plataforma se conecta e troca informações com os outros sistemas da EMSERH de forma automática e segura, mesmo quando a internet falha."
       description="Interoperabilidade via APIs versionadas, sincronização segura, tolerância a instabilidades de rede e AI Gateway para provedores de IA generativa."
+      actions={actions}
     />
   )
 }

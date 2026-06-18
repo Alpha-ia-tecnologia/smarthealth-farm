@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Activity, ArrowLeftRight, BellRing, MapPin, PackageX, CalendarClock } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { KpiCard } from "@/components/shared/KpiCard"
@@ -16,8 +17,30 @@ import { Spinner } from "@/components/ui/spinner"
 import { usePainelOperacional } from "@/hooks/use-painel"
 import { useRecomendacoes } from "@/hooks/use-recomendacoes"
 import type { StatusRecomendacao } from "@/lib/recomendacoes"
+import type { PainelOperacional } from "@/lib/painel"
 import { conectividadeStatus, recomendacaoStatus, severidadeStatus } from "@/lib/status"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtNum } from "@/lib/format"
+
+/** Corpo do resumo operacional por IA: totais da rede + unidades em atenção/crítico. */
+function corpoOperacional(data: PainelOperacional): string {
+  const criticas = data.unidades.filter((u) => u.statusUnidade !== "ok").slice(0, 6)
+  const lista = criticas
+    .map(
+      (u) =>
+        `- ${u.sigla} (${u.municipio}): cobertura ${u.cobertura}%, ${u.criticos} críticos, ` +
+        `${u.alertasAtivos} alertas, conectividade ${u.conectividade}`,
+    )
+    .join("\n")
+  return (
+    `Faça um resumo operacional da rede para o gestor de plantão. Aponte: (1) unidades que exigem ` +
+    `ação imediata, (2) os principais riscos (desabastecimento/vencimento), (3) próximas ações.\n\n` +
+    `Totais: ${data.totais.alertasAtivos} alertas ativos, ${data.totais.alertasDesabastecimento} de ` +
+    `desabastecimento, ${data.totais.alertasVencimento} de vencimento, ` +
+    `${data.totais.recomendacoesPendentes} recomendações pendentes.\n\n` +
+    `Unidades em atenção/crítico:\n${lista || "nenhuma"}`
+  )
+}
 
 /** Opções do filtro isolado de status na seção "Recomendações em aberto". */
 const STATUS_REC_OPCOES = [
@@ -58,7 +81,18 @@ export default function OperacionalPage() {
 
   return (
     <>
-      <Cabecalho />
+      <Cabecalho
+        actions={
+          data ? (
+            <PaginaIaInsight
+              rotulo="Operacional"
+              titulo="Resumo operacional por IA"
+              descricao="Panorama da rede com as unidades que exigem ação e os próximos passos."
+              mensagens={mensagensAnalise(corpoOperacional(data))}
+            />
+          ) : undefined
+        }
+      />
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={setUnidadeId} />
@@ -233,13 +267,14 @@ export default function OperacionalPage() {
   )
 }
 
-function Cabecalho() {
+function Cabecalho({ actions }: { actions?: React.ReactNode }) {
   return (
     <PageHeader
       icon={<Activity className="size-5" />}
       title="Painel Operacional"
       info="Visão geral do dia a dia da farmácia hospitalar: reúne os avisos que precisam de ação, as sugestões de reposição e remanejamento de estoque e a situação de cada unidade da rede, tudo em uma só tela."
       description="Alertas ativos, recomendações de reposição/redistribuição e situação de cada unidade da rede."
+      actions={actions}
     />
   )
 }

@@ -67,6 +67,37 @@ export interface PosicaoEstoqueDetalhe {
   movimentacoes: Movimentacao[]
 }
 
+/** Classe da Curva ABC: A (itens vitais ~80% do valor), B (~15%), C (cauda ~5%). */
+export type ClasseAbc = "A" | "B" | "C"
+
+/** Item da Curva ABC (RF-EST): valor de consumo, participação/acumulado (%) e a classe. */
+export interface CurvaAbcItem {
+  insumoId: string
+  insumoCodigo: string
+  insumoNome: string
+  consumoMedioDiario: number
+  custoUnitario: number
+  valorConsumo: number // R$ (consumo médio diário × custo unitário)
+  participacaoPct: number
+  acumuladoPct: number
+  classe: ClasseAbc
+}
+
+/** Consolidado de uma classe da Curva ABC: nº de itens, valor e os percentuais. */
+export interface ResumoClasseAbc {
+  classe: ClasseAbc
+  itens: number
+  valor: number
+  itensPct: number
+  valorPct: number
+}
+
+/** Resposta da Curva ABC: itens ordenados (para o Pareto) + resumo por classe. */
+export interface CurvaAbc {
+  itens: CurvaAbcItem[]
+  resumo: ResumoClasseAbc[]
+}
+
 export interface PosicaoFiltros {
   unidadeId?: string
   insumoId?: string
@@ -92,6 +123,9 @@ export const estoqueApi = {
   /** GET /estoque/resumo — KPIs da tela (filtros opcionais por unidade/insumo). */
   resumo: (filtros: FiltrosResumo = {}) =>
     api.get<ResumoEstoque>(`/estoque/resumo${montarQuery({ ...filtros })}`),
+
+  /** GET /estoque/curva-abc — Curva ABC dos insumos por valor de consumo (rede). */
+  curvaAbc: () => api.get<CurvaAbc>("/estoque/curva-abc"),
 
   /** GET /estoque/{insumoId}/{unidadeId} — drill-down: lotes + movimentações. */
   detalhar: (insumoId: string, unidadeId: string) =>

@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import {
   ArrowLeftRight,
   ArrowRight,
@@ -14,6 +15,8 @@ import {
 import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
+import { MapaRede } from "@/components/charts/MapaRede"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
@@ -39,13 +42,47 @@ import {
   useRecusarRecomendacao,
   useResumoRecomendacoes,
 } from "@/hooks/use-recomendacoes"
+import { usePainelOperacional } from "@/hooks/use-painel"
+import { useUnidades } from "@/hooks/use-unidades"
+import { estoqueApi } from "@/lib/estoque"
+import type { PontoMapa } from "@/components/charts/MapaRede"
+import {
+  SugestaoRemanejamentoIa,
+  type UnidadeInsumo,
+} from "@/components/charts/SugestaoRemanejamentoIa"
 import { usePerfil } from "@/context/auth"
 import { podeGerir } from "@/lib/permissoes"
 import { ApiError } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import type { Recomendacao, StatusRecomendacao, TipoRecomendacao } from "@/lib/recomendacoes"
+import type {
+  Recomendacao,
+  ResumoRecomendacoes,
+  StatusRecomendacao,
+  TipoRecomendacao,
+} from "@/lib/recomendacoes"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtMoeda, fmtNum } from "@/lib/format"
 import { recomendacaoStatus } from "@/lib/status"
+
+/** Corpo da análise por IA das recomendações: resumo + as pendentes em destaque. */
+function corpoRecomendacoes(resumo: ResumoRecomendacoes, itens: Recomendacao[]): string {
+  const pendentes = itens.filter((r) => r.status === "Pendente").slice(0, 6)
+  const lista = pendentes
+    .map(
+      (r) =>
+        `- ${r.tipo} de ${r.insumoNome} (${fmtNum(r.quantidade)} un) ` +
+        `${r.unidadeOrigemSigla ? `${r.unidadeOrigemSigla}→` : ""}${r.unidadeDestinoSigla}: ` +
+        `economia ${fmtMoeda(r.economiaEstimada)}, prioridade ${r.prioridade}, origem ${r.origemMotor}`,
+    )
+    .join("\n")
+  return (
+    `Analise as recomendações de reposição/redistribuição da rede e oriente a decisão do gestor. ` +
+    `Aponte: (1) o que priorizar na aprovação, (2) o impacto/economia, (3) riscos a observar.\n\n` +
+    `Resumo: ${resumo.pendentes} pendentes, economia potencial ${fmtMoeda(resumo.economiaPotencial)}, ` +
+    `${resumo.geradasPorIA} geradas por IA, taxa de adesão ${resumo.taxaAdesao}%.\n\n` +
+    `Pendentes em destaque:\n${lista || "—"}`
+  )
+}
 
 /** Opções do filtro de status da listagem. */
 const STATUS_REC_OPCOES = [
@@ -203,6 +240,17 @@ export default function RecomendacoesPage() {
   const [tamanho, setTamanho] = useState(TAMANHO_PAGINA_PADRAO)
 
   const resumoQuery = useResumoRecomendacoes({ unidadeId, insumoId })
+
+  // Mapa da rede — a cor representa a condição do estoque por unidade. Sem insumo: condição geral
+  // (painel operacional). Com insumo: estoque DESSE insumo por unidade (posições de estoque).
+  const unidadesQuery = useUnidades()
+  const painelOpQuery = usePainelOperacional()
+  const posicoesInsumoQuery = useQuery({
+    queryKey: ["estoque", "mapa-insumo", insumoId],
+    queryFn: () => estoqueApi.listarPosicoes({ insumoId }, { tamanho: 50 }),
+    enabled: Boolean(insumoId),
+  })
+
   const recomendacoesQuery = useRecomendacoes(
     {
       tipo: filtroTipo === "todas" ? undefined : filtroTipo,
@@ -296,6 +344,70 @@ export default function RecomendacoesPage() {
   const total = recomendacoesQuery.data?.total ?? 0
   const totalPaginas = Math.ceil(total / tamanho)
 
+  // Pontos do mapa: por insumo (posições) quando há filtro de insumo; senão, condição geral.
+  const pontosMapa: PontoMapa[] = useMemo(() => {
+    const porId = new Map((unidadesQuery.data ?? []).map((u) => [u.id, u]))
+    if (insumoId) {
+      return (posicoesInsumoQuery.data?.itens ?? []).flatMap((p) => {
+        const u = porId.get(p.unidadeId)
+        if (!u || u.hub) return []
+        return [
+          {
+            unidadeId: p.unidadeId,
+            sigla: p.unidadeSigla,
+            nome: p.unidadeNome,
+            municipio: u.municipio,
+            status: p.status,
+            detalhes: [
+              { rotulo: "Em estoque", valor: `${fmtNum(p.quantidade)} un` },
+              { rotulo: "Nível crítico", valor: fmtNum(p.nivelCritico) },
+              { rotulo: "Estoque máximo", valor: fmtNum(p.estoqueMaximo) },
+              { rotulo: "Consumo/dia", valor: fmtNum(p.consumoMedioDiario) },
+            ],
+          },
+        ]
+      })
+    }
+    return (painelOpQuery.data?.unidades ?? []).map((u) => ({
+      unidadeId: u.unidadeId,
+      sigla: u.sigla,
+      nome: u.nome,
+      municipio: u.municipio,
+      status: u.statusUnidade,
+      detalhes: [
+        { rotulo: "Cobertura", valor: `${u.cobertura}%` },
+        { rotulo: "Itens críticos", valor: fmtNum(u.criticos) },
+        { rotulo: "Alertas ativos", valor: fmtNum(u.alertasAtivos) },
+        { rotulo: "Conectividade", valor: u.conectividade },
+      ],
+    }))
+  }, [insumoId, unidadesQuery.data, posicoesInsumoQuery.data, painelOpQuery.data])
+
+  const mapaErro = unidadesQuery.isError || (insumoId ? posicoesInsumoQuery.isError : painelOpQuery.isError)
+  const mapaCarregando =
+    unidadesQuery.isPending || (insumoId ? posicoesInsumoQuery.isPending : painelOpQuery.isPending)
+
+  // Dados do insumo por unidade (números crus) p/ a sugestão de remanejamento por IA abaixo do mapa.
+  const unidadesInsumo: UnidadeInsumo[] = useMemo(() => {
+    if (!insumoId) return []
+    const porId = new Map((unidadesQuery.data ?? []).map((u) => [u.id, u]))
+    return (posicoesInsumoQuery.data?.itens ?? []).flatMap((p) => {
+      const u = porId.get(p.unidadeId)
+      if (!u || u.hub) return []
+      return [
+        {
+          sigla: p.unidadeSigla,
+          municipio: u.municipio,
+          status: p.status,
+          quantidade: p.quantidade,
+          nivelCritico: p.nivelCritico,
+          consumoMedioDiario: p.consumoMedioDiario,
+        },
+      ]
+    })
+  }, [insumoId, unidadesQuery.data, posicoesInsumoQuery.data])
+  const insumoNomeMapa = posicoesInsumoQuery.data?.itens[0]?.insumoNome ?? "o insumo selecionado"
+
   return (
     <>
       <PageHeader
@@ -303,6 +415,16 @@ export default function RecomendacoesPage() {
         title="Reposição & Redistribuição"
         info="Sugere o que comprar e como remanejar estoque entre unidades, com base na previsão de demanda — para reduzir compras de urgência e equilibrar os estoques críticos. Gestores aprovam e executam cada recomendação."
         description="Módulo de recomendação dimensionado pela previsão de demanda — reduz compras emergenciais e equilibra estoques críticos entre unidades."
+        actions={
+          resumoQuery.data ? (
+            <PaginaIaInsight
+              rotulo="Recomendações"
+              titulo="Análise das recomendações"
+              descricao="Leitura por IA das recomendações pendentes para apoiar a decisão do gestor."
+              mensagens={mensagensAnalise(corpoRecomendacoes(resumoQuery.data, itens))}
+            />
+          ) : undefined
+        }
       />
 
       <BarraFiltros>
@@ -402,9 +524,56 @@ export default function RecomendacoesPage() {
           )}
         </div>
 
+        <div className="space-y-6 lg:col-span-1">
+        {/* Mapa da rede — condição de estoque por unidade (RF-DASH-02 / RF-REC). */}
+        <Section
+          className="h-fit"
+          title="Mapa da rede"
+          info="Mostra cada unidade da rede no mapa do Maranhão. A cor do marcador indica a condição do estoque (adequado, atenção ou crítico). Ao filtrar por um insumo, o mapa passa a mostrar a condição daquele insumo em cada unidade. Passe o cursor para ver os detalhes e clique num marcador para filtrar por aquela unidade."
+          description={
+            insumoId
+              ? "Estoque do insumo selecionado, por unidade. Cursor para detalhes; clique para filtrar."
+              : "Condição geral do estoque por unidade. Cursor para detalhes; clique para filtrar."
+          }
+        >
+          {mapaErro ? (
+            <ErroConsulta
+              mensagem="Não foi possível carregar o mapa da rede."
+              onTentarNovamente={() => {
+                unidadesQuery.refetch()
+                painelOpQuery.refetch()
+                posicoesInsumoQuery.refetch()
+              }}
+            />
+          ) : mapaCarregando ? (
+            <div className="flex justify-center py-16">
+              <Spinner size={40} label="Carregando mapa" />
+            </div>
+          ) : pontosMapa.length === 0 ? (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              Sem dados de estoque para o mapa.
+            </p>
+          ) : (
+            <>
+              <MapaRede
+                pontos={pontosMapa}
+                unidadeSelecionadaId={unidadeId}
+                onSelecionar={aoFiltrarUnidade}
+              />
+              {insumoId && unidadesInsumo.length > 0 && (
+                <SugestaoRemanejamentoIa
+                  key={insumoId}
+                  insumoNome={insumoNomeMapa}
+                  unidades={unidadesInsumo}
+                />
+              )}
+            </>
+          )}
+        </Section>
+
         {/* Desempenho do módulo (RF-REC-05) — dados ilustrativos (sem endpoint dedicado). */}
         <Section
-          className="lg:col-span-1 h-fit"
+          className="h-fit"
           title="Desempenho do módulo"
           info="Acompanha a qualidade do módulo: o quanto as recomendações têm acertado, quantas redistribuições foram aceitas e a cobertura por regras e por inteligência artificial."
           description="Acompanhamento e auditoria."
@@ -439,6 +608,7 @@ export default function RecomendacoesPage() {
             </div>
           </div>
         </Section>
+        </div>
       </div>
 
       <ConfirmarAcaoRecomendacaoDialog

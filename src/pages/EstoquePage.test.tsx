@@ -78,6 +78,19 @@ describe("EstoquePage", () => {
     expect(screen.queryByText("Med 0")).not.toBeInTheDocument()
   })
 
+  it("mostra a Curva ABC (resumo por classe) e abre o modal de análise por IA", async () => {
+    const { usuario } = renderizar(<EstoquePage />)
+    await usuario.click(await screen.findByRole("tab", { name: "Curva ABC" }))
+
+    // Resumo por classe na aba.
+    expect(await screen.findByText("Classe A")).toBeInTheDocument()
+
+    // Abre o modal de análise (detalhe + insight de IA).
+    await usuario.click(await screen.findByRole("button", { name: "Análise IA — Curva ABC" }))
+    expect(await screen.findByText("Análise por IA")).toBeInTheDocument()
+    expect(await screen.findByText(/Resposta para:/)).toBeInTheDocument()
+  })
+
   it("mostra erro quando as posições falham", async () => {
     server.use(
       http.get("*/estoque", () =>

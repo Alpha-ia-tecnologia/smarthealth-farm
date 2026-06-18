@@ -22,6 +22,11 @@ export interface Indicador {
   progresso: number // % do caminho até a meta
   atingiu: boolean
   variacaoPct: number | null // variação atual × base (null se base = 0)
+  // Lastro em números reais por trás de uma taxa (ex.: 9 de 80 itens essenciais para 11,2% de
+  // desabastecimento). null onde não se aplica (unidade já absoluta — R$/dias/un — ou MAPE).
+  numeradorAbsoluto: number | null
+  denominadorAbsoluto: number | null
+  unidadeAbsoluta: string | null
   historico: PontoHistorico[]
 }
 
