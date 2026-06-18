@@ -6,6 +6,8 @@ import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
+import { GraficoInsightDialog } from "@/components/shared/GraficoInsightDialog"
 import { CurvaAbcResumo } from "@/components/shared/CurvaAbcResumo"
 import { CurvaAbcInsightDialog } from "@/components/shared/CurvaAbcInsightDialog"
 import { AbcChart } from "@/components/charts/AbcChart"
@@ -28,8 +30,9 @@ import {
 } from "@/components/ui/dialog"
 import { useCurvaAbc, usePosicaoDetalhe, usePosicoes, useResumoEstoque, useLotes } from "@/hooks/use-estoque"
 import { useDebounce } from "@/hooks/use-debounce"
-import type { PosicaoEstoque, StatusEstoque } from "@/lib/estoque"
+import type { PosicaoEstoque, StatusEstoque, ResumoEstoque, Lote } from "@/lib/estoque"
 import type { StatusKey } from "@/lib/status"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtData, fmtDataHora, fmtNum } from "@/lib/format"
 
 /** Coluna da tabela (id) → campo de ordenação no backend. Status é derivado: não ordenável. */
@@ -49,9 +52,74 @@ const STATUS_ESTOQUE_OPCOES = [
   { valor: "critico", rotulo: "Crítico" },
 ]
 
+function corpoGeralEstoque(resumo: ResumoEstoque): string {
+  return (
+    `Faça uma análise geral da situação do estoque da rede.\n\n` +
+    `Totais:\n` +
+    `- Unidades cobertas: ${fmtNum(resumo.totalUnidadesEstoque)}\n` +
+    `- Itens críticos (abaixo do mínimo): ${fmtNum(resumo.itensCriticos)}\n` +
+    `- Lotes próximos do vencimento: ${fmtNum(resumo.lotesProximosVencimento)}\n` +
+    `- Tempo médio de ressuprimento: ${resumo.tempoMedioRessuprimentoDias} dias\n\n` +
+    `Baseado nesses números, qual o diagnóstico geral do estoque e quais as prioridades de ação?`
+  )
+}
+
+function corpoCriticos(resumo: ResumoEstoque): string {
+  return (
+    `Analise a quantidade de itens abaixo do estoque mínimo.\n\n` +
+    `Itens críticos: ${fmtNum(resumo.itensCriticos)}.\n\n` +
+    `Explique os riscos desses itens estarem críticos (risco de desabastecimento) e recomende ações imediatas, como compras emergenciais ou remanejamentos.`
+  )
+}
+
+function corpoLotesVencendo(resumo: ResumoEstoque): string {
+  return (
+    `Analise o número de lotes próximos do vencimento (≤ 60 dias).\n\n` +
+    `Lotes próximos do vencimento: ${fmtNum(resumo.lotesProximosVencimento)}.\n\n` +
+    `Explique o impacto do desperdício de insumos por vencimento e sugira ações como acelerar o consumo ou redistribuir para unidades com maior demanda.`
+  )
+}
+
+function corpoTempoRessup(resumo: ResumoEstoque): string {
+  return (
+    `Analise o tempo médio de ressuprimento da rede.\n\n` +
+    `Tempo médio: ${resumo.tempoMedioRessuprimentoDias} dias.\n\n` +
+    `Explique o que esse tempo significa em termos de agilidade logística, seu impacto na necessidade de estoque de segurança e o que pode ser feito para otimizar esse prazo.`
+  )
+}
+
+function corpoUnidades(resumo: ResumoEstoque): string {
+  return (
+    `Analise o escopo de atuação do controle de estoque.\n\n` +
+    `Unidades cobertas: ${fmtNum(resumo.totalUnidadesEstoque)}.\n\n` +
+    `Comente sobre o benefício de ter essa quantidade de unidades sob monitoramento centralizado e como a visibilidade ampla ajuda no remanejamento de insumos.`
+  )
+}
+
+function corpoPosicoesTabela(posicoes: PosicaoEstoque[]): string {
+  const criticos = posicoes.filter(p => p.status === "critico" || p.status === "atencao").slice(0, 6)
+  const lista = criticos.map(p => `- ${p.insumoNome} @ ${p.unidadeSigla}: Estoque ${fmtNum(p.quantidade)} (mín: ${fmtNum(p.nivelCritico)}), Status: ${p.status}`).join("\n")
+  return (
+    `Analise a posição do estoque para os itens listados na tabela atual.\n\n` +
+    `Foque nos itens críticos ou em atenção (abaixo do nível de segurança):\n${lista || "Nenhum item crítico listado na página atual."}\n\n` +
+    `Quais as ações recomendadas para essas posições específicas (reabastecer, remanejar, etc)?`
+  )
+}
+
+function corpoLotesLista(lotes: Lote[]): string {
+  const criticos = lotes.filter(l => l.diasParaVencer <= 45).slice(0, 6)
+  const lista = criticos.map(l => `- Lote ${l.numeroLote} (${l.insumoNome}) @ ${l.unidadeSigla}: ${fmtNum(l.quantidade)} un, vence em ${l.diasParaVencer} dias (${fmtData(l.validade)})`).join("\n")
+  return (
+    `Analise a lista atual de lotes próximos do vencimento.\n\n` +
+    `Destaque para lotes mais urgentes (≤ 45 dias):\n${lista || "Nenhum lote crítico listado na página atual."}\n\n` +
+    `Sugira prioridades de ação rápida e destinação para os lotes listados a fim de evitar desperdícios.`
+  )
+}
+
 export default function EstoquePage() {
   const [sel, setSel] = useState<PosicaoEstoque | null>(null)
   const [abcAberto, setAbcAberto] = useState(false)
+  const [dialogOp, setDialogOp] = useState<string | null>(null)
 
   // Filtros compartilhados (unidade + insumo) e o status isolado da tabela de posições.
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
@@ -199,6 +267,16 @@ export default function EstoquePage() {
         title="Estoque & Rastreabilidade por Lote"
         info="Esta tela mostra quanto de cada insumo existe em cada unidade, permite seguir cada lote (com sua validade) e ver todo o histórico de entradas e saídas. Serve para garantir que nada falte e que nada vença sem ser usado."
         description="Níveis de estoque por unidade, rastreabilidade por lote com controle de validade e histórico de movimentação para auditoria sanitária."
+        actions={
+          resumoQuery.data && (
+            <PaginaIaInsight
+              rotulo="Estoque"
+              titulo="Análise geral do Estoque"
+              descricao="Avaliação macro dos níveis de estoque, lotes e ressuprimento."
+              mensagens={mensagensAnalise(corpoGeralEstoque(resumoQuery.data))}
+            />
+          )
+        }
       />
 
       <BarraFiltros>
@@ -214,10 +292,10 @@ export default function EstoquePage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Itens abaixo do mínimo" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensCriticos) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos insumos estão com estoque abaixo do nível considerado seguro. Esses itens correm risco de acabar e precisam de reposição com prioridade." />
-          <KpiCard label="Lotes próx. do vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.lotesProximosVencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" hint="≤ 60 dias" info="Quantos lotes vão vencer em breve (até 60 dias). Eles devem ser usados ou remanejados antes da validade para evitar desperdício de insumos." />
-          <KpiCard label="Tempo médio de ressup." value={resumoQuery.data ? `${resumoQuery.data.tempoMedioRessuprimentoDias} dias` : ""} carregando={resumoQuery.isPending} icon={Clock} accent="teal" info="Em média, quantos dias o estoque leva para ser reposto desde o pedido até a chegada. Quanto maior esse tempo, mais cedo é preciso pedir para não faltar." />
-          <KpiCard label="Unidades em estoque" value={resumoQuery.data ? fmtNum(resumoQuery.data.totalUnidadesEstoque) : ""} carregando={resumoQuery.isPending} icon={Layers} accent="primary" info="Quantas unidades hospitalares têm estoque sendo acompanhado por esta plataforma." />
+          <KpiCard label="Itens abaixo do mínimo" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensCriticos) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos insumos estão com estoque abaixo do nível considerado seguro. Esses itens correm risco de acabar e precisam de reposição com prioridade." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Itens abaixo do mínimo" onClick={() => setDialogOp("criticos")} /> : undefined} />
+          <KpiCard label="Lotes próx. do vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.lotesProximosVencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" hint="≤ 60 dias" info="Quantos lotes vão vencer em breve (até 60 dias). Eles devem ser usados ou remanejados antes da validade para evitar desperdício de insumos." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Lotes vencendo" onClick={() => setDialogOp("vencendo")} /> : undefined} />
+          <KpiCard label="Tempo médio de ressup." value={resumoQuery.data ? `${resumoQuery.data.tempoMedioRessuprimentoDias} dias` : ""} carregando={resumoQuery.isPending} icon={Clock} accent="teal" info="Em média, quantos dias o estoque leva para ser reposto desde o pedido até a chegada. Quanto maior esse tempo, mais cedo é preciso pedir para não faltar." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Tempo de ressuprimento" onClick={() => setDialogOp("ressup")} /> : undefined} />
+          <KpiCard label="Unidades em estoque" value={resumoQuery.data ? fmtNum(resumoQuery.data.totalUnidadesEstoque) : ""} carregando={resumoQuery.isPending} icon={Layers} accent="primary" info="Quantas unidades hospitalares têm estoque sendo acompanhado por esta plataforma." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Unidades em estoque" onClick={() => setDialogOp("unidades")} /> : undefined} />
         </div>
       )}
 
@@ -234,13 +312,16 @@ export default function EstoquePage() {
             info="Lista quanto há de cada insumo em cada unidade, comparado com o estoque mínimo recomendado. A barra colorida indica se o nível está bom, em atenção ou crítico. Clique em uma linha para ver os lotes e a movimentação."
             description="Estoque mínimo calculado a partir da previsão de demanda. Clique para ver os lotes e a movimentação."
             action={
-              <SelectFiltro
-                valor={statusEstoque}
-                onChange={aoFiltrarStatus}
-                opcoes={STATUS_ESTOQUE_OPCOES}
-                todosRotulo="Todos os status"
-                className="w-44"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <BotaoAnaliseIa rotulo="Posições de estoque" onClick={() => setDialogOp("tabelaPosicoes")} />
+                <SelectFiltro
+                  valor={statusEstoque}
+                  onChange={aoFiltrarStatus}
+                  opcoes={STATUS_ESTOQUE_OPCOES}
+                  todosRotulo="Todos os status"
+                  className="w-44"
+                />
+              </div>
             }
           >
             {posicoesQuery.isError ? (
@@ -273,6 +354,7 @@ export default function EstoquePage() {
             title="Lotes próximos do vencimento"
             info="Mostra os lotes cuja validade vence nos próximos 90 dias, do mais urgente ao menos urgente. Use esta lista para consumir ou redistribuir esses insumos antes que estraguem."
             description="Lotes com validade em até 90 dias — priorizados para uso ou redistribuição."
+            action={<BotaoAnaliseIa rotulo="Controle de validade" onClick={() => setDialogOp("listaLotes")} />}
             noPadding
           >
             {lotesQuery.isError ? (
@@ -368,6 +450,63 @@ export default function EstoquePage() {
       </Tabs>
 
       <CurvaAbcInsightDialog curva={curvaAbcQuery.data} aberto={abcAberto} onOpenChange={setAbcAberto} />
+
+      {resumoQuery.data && (
+        <>
+          <GraficoInsightDialog
+            aberto={dialogOp === "criticos"}
+            onOpenChange={(a) => setDialogOp(a ? "criticos" : null)}
+            titulo="Itens críticos — análise por IA"
+            descricao="Recomendações para evitar desabastecimento dos itens abaixo do mínimo."
+            mensagens={mensagensAnalise(corpoCriticos(resumoQuery.data))}
+            chave="est-criticos"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "vencendo"}
+            onOpenChange={(a) => setDialogOp(a ? "vencendo" : null)}
+            titulo="Lotes próximos do vencimento — análise por IA"
+            descricao="Recomendações para evitar desperdícios com itens vencendo."
+            mensagens={mensagensAnalise(corpoLotesVencendo(resumoQuery.data))}
+            chave="est-vencendo"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "ressup"}
+            onOpenChange={(a) => setDialogOp(a ? "ressup" : null)}
+            titulo="Tempo médio de ressuprimento — análise por IA"
+            descricao="Avaliação da agilidade logística da rede."
+            mensagens={mensagensAnalise(corpoTempoRessup(resumoQuery.data))}
+            chave="est-ressup"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "unidades"}
+            onOpenChange={(a) => setDialogOp(a ? "unidades" : null)}
+            titulo="Unidades em estoque — análise por IA"
+            descricao="Avaliação do escopo do monitoramento de estoque."
+            mensagens={mensagensAnalise(corpoUnidades(resumoQuery.data))}
+            chave="est-unidades"
+          />
+        </>
+      )}
+      {posicoesQuery.data && (
+        <GraficoInsightDialog
+          aberto={dialogOp === "tabelaPosicoes"}
+          onOpenChange={(a) => setDialogOp(a ? "tabelaPosicoes" : null)}
+          titulo="Posições de Estoque — análise por IA"
+          descricao="Recomendações de ação focando nos itens críticos ou em atenção."
+          mensagens={mensagensAnalise(corpoPosicoesTabela(posicoesQuery.data.itens))}
+          chave="est-tab-pos"
+        />
+      )}
+      {lotesVenc.length > 0 && (
+        <GraficoInsightDialog
+          aberto={dialogOp === "listaLotes"}
+          onOpenChange={(a) => setDialogOp(a ? "listaLotes" : null)}
+          titulo="Controle de Validade — análise por IA"
+          descricao="Destinação prioritária para os lotes prestes a vencer."
+          mensagens={mensagensAnalise(corpoLotesLista(lotesVenc))}
+          chave="est-list-lotes"
+        />
+      )}
 
       {/* Drill-down de lote (RF-EST-03 / RF-EST-06) */}
       <Dialog open={!!sel} onOpenChange={(o) => !o && setSel(null)}>

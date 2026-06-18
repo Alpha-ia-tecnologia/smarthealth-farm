@@ -15,7 +15,9 @@ import {
 import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
 import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
+import { GraficoInsightDialog } from "@/components/shared/GraficoInsightDialog"
 import { MapaRede } from "@/components/charts/MapaRede"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -81,6 +83,38 @@ function corpoRecomendacoes(resumo: ResumoRecomendacoes, itens: Recomendacao[]):
     `Resumo: ${resumo.pendentes} pendentes, economia potencial ${fmtMoeda(resumo.economiaPotencial)}, ` +
     `${resumo.geradasPorIA} geradas por IA, taxa de adesão ${resumo.taxaAdesao}%.\n\n` +
     `Pendentes em destaque:\n${lista || "—"}`
+  )
+}
+
+function corpoPendentes(resumo: ResumoRecomendacoes): string {
+  return (
+    `Analise o volume de recomendações aguardando aprovação.\n\n` +
+    `Recomendações pendentes: ${fmtNum(resumo.pendentes)}.\n\n` +
+    `Qual o impacto de acumular um grande número de recomendações pendentes e quais ações gerenciais devem ser tomadas para dar vazão a essa fila?`
+  )
+}
+
+function corpoEconomia(resumo: ResumoRecomendacoes): string {
+  return (
+    `Analise o potencial de economia gerado pelas recomendações.\n\n` +
+    `Economia potencial estimada: ${fmtMoeda(resumo.economiaPotencial)}.\n\n` +
+    `Comente sobre a importância desse planejamento para a sustentabilidade da rede e recomende práticas para maximizar ainda mais a economia (como evitar fretes emergenciais).`
+  )
+}
+
+function corpoGeradasIA(resumo: ResumoRecomendacoes): string {
+  return (
+    `Analise o volume de sugestões logísticas originadas por Inteligência Artificial.\n\n` +
+    `Geradas por IA: ${fmtNum(resumo.geradasPorIA)}.\n\n` +
+    `O que a transição das recomendações baseadas em regras fixas para modelos de aprendizado de máquina traz de benefício para a rede hospitalar em termos de agilidade e assertividade?`
+  )
+}
+
+function corpoAdesao(resumo: ResumoRecomendacoes): string {
+  return (
+    `Analise a taxa de adesão (aprovações e execuções) do sistema de recomendações pela equipe.\n\n` +
+    `Taxa de adesão: ${resumo.taxaAdesao}%.\n\n` +
+    `Avalie o nível de engajamento da equipe logística e proponha formas de aumentar a confiança e a adesão às sugestões de remanejamento geradas.`
   )
 }
 
@@ -231,6 +265,8 @@ export default function RecomendacoesPage() {
   const perfil = usePerfil()
   // "Gestor ou Admin" — quem pode aprovar/executar recomendações.
   const ehGestor = podeGerir(perfil)
+
+  const [dialogOp, setDialogOp] = useState<string | null>(null)
 
   const [filtroTipo, setFiltroTipo] = useState<"todas" | TipoRecomendacao>("todas")
   const [filtroStatus, setFiltroStatus] = useState<string | undefined>(undefined)
@@ -447,10 +483,10 @@ export default function RecomendacoesPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Recomendações pendentes" value={resumoQuery.data ? fmtNum(resumoQuery.data.pendentes) : ""} carregando={resumoQuery.isPending} icon={ArrowLeftRight} accent="warning" info="Quantidade de sugestões aguardando aprovação de um gestor." />
-          <KpiCard label="Economia potencial" value={resumoQuery.data ? fmtMoeda(resumoQuery.data.economiaPotencial) : ""} carregando={resumoQuery.isPending} icon={Coins} accent="success" info="Quanto a rede pode economizar ao seguir estas recomendações. A economia existe porque comprar de forma programada sai mais barato: compras de urgência pagam frete e preços maiores. Planejar a reposição com antecedência reduz esse custo extra." />
-          <KpiCard label="Geradas por IA" value={resumoQuery.data ? fmtNum(resumoQuery.data.geradasPorIA) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="evolução de regras → IA" info="Quantas recomendações foram criadas por inteligência artificial, e não apenas por regras fixas." />
-          <KpiCard label="Taxa de adesão" value={resumoQuery.data ? `${resumoQuery.data.taxaAdesao}%` : ""} carregando={resumoQuery.isPending} icon={BadgeCheck} accent="teal" hint="aprovadas + executadas" info="Percentual de recomendações que foram aprovadas ou executadas — indica o quanto as sugestões estão sendo aproveitadas." />
+          <KpiCard label="Recomendações pendentes" value={resumoQuery.data ? fmtNum(resumoQuery.data.pendentes) : ""} carregando={resumoQuery.isPending} icon={ArrowLeftRight} accent="warning" info="Quantidade de sugestões aguardando aprovação de um gestor." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Pendentes" onClick={() => setDialogOp("pendentes")} /> : undefined} />
+          <KpiCard label="Economia potencial" value={resumoQuery.data ? fmtMoeda(resumoQuery.data.economiaPotencial) : ""} carregando={resumoQuery.isPending} icon={Coins} accent="success" info="Quanto a rede pode economizar ao seguir estas recomendações. A economia existe porque comprar de forma programada sai mais barato: compras de urgência pagam frete e preços maiores. Planejar a reposição com antecedência reduz esse custo extra." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Economia" onClick={() => setDialogOp("economia")} /> : undefined} />
+          <KpiCard label="Geradas por IA" value={resumoQuery.data ? fmtNum(resumoQuery.data.geradasPorIA) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="evolução de regras → IA" info="Quantas recomendações foram criadas por inteligência artificial, e não apenas por regras fixas." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Iniciativas de IA" onClick={() => setDialogOp("ia")} /> : undefined} />
+          <KpiCard label="Taxa de adesão" value={resumoQuery.data ? `${resumoQuery.data.taxaAdesao}%` : ""} carregando={resumoQuery.isPending} icon={BadgeCheck} accent="teal" hint="aprovadas + executadas" info="Percentual de recomendações que foram aprovadas ou executadas — indica o quanto as sugestões estão sendo aproveitadas." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Adesão" onClick={() => setDialogOp("adesao")} /> : undefined} />
         </div>
       )}
 
@@ -628,6 +664,43 @@ export default function RecomendacoesPage() {
         onOpenChange={setFormAberto}
         recomendacao={recEdicao}
       />
+
+      {resumoQuery.data && (
+        <>
+          <GraficoInsightDialog
+            aberto={dialogOp === "pendentes"}
+            onOpenChange={(a) => setDialogOp(a ? "pendentes" : null)}
+            titulo="Recomendações pendentes — análise por IA"
+            descricao="Avaliação do gargalo de aprovações logísticas."
+            mensagens={mensagensAnalise(corpoPendentes(resumoQuery.data))}
+            chave="rec-pend"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "economia"}
+            onOpenChange={(a) => setDialogOp(a ? "economia" : null)}
+            titulo="Economia potencial — análise por IA"
+            descricao="Análise dos impactos financeiros da repriorização de estoques."
+            mensagens={mensagensAnalise(corpoEconomia(resumoQuery.data))}
+            chave="rec-econ"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "ia"}
+            onOpenChange={(a) => setDialogOp(a ? "ia" : null)}
+            titulo="Geradas por IA — análise por IA"
+            descricao="Otimização do trabalho humano via aprendizado de máquina."
+            mensagens={mensagensAnalise(corpoGeradasIA(resumoQuery.data))}
+            chave="rec-ia"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "adesao"}
+            onOpenChange={(a) => setDialogOp(a ? "adesao" : null)}
+            titulo="Taxa de adesão — análise por IA"
+            descricao="Engajamento humano e aceitação das recomendações."
+            mensagens={mensagensAnalise(corpoAdesao(resumoQuery.data))}
+            chave="rec-adesao"
+          />
+        </>
+      )}
     </>
   )
 }
