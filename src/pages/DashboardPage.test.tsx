@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw"
 import DashboardPage from "@/pages/DashboardPage"
 import { renderizar, screen, waitFor } from "@/test/utils"
 import { server } from "@/test/server"
-import { erro, ok, painelGerencialTeste } from "@/test/handlers"
+import { erro, indicadoresTeste, ok, painelGerencialTeste } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
 
 function renderDashboard() {
@@ -87,6 +87,23 @@ describe("DashboardPage", () => {
     // Com unidade: os KPIs do projeto permanecem; o filtro afeta só os blocos abaixo.
     expect(await screen.findByText("Taxa de desabastecimento")).toBeInTheDocument()
     expect(screen.queryByText("Itens críticos")).not.toBeInTheDocument()
+  })
+
+  it("envia o filtro de unidade ao /indicadores (recalcula o valor atual no escopo)", async () => {
+    let ultimaUrl: URL | undefined
+    server.use(
+      http.get("*/indicadores", ({ request }) => {
+        ultimaUrl = new URL(request.url)
+        return HttpResponse.json(ok(indicadoresTeste))
+      }),
+    )
+    const { usuario } = renderDashboard()
+    expect(await screen.findByText("Taxa de desabastecimento")).toBeInTheDocument()
+
+    await usuario.click(screen.getByRole("combobox", { name: "Unidade" }))
+    await usuario.click(await screen.findByRole("option", { name: "HTO · São Luís" }))
+
+    await waitFor(() => expect(ultimaUrl?.searchParams.get("unidadeId")).toBe("uni-hto"))
   })
 
   it("envia o insumoId ao /painel ao filtrar por insumo", async () => {

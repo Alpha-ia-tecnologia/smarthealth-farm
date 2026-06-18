@@ -1,19 +1,22 @@
 import { useQuery } from "@tanstack/react-query"
-import { indicadoresApi } from "@/lib/indicadores"
+import { indicadoresApi, type IndicadoresFiltros } from "@/lib/indicadores"
 
 /** Chaves de cache do domínio de indicadores. */
 export const indicadoresKeys = {
   raiz: ["indicadores"] as const,
-  lista: () => ["indicadores", "lista"] as const,
+  lista: (filtros: IndicadoresFiltros) => ["indicadores", "lista", filtros] as const,
   resumo: () => ["indicadores", "resumo"] as const,
   detalhe: (codigo: string) => ["indicadores", "detalhe", codigo] as const,
 }
 
-/** Lista de indicadores do projeto com histórico e progresso. */
-export function useIndicadores() {
+/**
+ * Lista de indicadores do projeto com histórico e progresso. Filtros opcionais por unidade/insumo
+ * recalculam o valor atual no escopo (baseline/meta seguem do edital).
+ */
+export function useIndicadores(filtros: IndicadoresFiltros = {}) {
   return useQuery({
-    queryKey: indicadoresKeys.lista(),
-    queryFn: () => indicadoresApi.listar(),
+    queryKey: indicadoresKeys.lista(filtros),
+    queryFn: () => indicadoresApi.listar(filtros),
   })
 }
 
