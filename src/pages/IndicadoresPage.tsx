@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   CalendarDays,
   CheckCircle2,
@@ -9,6 +10,8 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
+import { IndicadorInsightDialog } from "@/components/shared/IndicadorInsightDialog"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
@@ -24,6 +27,7 @@ import { fmtDec, fmtNum } from "@/lib/format"
 export default function IndicadoresPage() {
   const resumoQuery = useResumoIndicadores()
   const indicadoresQuery = useIndicadores()
+  const [indSel, setIndSel] = useState<Indicador | null>(null)
 
   const indicadores = indicadoresQuery.data ?? []
   const comparativo = indicadores.filter((i) => i.variacaoPct != null)
@@ -68,7 +72,7 @@ export default function IndicadoresPage() {
         <AreaAtualizavel atualizando={indicadoresQuery.isFetching}>
           <div className="grid gap-5 lg:grid-cols-2">
             {indicadores.map((i) => (
-              <CartaoIndicador key={i.id} ind={i} />
+              <CartaoIndicador key={i.id} ind={i} onAnalise={setIndSel} />
             ))}
           </div>
 
@@ -146,23 +150,34 @@ export default function IndicadoresPage() {
           </div>
         </AreaAtualizavel>
       )}
+
+      <IndicadorInsightDialog
+        indicador={indSel}
+        aberto={indSel !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setIndSel(null)
+        }}
+      />
     </>
   )
 }
 
 /** Cartão de um indicador: valor atual, base, meta, série histórica e progresso (tudo do backend). */
-function CartaoIndicador({ ind }: { ind: Indicador }) {
+function CartaoIndicador({ ind, onAnalise }: { ind: Indicador; onAnalise: (ind: Indicador) => void }) {
   const cor = ind.atingiu ? "var(--chart-4)" : "var(--chart-3)"
   return (
     <Section
       title={ind.nome}
       info={`${ind.melhorMenor ? "Aqui, quanto menor o valor, melhor" : "Aqui, quanto maior o valor, melhor"}. O número grande é o resultado atual; "base" é como estava antes de começar; e "meta" é o alvo a alcançar. A barra mostra o quanto do caminho até a meta já foi percorrido.`}
       action={
-        <StatusBadge
-          status={ind.atingiu ? "ok" : "atencao"}
-          label={ind.atingiu ? "Meta atingida" : "Em progresso"}
-          dot={false}
-        />
+        <div className="flex items-center gap-2">
+          <BotaoAnaliseIa rotulo={ind.nome} onClick={() => onAnalise(ind)} />
+          <StatusBadge
+            status={ind.atingiu ? "ok" : "atencao"}
+            label={ind.atingiu ? "Meta atingida" : "Em progresso"}
+            dot={false}
+          />
+        </div>
       }
     >
       <div className="flex items-end justify-between">

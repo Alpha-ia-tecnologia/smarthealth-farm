@@ -56,6 +56,14 @@ describe("estoqueApi", () => {
     expect(resumo).toEqual(resumoEstoqueTeste)
   })
 
+  it("traz a Curva ABC com itens ordenados e resumo por classe", async () => {
+    const curva = await estoqueApi.curvaAbc()
+    expect(curva.itens[0].classe).toBe("A")
+    expect(curva.itens).toHaveLength(3)
+    expect(curva.resumo).toHaveLength(3)
+    expect(curva.resumo[0].classe).toBe("A")
+  })
+
   it("detalha uma posição com lotes e movimentações", async () => {
     const detalhe = await estoqueApi.detalhar("ins-001", "uni-hto")
     expect(detalhe.lotes).toHaveLength(1)

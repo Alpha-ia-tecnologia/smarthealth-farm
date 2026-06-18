@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { ArrowDownRight, ArrowUpRight, type LucideIcon } from "lucide-react"
+import { ArrowDownRight, ArrowUpRight, ChevronRight, Sparkles, type LucideIcon } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Spinner } from "@/components/ui/spinner"
 import { InfoHint } from "./InfoHint"
@@ -16,6 +16,14 @@ interface Props {
   footer?: React.ReactNode
   /** Mostra um spinner no lugar do valor enquanto a API carrega. */
   carregando?: boolean
+  /**
+   * Torna o card clicável (vira um botão acessível). Quando definido, mostra uma chamada para
+   * abrir os detalhes — usado para revelar os números reais e a análise por IA num modal, em vez
+   * de poluir o card com textos secundários.
+   */
+  onClick?: () => void
+  /** Texto da chamada de ação exibida no rodapé quando o card é clicável. */
+  acaoLabel?: string
 }
 
 const accents: Record<NonNullable<Props["accent"]>, string> = {
@@ -27,19 +35,56 @@ const accents: Record<NonNullable<Props["accent"]>, string> = {
 }
 
 /**
- * Tamanho do valor conforme o comprimento — números grandes (ex.: "R$ 11.367.572") encolhem
- * para não invadir o ícone, em vez de transbordar o card. Determinístico, sem depender da viewport.
+ * Tamanho do valor conforme o comprimento — números grandes (ex.: "R$ 812.000", "R$ 11.367.572")
+ * encolhem para caber numa linha dentro do card (4 colunas), em vez de quebrar/transbordar.
+ * Determinístico, sem depender da viewport.
  */
 function tamanhoValor(value: string): string {
   const n = value.length
-  if (n <= 9) return "text-3xl"
-  if (n <= 13) return "text-2xl"
-  return "text-xl"
+  if (n <= 6) return "text-3xl"
+  if (n <= 9) return "text-2xl"
+  if (n <= 12) return "text-xl"
+  return "text-lg"
 }
 
-export function KpiCard({ label, value, icon: Icon, delta, hint, info, accent = "primary", footer, carregando }: Props) {
+export function KpiCard({
+  label,
+  value,
+  icon: Icon,
+  delta,
+  hint,
+  info,
+  accent = "primary",
+  footer,
+  carregando,
+  onClick,
+  acaoLabel = "Números reais e análise IA",
+}: Props) {
+  const interativo = !!onClick && !carregando
+  const propsInterativas = onClick
+    ? {
+        role: "button" as const,
+        tabIndex: 0,
+        "aria-label": `Ver números e análise de ${label}`,
+        onClick,
+        onKeyDown: (evento: React.KeyboardEvent) => {
+          if (evento.key === "Enter" || evento.key === " ") {
+            evento.preventDefault()
+            onClick()
+          }
+        },
+      }
+    : {}
+
   return (
-    <Card className="relative gap-0 overflow-hidden p-5">
+    <Card
+      className={cn(
+        "relative gap-0 overflow-hidden p-5",
+        onClick &&
+          "group cursor-pointer transition-[color,background-color,border-color,box-shadow] duration-200 hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      )}
+      {...propsInterativas}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-1.5">
@@ -76,6 +121,13 @@ export function KpiCard({ label, value, icon: Icon, delta, hint, info, accent = 
             </span>
           )}
           {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+        </div>
+      )}
+      {interativo && (
+        <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary/85">
+          <Sparkles className="size-3.5" />
+          <span>{acaoLabel}</span>
+          <ChevronRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none" />
         </div>
       )}
       {footer && <div className="mt-3 border-t pt-3">{footer}</div>}

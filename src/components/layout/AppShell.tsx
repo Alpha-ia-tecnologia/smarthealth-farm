@@ -4,6 +4,7 @@ import { Bell, LogOut, Menu, Moon, Sun } from "lucide-react"
 import { SidebarContent } from "./Sidebar"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
+import { LogoEmserh } from "@/components/shared/LogoEmserh"
 import { AssistenteIa } from "@/components/shared/AssistenteIa"
 import {
   DropdownMenu,
@@ -44,9 +45,17 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b bg-background/85 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/70 lg:px-6">
+      {/* Fio de marca EMSERH: azul → verde da logo, vinculando o header à identidade */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand-azul/70 via-brand-azul/20 to-brand-verde/70"
+      />
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onOpenMenu}>
         <Menu className="size-5" />
       </Button>
+
+      {/* Logo oficial EMSERH no mobile (a sidebar fica oculta); título da página no desktop. */}
+      <LogoEmserh variant="full" className="h-8 w-auto lg:hidden" />
 
       <div className="hidden min-w-0 lg:block">
         <p className="truncate font-display text-sm font-semibold">{current.label}</p>

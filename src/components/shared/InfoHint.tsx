@@ -23,7 +23,11 @@ export function InfoHint({ texto, rotulo = "O que é isto?", lado = "top", class
         <button
           type="button"
           aria-label={rotulo}
-          onClick={(e) => e.preventDefault()}
+          // Não dispara o clique do container (ex.: KpiCard clicável) ao abrir a dica.
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+          }}
           className={cn(
             "inline-flex size-4 shrink-0 cursor-help items-center justify-center rounded-full text-muted-foreground/70 transition-colors hover:text-foreground focus-visible:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             className,

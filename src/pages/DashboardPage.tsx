@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
-  AlertTriangle,
   ArrowRight,
+  BarChart3,
   BellRing,
   CalendarClock,
   Coins,
@@ -13,6 +13,15 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { IndicadorInsightDialog } from "@/components/shared/IndicadorInsightDialog"
+import {
+  DashboardGraficosDialogs,
+  type GraficoDashboard,
+} from "@/components/shared/DashboardGraficosDialogs"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
+import { CurvaAbcResumo } from "@/components/shared/CurvaAbcResumo"
+import { CurvaAbcInsightDialog } from "@/components/shared/CurvaAbcInsightDialog"
 import { Section } from "@/components/shared/Section"
 import { BarraFiltros, FiltroUnidade } from "@/components/shared/filtros"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -20,14 +29,93 @@ import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ForecastChart } from "@/components/charts/ForecastChart"
 import { Gauge } from "@/components/charts/extras"
 import { CoverageChart } from "@/components/charts/CoverageChart"
+import { AbcChart } from "@/components/charts/AbcChart"
 import { Spinner } from "@/components/ui/spinner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { usePainelGerencial } from "@/hooks/use-painel"
 import { useIndicadores } from "@/hooks/use-indicadores"
+import { useCurvaAbc } from "@/hooks/use-estoque"
 import { formatarValorIndicador, type Indicador } from "@/lib/indicadores"
+import type { PainelGerencial } from "@/lib/painel"
+import type { CurvaAbc } from "@/lib/estoque"
+import type { MensagemChat } from "@/lib/ia"
 import { fmtMoeda, fmtNum, fmtPct } from "@/lib/format"
 import { severidadeStatus } from "@/lib/status"
+
+/** Sistema do consultor: produz a análise gerencial estruturada (seções fixas) para decisão. */
+const SISTEMA_GERENCIAL: MensagemChat = {
+  papel: "system",
+  conteudo:
+    "Você é um consultor de gestão da plataforma Smart Health CAHOSP (gestão preditiva da cadeia " +
+    "farmacêutica hospitalar, EMSERH-MA). Produza uma análise executiva do painel gerencial para " +
+    "apoiar a tomada de decisão, em português do Brasil, usando SOMENTE os dados fornecidos (sem " +
+    "inventar números). Estruture a resposta EXATAMENTE nestas seções, nesta ordem, com os títulos:\n" +
+    "Resumo: (2 a 3 frases)\n" +
+    "Insights: (3 a 5 itens, um por linha começando com '- ')\n" +
+    "Pontos fortes: (itens começando com '- ')\n" +
+    "Pontos de atenção: (itens começando com '- ')",
+}
+
+type IndicadoresChave = {
+  ruptura?: Indicador
+  vencimento?: Indicador
+  emergencial?: Indicador
+  mape?: Indicador
+  evitados?: Indicador
+}
+
+/** Monta o corpo com os números do dashboard (indicadores, totais da rede, cobertura e Curva ABC). */
+function corpoDashboard(painel: PainelGerencial, inds: IndicadoresChave, abc: CurvaAbc | undefined): string {
+  const linhas: string[] = ["Painel gerencial da rede CAHOSP — visão consolidada."]
+
+  const ind: string[] = []
+  if (inds.ruptura)
+    ind.push(
+      `Taxa de desabastecimento: ${fmtPct(inds.ruptura.atual)} (meta ${fmtPct(inds.ruptura.meta)}, ` +
+        `base ${fmtPct(inds.ruptura.baseline)}, ${inds.ruptura.atingiu ? "meta atingida" : "em progresso"})`,
+    )
+  if (inds.vencimento)
+    ind.push(
+      `Perdas por vencimento: ${fmtPct(inds.vencimento.atual)} (meta ${fmtPct(inds.vencimento.meta)}, ` +
+        `base ${fmtPct(inds.vencimento.baseline)})`,
+    )
+  if (inds.emergencial)
+    ind.push(
+      `Compras emergenciais: ${formatarValorIndicador(inds.emergencial.unidade, inds.emergencial.atual)} ` +
+        `(base ${formatarValorIndicador(inds.emergencial.unidade, inds.emergencial.baseline)})`,
+    )
+  if (inds.mape) ind.push(`Assertividade da previsão (MAPE): ${fmtPct(inds.mape.atual)} (alvo < ${fmtPct(inds.mape.meta)})`)
+  if (inds.evitados) ind.push(`Desabastecimentos evitados (acum.): ${fmtNum(inds.evitados.atual)}`)
+  if (ind.length) linhas.push("\nIndicadores do edital:\n" + ind.map((x) => `- ${x}`).join("\n"))
+
+  const t = painel.totais
+  linhas.push(
+    `\nRede: ${fmtNum(t.itensCriticos)} itens críticos, ${fmtNum(t.alertasAtivos)} alertas ativos ` +
+      `(${t.alertasDesabastecimento} de desabastecimento, ${t.alertasVencimento} de vencimento), ` +
+      `${t.recomendacoesPendentes} recomendações pendentes, economia potencial ${fmtMoeda(t.economiaPotencial)}.`,
+  )
+
+  if (painel.coberturaPorUnidade.length)
+    linhas.push(
+      "\nCobertura de estoque por unidade: " +
+        painel.coberturaPorUnidade.map((u) => `${u.nome} ${u.valor}%`).join(", ") +
+        " (meta 80%).",
+    )
+
+  if (abc && abc.resumo.length)
+    linhas.push(
+      "\nCurva ABC (valor de consumo): " +
+        abc.resumo.map((r) => `classe ${r.classe} ${r.itens} itens = ${r.valorPct}% do valor`).join("; ") +
+        ".",
+    )
+
+  return linhas.join("\n")
+}
+
+function mensagensDashboard(painel: PainelGerencial, inds: IndicadoresChave, abc: CurvaAbc | undefined): MensagemChat[] {
+  return [SISTEMA_GERENCIAL, { papel: "user", conteudo: corpoDashboard(painel, inds, abc) }]
+}
 
 /** Delta do KPI a partir da variação entregue pela API (sinal interpretado pela direção da meta). */
 function deltaIndicador(ind: Indicador) {
@@ -38,8 +126,12 @@ function deltaIndicador(ind: Indicador) {
 
 export default function DashboardPage() {
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
+  const [indicadorSel, setIndicadorSel] = useState<Indicador | null>(null)
+  const [grafico, setGrafico] = useState<GraficoDashboard | null>(null)
+  const [abcAberto, setAbcAberto] = useState(false)
   const painelQuery = usePainelGerencial({ unidadeId })
   const indicadoresQuery = useIndicadores()
+  const curvaAbcQuery = useCurvaAbc()
 
   const indPorCodigo = useMemo(
     () => new Map((indicadoresQuery.data ?? []).map((i) => [i.codigo, i])),
@@ -61,11 +153,25 @@ export default function DashboardPage() {
         info="Visão geral do desempenho da rede: previsão de demanda, situação dos estoques e os principais indicadores comparados às metas do projeto. Use os atalhos de cada bloco para abrir o módulo em detalhe."
         description="Visão consolidada da cadeia farmacêutica da CAHOSP e das unidades da rede EMSERH — previsão, estoque e indicadores frente às metas do projeto."
         actions={
-          <Button variant="outline" asChild>
-            <Link to="/relatorios">
-              Relatório executivo <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+          <>
+            {painel && (
+              <PaginaIaInsight
+                rotulo="Dashboard"
+                titulo="Análise gerencial por IA"
+                descricao="Análise das informações da página com insights, pontos fortes e pontos de atenção para apoiar a decisão."
+                mensagens={mensagensDashboard(
+                  painel,
+                  { ruptura, vencimento, emergencial, mape, evitados },
+                  curvaAbcQuery.data,
+                )}
+              />
+            )}
+            <Button variant="outline" asChild>
+              <Link to="/relatorios">
+                Relatório executivo <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </>
         }
       />
 
@@ -95,7 +201,7 @@ export default function DashboardPage() {
             icon={PackageX}
             accent="danger"
             delta={ruptura ? deltaIndicador(ruptura) : undefined}
-            hint={ruptura ? `meta −${ruptura.metaReducaoPct}% · base ${fmtPct(ruptura.baseline)}` : undefined}
+            onClick={ruptura ? () => setIndicadorSel(ruptura) : undefined}
             info="Percentual de itens que ficaram em falta quando eram necessários. Quanto menor, melhor — a meta é reduzir esse número em relação à linha de base (situação antes do projeto)."
           />
           <KpiCard
@@ -105,7 +211,7 @@ export default function DashboardPage() {
             icon={CalendarClock}
             accent="warning"
             delta={vencimento ? deltaIndicador(vencimento) : undefined}
-            hint={vencimento ? `meta −${vencimento.metaReducaoPct}% · base ${fmtPct(vencimento.baseline)}` : undefined}
+            onClick={vencimento ? () => setIndicadorSel(vencimento) : undefined}
             info="Percentual de insumos descartados por terem vencido antes de serem usados. Comprar e distribuir na medida certa reduz esse desperdício."
           />
           <KpiCard
@@ -115,7 +221,7 @@ export default function DashboardPage() {
             icon={TrendingDown}
             accent="teal"
             delta={emergencial ? deltaIndicador(emergencial) : undefined}
-            hint={emergencial ? `meta −${emergencial.metaReducaoPct}% · base ${formatarValorIndicador(emergencial.unidade, emergencial.baseline)}` : undefined}
+            onClick={emergencial ? () => setIndicadorSel(emergencial) : undefined}
             info="Volume de compras feitas com urgência, fora do planejamento. Costumam sair mais caras (frete e preço); a meta é reduzi-las com previsão e reposição programada."
           />
           <KpiCard
@@ -125,11 +231,31 @@ export default function DashboardPage() {
             icon={Target}
             accent="success"
             delta={mape ? deltaIndicador(mape) : undefined}
-            hint={mape ? `alvo < ${fmtPct(mape.meta)}` : undefined}
+            onClick={mape ? () => setIndicadorSel(mape) : undefined}
             info="MAPE é o erro médio da previsão de demanda: o quanto, em média, ela erra para mais ou para menos. Quanto menor o erro, mais confiável é a previsão (alvo abaixo da meta)."
           />
         </div>
       )}
+
+      <IndicadorInsightDialog
+        indicador={indicadorSel}
+        aberto={indicadorSel !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setIndicadorSel(null)
+        }}
+      />
+
+      <DashboardGraficosDialogs
+        grafico={grafico}
+        onOpenChange={(aberto) => {
+          if (!aberto) setGrafico(null)
+        }}
+        painel={painel}
+        mape={mape}
+        evitados={evitados}
+      />
+
+      <CurvaAbcInsightDialog curva={curvaAbcQuery.data} aberto={abcAberto} onOpenChange={setAbcAberto} />
 
       {/* Previsão agregada + acurácia */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -138,7 +264,12 @@ export default function DashboardPage() {
           title={painel ? `Demanda × Previsão — ${painel.serieAgregada.insumoNome} (rede)` : "Demanda × Previsão (rede)"}
           description="Comparativo entre consumo realizado e previsto, com projeção de 3 meses."
           info="Compara o consumo já realizado (histórico) com o previsto pelo modelo e projeta os próximos meses, ajudando a antecipar quanto será necessário."
-          action={<Badge variant="outline" className="text-[10px]">Modelo preditivo híbrido</Badge>}
+          action={
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px]">Modelo preditivo híbrido</Badge>
+              {painel && <BotaoAnaliseIa rotulo="Demanda × Previsão" onClick={() => setGrafico("previsao")} />}
+            </div>
+          }
         >
           {painelQuery.isError ? (
             <ErroConsulta mensagem="Não foi possível carregar a série." onTentarNovamente={() => painelQuery.refetch()} />
@@ -149,7 +280,12 @@ export default function DashboardPage() {
           )}
         </Section>
 
-        <Section title="Assertividade das previsões" info="Mostra o quanto as previsões têm acertado nos itens mais críticos. O ponteiro indica a assertividade média (100% menos o erro); ao lado, os desabastecimentos que foram evitados." description="Erro médio (MAPE) ponderado dos itens de maior criticidade.">
+        <Section
+          title="Assertividade das previsões"
+          info="Mostra o quanto as previsões têm acertado nos itens mais críticos. O ponteiro indica a assertividade média (100% menos o erro); ao lado, os desabastecimentos que foram evitados."
+          description="Erro médio (MAPE) ponderado dos itens de maior criticidade."
+          action={mape ? <BotaoAnaliseIa rotulo="Assertividade das previsões" onClick={() => setGrafico("assertividade")} /> : undefined}
+        >
           {indicadoresQuery.isError ? (
             <ErroConsulta mensagem="Não foi possível carregar os indicadores." onTentarNovamente={() => indicadoresQuery.refetch()} />
           ) : !mape ? (
@@ -178,6 +314,7 @@ export default function DashboardPage() {
           title="Cobertura de estoque por unidade"
           info="Para cada unidade, o percentual de itens com estoque acima do nível de segurança. Quanto maior a cobertura, menor o risco de faltar item."
           description="% de itens com estoque acima do nível de segurança, por unidade."
+          action={painel ? <BotaoAnaliseIa rotulo="Cobertura por unidade" onClick={() => setGrafico("cobertura")} /> : undefined}
         >
           {painelQuery.isError ? (
             <ErroConsulta mensagem="Não foi possível carregar a cobertura." onTentarNovamente={() => painelQuery.refetch()} />
@@ -263,10 +400,30 @@ export default function DashboardPage() {
         </Section>
       </div>
 
-      <p className="flex items-center gap-2 text-xs text-muted-foreground">
-        <AlertTriangle className="size-3.5" />
-        Indicadores acompanham as metas do edital FAPEMA GovIA.
-      </p>
+      <Section
+        title="Curva ABC da rede — valor de consumo"
+        icon={<BarChart3 className="size-4" />}
+        info="Classifica os insumos pelo valor de consumo (consumo médio diário × custo unitário). Poucos itens (classe A) concentram a maior parte do valor — são os que merecem controle mais rígido. Clique em Análise IA para o detalhamento e a recomendação."
+        description="Análise de Pareto: onde está concentrado o valor de consumo da rede."
+        action={
+          curvaAbcQuery.data && curvaAbcQuery.data.itens.length > 0 ? (
+            <BotaoAnaliseIa rotulo="Curva ABC" onClick={() => setAbcAberto(true)} />
+          ) : undefined
+        }
+      >
+        {curvaAbcQuery.isError ? (
+          <ErroConsulta mensagem="Não foi possível carregar a Curva ABC." onTentarNovamente={() => curvaAbcQuery.refetch()} />
+        ) : !curvaAbcQuery.data ? (
+          <div className="flex justify-center py-16"><Spinner size={40} label="Carregando Curva ABC" /></div>
+        ) : curvaAbcQuery.data.itens.length === 0 ? (
+          <p className="py-10 text-center text-sm text-muted-foreground">Sem dados de consumo para a Curva ABC.</p>
+        ) : (
+          <div className="space-y-4">
+            <CurvaAbcResumo resumo={curvaAbcQuery.data.resumo} />
+            <AbcChart itens={curvaAbcQuery.data.itens} height={200} />
+          </div>
+        )}
+      </Section>
     </>
   )
 }

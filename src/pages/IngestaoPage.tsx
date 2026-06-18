@@ -1,5 +1,6 @@
 import { Activity, Database, DatabaseZap, FileCheck2, ShieldCheck, Thermometer } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -8,9 +9,32 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
 import { useFontes, useQualidadeCategorias, useResumoIngestao } from "@/hooks/use-ingestao"
-import type { StatusFonte } from "@/lib/ingestao"
+import type { FonteDado, QualidadeCategoria, ResumoIngestao, StatusFonte } from "@/lib/ingestao"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtNum, fmtDataHora } from "@/lib/format"
 import type { StatusKey } from "@/lib/status"
+
+/** Corpo do diagnóstico de qualidade de dados por IA: resumo + fontes/categorias frágeis. */
+function corpoIngestao(resumo: ResumoIngestao, fontes: FonteDado[], qualidade: QualidadeCategoria[]): string {
+  const problema = fontes
+    .filter((f) => f.status !== "Sincronizado")
+    .map((f) => `- ${f.nome}: ${f.status}, qualidade ${f.qualidade}%`)
+    .join("\n")
+  const fragies = [...qualidade]
+    .sort((a, b) => a.completude + a.consistencia - (b.completude + b.consistencia))
+    .slice(0, 3)
+    .map((q) => `- ${q.categoria}: maturidade ${q.maturidade}%, completude ${q.completude}%, ${q.lacunas} lacuna(s)`)
+    .join("\n")
+  return (
+    `Faça um diagnóstico da qualidade dos dados (governança). Aponte: (1) fontes que precisam de ` +
+    `atenção, (2) categorias com pior qualidade/lacunas, (3) o que melhorar primeiro para a ` +
+    `previsão ficar mais confiável.\n\n` +
+    `Resumo: ${fmtNum(resumo.registrosIngeridos)} registros, ${resumo.fontesSincronizadas}/` +
+    `${resumo.totalFontes} fontes sincronizadas, qualidade média ${resumo.qualidadeMedia}%, ` +
+    `anonimização ${resumo.anonimizacaoAtiva ? "ativa" : "inativa"}.\n\n` +
+    `Fontes com pendência:\n${problema || "nenhuma"}\n\nCategorias mais frágeis:\n${fragies || "—"}`
+  )
+}
 
 const fonteStatus: Record<StatusFonte, StatusKey> = {
   Sincronizado: "ok",
@@ -50,7 +74,20 @@ export default function IngestaoPage() {
 
   return (
     <>
-      <Cabecalho />
+      <Cabecalho
+        actions={
+          resumo ? (
+            <PaginaIaInsight
+              rotulo="Ingestão"
+              titulo="Diagnóstico de qualidade dos dados"
+              descricao="A IA aponta fontes e categorias frágeis e o que melhorar primeiro."
+              mensagens={mensagensAnalise(
+                corpoIngestao(resumo, fontesQuery.data ?? [], qualidadeQuery.data ?? []),
+              )}
+            />
+          ) : undefined
+        }
+      />
 
       {/* KPIs (RF-DAD-01/02/04) — vindos de /ingestao/resumo */}
       {resumoQuery.isError ? (
@@ -168,13 +205,14 @@ export default function IngestaoPage() {
   )
 }
 
-function Cabecalho() {
+function Cabecalho({ actions }: { actions?: React.ReactNode }) {
   return (
     <PageHeader
       icon={<DatabaseZap className="size-5" />}
       title="Ingestão, Tratamento e Anonimização"
       info="Tela onde os dados de consumo e distribuição de insumos são importados de vários sistemas, padronizados, limpos e têm os dados pessoais protegidos antes do uso."
       description="Coleta e padronização das séries históricas de consumo e dispensação de fontes heterogêneas, com anonimização LGPD e enriquecimento epidemiológico."
+      actions={actions}
     />
   )
 }

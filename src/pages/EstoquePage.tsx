@@ -5,6 +5,10 @@ import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
+import { CurvaAbcResumo } from "@/components/shared/CurvaAbcResumo"
+import { CurvaAbcInsightDialog } from "@/components/shared/CurvaAbcInsightDialog"
+import { AbcChart } from "@/components/charts/AbcChart"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
 import { BarraFiltros, FiltroInsumo, FiltroUnidade, SelectFiltro } from "@/components/shared/filtros"
@@ -22,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { usePosicaoDetalhe, usePosicoes, useResumoEstoque, useLotes } from "@/hooks/use-estoque"
+import { useCurvaAbc, usePosicaoDetalhe, usePosicoes, useResumoEstoque, useLotes } from "@/hooks/use-estoque"
 import { useDebounce } from "@/hooks/use-debounce"
 import type { PosicaoEstoque, StatusEstoque } from "@/lib/estoque"
 import type { StatusKey } from "@/lib/status"
@@ -47,6 +51,7 @@ const STATUS_ESTOQUE_OPCOES = [
 
 export default function EstoquePage() {
   const [sel, setSel] = useState<PosicaoEstoque | null>(null)
+  const [abcAberto, setAbcAberto] = useState(false)
 
   // Filtros compartilhados (unidade + insumo) e o status isolado da tabela de posições.
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
@@ -84,6 +89,7 @@ export default function EstoquePage() {
     { comSaldo: true, validadeAteDias: 90, unidadeId, insumoId },
     { pagina: pagVenc, tamanho: tamanhoVenc },
   )
+  const curvaAbcQuery = useCurvaAbc()
   const detalheQuery = usePosicaoDetalhe(sel?.insumoId, sel?.unidadeId)
 
   /** Mudou um filtro → ambas as listas voltam à primeira página. */
@@ -219,6 +225,7 @@ export default function EstoquePage() {
         <TabsList>
           <TabsTrigger value="posicoes">Posições de estoque</TabsTrigger>
           <TabsTrigger value="vencimento">Controle de validade</TabsTrigger>
+          <TabsTrigger value="abc">Curva ABC</TabsTrigger>
         </TabsList>
 
         <TabsContent value="posicoes" className="pt-4">
@@ -323,7 +330,44 @@ export default function EstoquePage() {
             )}
           </Section>
         </TabsContent>
+
+        <TabsContent value="abc" className="pt-4">
+          <Section
+            title="Curva ABC por valor de consumo"
+            info="Classifica os insumos pelo valor de consumo (consumo médio diário × custo unitário). Poucos itens (classe A) costumam concentrar a maior parte do valor — são os que merecem controle mais rígido; B é intermediário e C é a cauda. Use a Análise IA para a leitura e a recomendação por classe."
+            description="Análise de Pareto da rede: onde está concentrado o valor de consumo dos insumos."
+            action={
+              curvaAbcQuery.data && curvaAbcQuery.data.itens.length > 0 ? (
+                <BotaoAnaliseIa rotulo="Curva ABC" onClick={() => setAbcAberto(true)} />
+              ) : undefined
+            }
+          >
+            {curvaAbcQuery.isError ? (
+              <ErroConsulta
+                mensagem="Não foi possível carregar a Curva ABC."
+                onTentarNovamente={() => curvaAbcQuery.refetch()}
+              />
+            ) : !curvaAbcQuery.data ? (
+              <div className="flex justify-center py-20">
+                <Spinner size={40} label="Carregando Curva ABC" />
+              </div>
+            ) : curvaAbcQuery.data.itens.length === 0 ? (
+              <p className="py-10 text-center text-sm text-muted-foreground">
+                Sem dados de consumo para a Curva ABC.
+              </p>
+            ) : (
+              <AreaAtualizavel atualizando={curvaAbcQuery.isFetching}>
+                <div className="space-y-4">
+                  <CurvaAbcResumo resumo={curvaAbcQuery.data.resumo} />
+                  <AbcChart itens={curvaAbcQuery.data.itens} height={320} />
+                </div>
+              </AreaAtualizavel>
+            )}
+          </Section>
+        </TabsContent>
       </Tabs>
+
+      <CurvaAbcInsightDialog curva={curvaAbcQuery.data} aberto={abcAberto} onOpenChange={setAbcAberto} />
 
       {/* Drill-down de lote (RF-EST-03 / RF-EST-06) */}
       <Dialog open={!!sel} onOpenChange={(o) => !o && setSel(null)}>

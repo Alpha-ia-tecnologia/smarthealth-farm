@@ -13,6 +13,7 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
@@ -41,9 +42,32 @@ import { useDebounce } from "@/hooks/use-debounce"
 import { usePerfil } from "@/context/auth"
 import { podeGerir } from "@/lib/permissoes"
 import { ApiError } from "@/lib/api"
-import type { Alerta, LimiarAlerta, SeveridadeAlerta, StatusAlerta, TipoAlerta } from "@/lib/alertas"
+import type {
+  Alerta,
+  LimiarAlerta,
+  ResumoAlertas,
+  SeveridadeAlerta,
+  StatusAlerta,
+  TipoAlerta,
+} from "@/lib/alertas"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtDataHora, fmtNum } from "@/lib/format"
 import { severidadeStatus } from "@/lib/status"
+
+/** Corpo da triagem por IA dos alertas: resumo + os ativos em destaque. */
+function corpoAlertas(resumo: ResumoAlertas, alertas: Alerta[]): string {
+  const ativos = alertas.filter((a) => a.status !== "Resolvido").slice(0, 6)
+  const lista = ativos
+    .map((a) => `- ${a.tipo} [${a.severidade}] ${a.insumoNome} @ ${a.unidadeSigla}: ${a.mensagem} (${a.status})`)
+    .join("\n")
+  return (
+    `Faça a triagem dos alertas operacionais da rede hospitalar. Aponte: (1) o que tratar primeiro ` +
+    `(prioridade), (2) o risco por tipo, (3) ações recomendadas.\n\n` +
+    `Resumo: ${resumo.ativos} ativos (${resumo.abertos} abertos, ${resumo.emTratamento} em tratamento), ` +
+    `${resumo.desabastecimento} de desabastecimento, ${resumo.vencimento} de vencimento, ` +
+    `${resumo.criticos} críticos.\n\nAlertas ativos em destaque:\n${lista || "—"}`
+  )
+}
 
 const statusMap = { Aberto: "critico", "Em tratamento": "atencao", Resolvido: "ok" } as const
 
@@ -285,6 +309,16 @@ export default function AlertasPage() {
         title="Alertas Operacionais"
         info="Aqui o sistema avisa, de forma automática, quando algum insumo corre risco de acabar ou de vencer. Use esta tela para ver os avisos, ajustar quando eles devem disparar e acompanhar o que já foi resolvido."
         description="Alertas automáticos de risco de desabastecimento e de vencimento, com base nas previsões de demanda, configuração de limiares e direcionamento por perfil."
+        actions={
+          resumoQuery.data ? (
+            <PaginaIaInsight
+              rotulo="Alertas"
+              titulo="Triagem inteligente dos alertas"
+              descricao="A IA prioriza os alertas ativos e sugere as primeiras ações."
+              mensagens={mensagensAnalise(corpoAlertas(resumoQuery.data, alertasQuery.data?.itens ?? []))}
+            />
+          ) : undefined
+        }
       />
 
       <BarraFiltros>

@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom"
-import { Activity } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LogoEmserh } from "@/components/shared/LogoEmserh"
 import { grupos, navItemsPara } from "@/lib/nav"
 import { usePerfil } from "@/context/auth"
 
@@ -8,15 +8,10 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const itens = navItemsPara(usePerfil())
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      {/* Marca */}
-      <div className="flex items-center gap-3 px-5 py-5">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground shadow-sm">
-          <Activity className="size-5" strokeWidth={2.5} />
-        </div>
-        <div className="leading-tight">
-          <p className="font-display text-base font-bold tracking-tight">Smart Health</p>
-          <p className="text-[11px] text-sidebar-foreground/60">CAHOSP · EMSERH-MA</p>
-        </div>
+      {/* Marca institucional EMSERH (logo oficial) + plataforma */}
+      <div className="border-b border-sidebar-border/60 px-5 py-5">
+        <LogoEmserh variant="full" className="w-[12.5rem] max-w-full" />
+        <p className="mt-2.5 text-[11px] text-sidebar-foreground/60">Smart Health · CAHOSP</p>
       </div>
 
       {/* Navegação */}
@@ -41,7 +36,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                       cn(
                         "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                         isActive
-                          ? "bg-sidebar-primary/15 text-sidebar-primary-foreground"
+                          ? "bg-sidebar-primary/15 font-semibold text-sidebar-primary"
                           : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       )
                     }

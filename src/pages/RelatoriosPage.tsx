@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
+import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -32,7 +33,25 @@ import {
 import { usePainelGerencial } from "@/hooks/use-painel"
 import { useResumoIndicadores } from "@/hooks/use-indicadores"
 import { useUnidades } from "@/hooks/use-unidades"
+import type { TotaisRede } from "@/lib/painel"
+import type { ResumoIndicadores } from "@/lib/indicadores"
+import { mensagensAnalise } from "@/lib/ia-prompts"
 import { fmtMoeda, fmtNum } from "@/lib/format"
+
+/** Corpo do resumo executivo por IA: metas do projeto + situação consolidada da rede. */
+function corpoRelatorio(totais: TotaisRede, resumoInd: ResumoIndicadores): string {
+  return (
+    `Escreva um resumo executivo para a direção da EMSERH sobre a gestão da cadeia farmacêutica ` +
+    `da CAHOSP. Em 3 a 4 frases: (1) o estado geral (metas e riscos), (2) os números-chave, ` +
+    `(3) a recomendação principal.\n\n` +
+    `Metas do projeto: ${resumoInd.atingidas}/${resumoInd.total} atingidas, ` +
+    `${resumoInd.emProgresso} em progresso.\n` +
+    `Rede: ${fmtNum(totais.itensCriticos)} itens críticos, ${fmtNum(totais.alertasAtivos)} alertas ` +
+    `ativos (${totais.alertasDesabastecimento} de desabastecimento, ${totais.alertasVencimento} de ` +
+    `vencimento), ${totais.recomendacoesPendentes} recomendações pendentes, economia potencial ` +
+    `${fmtMoeda(totais.economiaPotencial)}.`
+  )
+}
 
 /** Categorias de insumo (enum de domínio) — opções do filtro. */
 const CATEGORIAS = [
@@ -91,6 +110,14 @@ export default function RelatoriosPage() {
         description="Relatórios estratégicos para a direção da EMSERH, painel de progresso do projeto (OPED) e exportação em formatos estruturados."
         actions={
           <>
+            {totais && resumoInd && (
+              <PaginaIaInsight
+                rotulo="Relatórios"
+                titulo="Resumo executivo por IA"
+                descricao="Síntese do estado da rede e das metas para a direção da EMSERH."
+                mensagens={mensagensAnalise(corpoRelatorio(totais, resumoInd))}
+              />
+            )}
             <Button variant="outline" onClick={() => toast.success("Exportando planilha…")}><FileSpreadsheet className="size-4" /> Planilha</Button>
             <Button onClick={() => toast.success("Gerando PDF…")}><FileText className="size-4" /> PDF</Button>
           </>
