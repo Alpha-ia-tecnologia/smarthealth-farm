@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import type { FiltrosResumo } from "@/lib/api"
 import {
   estoqueApi,
+  type CurvaAbcFiltros,
   type LoteFiltros,
   type ParamsPaginacao,
   type PosicaoFiltros,
@@ -16,7 +17,7 @@ export const estoqueKeys = {
   detalhe: (medId: string, uniId: string) => ["estoque", "detalhe", medId, uniId] as const,
   lotes: (filtros: LoteFiltros, paginacao: ParamsPaginacao) =>
     ["estoque", "lotes", filtros, paginacao] as const,
-  curvaAbc: () => ["estoque", "curva-abc"] as const,
+  curvaAbc: (filtros: CurvaAbcFiltros) => ["estoque", "curva-abc", filtros] as const,
 }
 
 /** Posições de estoque paginadas com status (+ filtros). Mantém a página anterior ao paginar. */
@@ -45,11 +46,11 @@ export function usePosicaoDetalhe(insumoId: string | undefined, unidadeId: strin
   })
 }
 
-/** Curva ABC dos insumos por valor de consumo (rede) — somente leitura. */
-export function useCurvaAbc() {
+/** Curva ABC dos insumos por valor de consumo (filtro opcional por unidade) — somente leitura. */
+export function useCurvaAbc(filtros: CurvaAbcFiltros = {}) {
   return useQuery({
-    queryKey: estoqueKeys.curvaAbc(),
-    queryFn: () => estoqueApi.curvaAbc(),
+    queryKey: estoqueKeys.curvaAbc(filtros),
+    queryFn: () => estoqueApi.curvaAbc(filtros),
   })
 }
 

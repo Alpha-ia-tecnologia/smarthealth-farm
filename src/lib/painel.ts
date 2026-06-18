@@ -71,9 +71,13 @@ export interface PainelOperacional {
   recomendacoesAbertas: Recomendacao[]
 }
 
-/** Filtro do dashboard gerencial — unidade reaplica em tudo, menos cobertura por unidade. */
+/**
+ * Filtros do dashboard gerencial — unidade e insumo reaplicam em totais, série agregada, alertas e
+ * recomendações; a cobertura por unidade permanece da rede inteira (visão cross-unidade).
+ */
 export interface PainelGerencialFiltros {
   unidadeId?: string
+  insumoId?: string
 }
 
 /** Filtros do painel operacional — unidade e insumo. */
@@ -83,7 +87,7 @@ export interface PainelOperacionalFiltros {
 }
 
 export const painelApi = {
-  /** GET /painel — dashboard gerencial consolidado (filtro opcional por unidade). */
+  /** GET /painel — dashboard gerencial consolidado (filtros opcionais por unidade e insumo). */
   dashboard: (filtros: PainelGerencialFiltros = {}) =>
     api.get<PainelGerencial>(`/painel${montarQuery({ ...filtros })}`),
 

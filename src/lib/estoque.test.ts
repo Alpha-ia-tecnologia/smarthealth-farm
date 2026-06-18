@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw"
 import { server } from "@/test/server"
-import { lotesTeste, ok, posicoesTeste, resumoEstoqueTeste } from "@/test/handlers"
+import { curvaAbcTeste, lotesTeste, ok, posicoesTeste, resumoEstoqueTeste } from "@/test/handlers"
 import { estoqueApi } from "@/lib/estoque"
 
 describe("estoqueApi", () => {
@@ -62,6 +62,18 @@ describe("estoqueApi", () => {
     expect(curva.itens).toHaveLength(3)
     expect(curva.resumo).toHaveLength(3)
     expect(curva.resumo[0].classe).toBe("A")
+  })
+
+  it("envia unidadeId na query da Curva ABC quando filtrada", async () => {
+    let url: URL | undefined
+    server.use(
+      http.get("*/estoque/curva-abc", ({ request }) => {
+        url = new URL(request.url)
+        return HttpResponse.json(ok(curvaAbcTeste))
+      }),
+    )
+    await estoqueApi.curvaAbc({ unidadeId: "uni-hto" })
+    expect(url?.searchParams.get("unidadeId")).toBe("uni-hto")
   })
 
   it("detalha uma posição com lotes e movimentações", async () => {

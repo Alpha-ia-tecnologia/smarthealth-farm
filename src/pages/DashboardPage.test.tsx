@@ -1,8 +1,8 @@
 import { http, HttpResponse } from "msw"
 import DashboardPage from "@/pages/DashboardPage"
-import { renderizar, screen } from "@/test/utils"
+import { renderizar, screen, waitFor } from "@/test/utils"
 import { server } from "@/test/server"
-import { erro } from "@/test/handlers"
+import { erro, ok, painelGerencialTeste } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
 
 function renderDashboard() {
@@ -87,6 +87,22 @@ describe("DashboardPage", () => {
     // Com unidade: os KPIs do projeto permanecem; o filtro afeta só os blocos abaixo.
     expect(await screen.findByText("Taxa de desabastecimento")).toBeInTheDocument()
     expect(screen.queryByText("Itens críticos")).not.toBeInTheDocument()
+  })
+
+  it("envia o insumoId ao /painel ao filtrar por insumo", async () => {
+    let ultimaUrl: URL | undefined
+    server.use(
+      http.get("*/painel", ({ request }) => {
+        ultimaUrl = new URL(request.url)
+        return HttpResponse.json(ok(painelGerencialTeste))
+      }),
+    )
+    const { usuario } = renderDashboard()
+
+    await usuario.click(await screen.findByRole("combobox", { name: "Insumo" }))
+    await usuario.click(await screen.findByRole("option", { name: "Dipirona 500mg/mL (INS-002)" }))
+
+    await waitFor(() => expect(ultimaUrl?.searchParams.get("insumoId")).toBe("ins-002"))
   })
 
   it("mostra o resumo da Curva ABC da rede", async () => {
