@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react"
+import { type Ref, useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import {
   ArrowLeftRight,
@@ -138,6 +139,8 @@ function RecCard({
   onRecusar,
   onEditar,
   ocupada,
+  destacado,
+  innerRef,
 }: {
   r: Recomendacao
   ehGestor: boolean
@@ -146,12 +149,21 @@ function RecCard({
   onRecusar: (r: Recomendacao) => void
   onEditar: (r: Recomendacao) => void
   ocupada: boolean
+  /** Cartão alvo (veio do "Avaliar" do painel): ganha realce visual. */
+  destacado?: boolean
+  /** Ref no cartão alvo, para rolar a tela até ele. */
+  innerRef?: Ref<HTMLDivElement>
 }) {
   // Cartões pendentes (para Gestor) são editáveis: clicar abre o modal de edição.
   const editavel = ehGestor && r.status === "Pendente"
   return (
     <Card
-      className={cn("gap-3 p-4", editavel && "cursor-pointer transition-colors hover:border-primary/50")}
+      ref={innerRef}
+      className={cn(
+        "gap-3 p-4 transition-shadow",
+        editavel && "cursor-pointer transition-colors hover:border-primary/50",
+        destacado && "ring-2 ring-primary ring-offset-2 ring-offset-background",
+      )}
       onClick={editavel ? () => onEditar(r) : undefined}
       title={editavel ? "Clique para editar esta transferência" : undefined}
     >
@@ -376,9 +388,32 @@ export default function RecomendacoesPage() {
     setPagina(0)
   }
 
-  const itens = recomendacoesQuery.data?.itens ?? []
+  const itens = useMemo(() => recomendacoesQuery.data?.itens ?? [], [recomendacoesQuery.data])
   const total = recomendacoesQuery.data?.total ?? 0
   const totalPaginas = Math.ceil(total / tamanho)
+
+  // "Avaliar" no painel operacional chega aqui com ?rec=<id>: realça o cartão e rola até ele,
+  // poupando o usuário de procurar a transferência na lista.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [destaqueId] = useState<string | undefined>(() => searchParams.get("rec") ?? undefined)
+  const cardDestaqueRef = useRef<HTMLDivElement>(null)
+  const rolouRef = useRef(false)
+
+  // Consome o param da URL (evita re-rolar a cada refetch/refresh); o realce vive em `destaqueId`.
+  useEffect(() => {
+    if (!searchParams.has("rec")) return
+    searchParams.delete("rec")
+    setSearchParams(searchParams, { replace: true })
+  }, [searchParams, setSearchParams])
+
+  // Quando o cartão alvo aparece na página atual, rola até ele uma única vez (respeita reduced-motion).
+  useEffect(() => {
+    if (!destaqueId || rolouRef.current) return
+    if (!itens.some((r) => r.id === destaqueId)) return
+    rolouRef.current = true
+    const reduzir = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    cardDestaqueRef.current?.scrollIntoView({ behavior: reduzir ? "auto" : "smooth", block: "center" })
+  }, [destaqueId, itens])
 
   // Pontos do mapa: por insumo (posições) quando há filtro de insumo; senão, condição geral.
   const pontosMapa: PontoMapa[] = useMemo(() => {
@@ -534,6 +569,8 @@ export default function RecomendacoesPage() {
                   <RecCard
                     key={r.id}
                     r={r}
+                    destacado={r.id === destaqueId}
+                    innerRef={r.id === destaqueId ? cardDestaqueRef : undefined}
                     ehGestor={ehGestor}
                     onAprovar={aoAprovar}
                     onExecutar={aoExecutar}

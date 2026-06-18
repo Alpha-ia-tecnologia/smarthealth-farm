@@ -211,6 +211,8 @@ export default function PrevisaoPage() {
         ) ?? itens[0]
       : null
   const detalheQuery = usePrevisaoDetalhe(sel?.insumoId, sel?.unidadeId)
+  // Há algum filtro ativo? Diferencia "rede sem previsão" de "filtro sem resultado" no gráfico.
+  const temFiltro = Boolean(unidadeId || insumoId || drift || buscaDebounced)
 
   const servidorPrevisoes: ControleServidor = {
     paginaAtual: pagina,
@@ -345,12 +347,6 @@ export default function PrevisaoPage() {
         <div className="flex justify-center py-20">
           <Spinner size={40} label="Carregando previsões" />
         </div>
-      ) : previsoesQuery.data.itens.length === 0 ? (
-        <Section title="Previsões por item e unidade" info="Lista todas as previsões por insumo e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa.">
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            Nenhuma previsão disponível no momento.
-          </p>
-        </Section>
       ) : (
         <>
           <div className={cn("grid gap-6", MOSTRAR_COMPOSICAO && "lg:grid-cols-5")}>
@@ -368,7 +364,13 @@ export default function PrevisaoPage() {
                 ) : undefined
               }
             >
-              {!sel || detalheQuery.isPending ? (
+              {!sel ? (
+                <p className="py-20 text-center text-sm text-muted-foreground">
+                  {temFiltro
+                    ? "Nenhuma previsão corresponde aos filtros atuais. Ajuste os filtros para ver a série."
+                    : "Nenhuma previsão disponível no momento."}
+                </p>
+              ) : detalheQuery.isPending ? (
                 <div className="flex justify-center py-20">
                   <Spinner size={40} label="Carregando série" />
                 </div>

@@ -136,4 +136,23 @@ describe("RecomendacoesPage", () => {
     renderComoGestor()
     expect(await screen.findByText("Dados ilustrativos")).toBeInTheDocument()
   })
+
+  it("chegando do painel com ?rec=<id>, realça o cartão e rola a tela até ele", async () => {
+    const scrollSpy = vi.fn()
+    Element.prototype.scrollIntoView = scrollSpy
+    HTMLElement.prototype.scrollIntoView = scrollSpy
+
+    salvarToken("jwt", true)
+    renderizar(<RecomendacoesPage />, { rota: "/recomendacoes?rec=rec-2" })
+
+    // O cartão alvo (rec-2 = Dipirona) apareceu…
+    const titulo = await screen.findByText("Dipirona 500mg/mL")
+    // …a tela rolou até ele…
+    await waitFor(() => expect(scrollSpy).toHaveBeenCalled())
+    // …e o cartão recebeu o realce visual (ring), enquanto outro cartão não.
+    expect(titulo.closest('[data-slot="card"]')).toHaveClass("ring-2")
+    expect(
+      screen.getByText("Ceftriaxona 1g").closest('[data-slot="card"]'),
+    ).not.toHaveClass("ring-2")
+  })
 })

@@ -59,6 +59,22 @@ describe("PrevisaoPage", () => {
     ).toBeInTheDocument()
   })
 
+  it("filtro de status sem resultado mantém o filtro acessível (não colapsa a tela)", async () => {
+    const { usuario } = renderComoGestor()
+    // Carrega normalmente com previsões.
+    expect(await screen.findByText("Ceftriaxona 1g")).toBeInTheDocument()
+
+    // O backend passa a devolver vazio (filtro de drift sem correspondência).
+    server.use(http.get("*/previsoes", () => HttpResponse.json(ok([], 0))))
+    await usuario.click(screen.getByRole("combobox", { name: "Todos os status" }))
+    await usuario.click(await screen.findByRole("option", { name: "Degradado" }))
+
+    // A tabela mostra o vazio nativo…
+    expect(await screen.findByText("Nenhum registro encontrado.")).toBeInTheDocument()
+    // …e o filtro de status CONTINUA na tela, para o usuário poder desfazer (antes sumia).
+    expect(screen.getByRole("combobox", { name: "Todos os status" })).toBeInTheDocument()
+  })
+
   it("mostra erro quando a lista falha", async () => {
     // 403: erro de cliente não tem retry na política do QueryClient → falha imediata.
     server.use(

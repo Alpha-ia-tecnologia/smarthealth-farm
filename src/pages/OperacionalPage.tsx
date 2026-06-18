@@ -404,7 +404,7 @@ export default function OperacionalPage() {
                       <div className="mt-1 flex items-center justify-between">
                         <span className="tabular text-sm font-semibold">{fmtNum(r.quantidade)} un</span>
                         <Button size="sm" variant="outline" asChild>
-                          <Link to="/recomendacoes">Avaliar</Link>
+                          <Link to={`/recomendacoes?rec=${r.id}`}>Avaliar</Link>
                         </Button>
                       </div>
                     </Card>
