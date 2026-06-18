@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react"
 import { useInsumos } from "@/hooks/use-insumos"
-import { SelectFiltro } from "./SelectFiltro"
+import { SelectFiltroBuscavel } from "./SelectFiltroBuscavel"
 
 interface Props {
   /** Insumo selecionado; `undefined` = todos. */
@@ -56,7 +56,7 @@ export function FiltroInsumo({
   }, [isFetching, valor, insumos, onChange])
 
   return (
-    <SelectFiltro
+    <SelectFiltroBuscavel
       label={label}
       valor={valor}
       onChange={onChange}
@@ -64,6 +64,8 @@ export function FiltroInsumo({
       carregando={isPending}
       todosRotulo={todosRotulo}
       placeholder={todosRotulo}
+      buscarPlaceholder="Pesquisar insumo…"
+      vazioRotulo="Nenhum insumo encontrado."
       className={className}
     />
   )

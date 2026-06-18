@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { useUnidades } from "@/hooks/use-unidades"
-import { SelectFiltro } from "./SelectFiltro"
+import { SelectFiltroBuscavel } from "./SelectFiltroBuscavel"
 
 interface Props {
   /** Unidade selecionada; `undefined` = todas. */
@@ -29,7 +29,7 @@ export function FiltroUnidade({
   )
 
   return (
-    <SelectFiltro
+    <SelectFiltroBuscavel
       label={label}
       valor={valor}
       onChange={onChange}
@@ -37,6 +37,8 @@ export function FiltroUnidade({
       carregando={isPending}
       todosRotulo={todosRotulo}
       placeholder={todosRotulo}
+      buscarPlaceholder="Pesquisar unidade…"
+      vazioRotulo="Nenhuma unidade encontrada."
       className={className}
     />
   )
