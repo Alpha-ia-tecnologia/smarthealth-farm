@@ -1,6 +1,6 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
-import { Bell, LogOut, Menu, Moon, Sun } from "lucide-react"
+import { Bell, CalendarClock, LogOut, Menu, Moon, PackageX, Sun } from "lucide-react"
 import { SidebarContent } from "./Sidebar"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
@@ -17,7 +17,8 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useTheme } from "@/hooks/use-theme"
 import { useAuth } from "@/context/auth"
-import { useResumoAlertas } from "@/hooks/use-alertas"
+import { useAlertas, useResumoAlertas } from "@/hooks/use-alertas"
+import { Spinner } from "@/components/ui/spinner"
 import { navItems } from "@/lib/nav"
 
 /** Iniciais para o avatar a partir do nome completo (ex.: "Ana Sousa" → "AS"). */
@@ -27,6 +28,86 @@ function iniciais(nome: string): string {
   const primeira = partes[0][0]
   const ultima = partes.length > 1 ? partes[partes.length - 1][0] : ""
   return (primeira + ultima).toUpperCase()
+}
+
+function NotificacoesDropdown({ alertasAtivos }: { alertasAtivos: number }) {
+  const navigate = useNavigate()
+  const [lido, setLido] = useState(false)
+  
+  // Reseta o estado lido se o número de alertas aumentar (chegou novo)
+  // Utilizamos um Ref ou o próprio state para comparar, mas simplificadamente 
+  // assumiremos que se a flag `lido` for verdadeira e o count crescer, reseta.
+  // Como `alertasAtivos` pode variar, vamos guardar o count anterior.
+  const [lastCount, setLastCount] = useState(alertasAtivos)
+  useEffect(() => {
+    if (alertasAtivos > lastCount) {
+      setLido(false)
+    }
+    setLastCount(alertasAtivos)
+  }, [alertasAtivos, lastCount])
+
+  const alertasQuery = useAlertas({ status: "Aberto" }, { tamanho: 5, ordenarPor: "criadoEm", ordem: "desc" })
+  const itens = alertasQuery.data?.itens ?? []
+
+  return (
+    <DropdownMenu onOpenChange={(open) => {
+      if (open && alertasAtivos > 0) setLido(true)
+    }}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          aria-label={alertasAtivos > 0 ? `Alertas — ${alertasAtivos} ativo(s)` : "Alertas"}
+        >
+          <Bell className="size-5" />
+          {alertasAtivos > 0 && !lido && (
+            <span className="absolute right-1.5 top-1.5 flex size-2 rounded-full bg-danger ring-2 ring-background" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex items-center justify-between">
+          <span>Alertas Recentes</span>
+          {alertasAtivos > 0 && (
+            <span className="text-xs font-normal text-muted-foreground">{alertasAtivos} pendentes</span>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        <div className="max-h-80 overflow-y-auto">
+          {alertasQuery.isPending ? (
+            <div className="flex justify-center p-4"><Spinner size={24} /></div>
+          ) : itens.length === 0 ? (
+            <p className="p-4 text-center text-sm text-muted-foreground">Nenhum alerta pendente.</p>
+          ) : (
+            itens.map((a) => (
+              <DropdownMenuItem key={a.id} className="flex flex-col items-start gap-1.5 p-3 cursor-pointer" onSelect={() => navigate("/alertas")}>
+                <div className="flex w-full items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5 font-medium text-sm">
+                    {a.tipo === "Desabastecimento" ? <PackageX className="size-4 text-danger" /> : <CalendarClock className="size-4 text-warning" />}
+                    {a.tipo}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{a.severidade}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xs font-semibold leading-tight">{a.insumoNome}</span>
+                  <span className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{a.mensagem}</span>
+                </div>
+              </DropdownMenuItem>
+            ))
+          )}
+        </div>
+        
+        <DropdownMenuSeparator />
+        <div className="p-1">
+          <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => navigate("/alertas")}>
+            Ver todos os alertas
+          </Button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
 }
 
 function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
@@ -66,18 +147,7 @@ function Header({ onOpenMenu }: { onOpenMenu: () => void }) {
         {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="relative"
-        aria-label={alertasAtivos > 0 ? `Alertas — ${alertasAtivos} ativo(s)` : "Alertas"}
-        onClick={() => navigate("/alertas")}
-      >
-        <Bell className="size-5" />
-        {alertasAtivos > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex size-2 rounded-full bg-danger ring-2 ring-background" />
-        )}
-      </Button>
+      <NotificacoesDropdown alertasAtivos={alertasAtivos} />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

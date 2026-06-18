@@ -222,7 +222,7 @@ export default function OperacionalPage() {
           accent="danger"
           hint="abertos + em tratamento"
           info="Quantos avisos importantes precisam de atenção agora, somando os que ainda não foram tratados e os que já estão em andamento. Quanto menor, mais sob controle está a operação."
-          action={data ? <BotaoAnaliseIa rotulo="Alertas ativos" onClick={() => setDialogOp("alertas")} /> : undefined}
+          footer={data ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Alertas ativos" onClick={() => setDialogOp("alertas")} /></div> : undefined}
         />
         <KpiCard
           label="Risco de desabastecimento"
@@ -231,7 +231,7 @@ export default function OperacionalPage() {
           icon={PackageX}
           accent="danger"
           info="Número de insumos que correm risco de acabar antes da próxima reposição. São casos que exigem ação rápida para não faltar remédio aos pacientes."
-          action={data ? <BotaoAnaliseIa rotulo="Risco de desabastecimento" onClick={() => setDialogOp("desabastecimento")} /> : undefined}
+          footer={data ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Risco de desabastecimento" onClick={() => setDialogOp("desabastecimento")} /></div> : undefined}
         />
         <KpiCard
           label="Risco de vencimento"
@@ -240,7 +240,7 @@ export default function OperacionalPage() {
           icon={CalendarClock}
           accent="warning"
           info="Número de insumos com data de validade se aproximando que talvez não sejam usados a tempo. Ajuda a evitar desperício, antecipando o uso ou a transferência desses itens."
-          action={data ? <BotaoAnaliseIa rotulo="Risco de vencimento" onClick={() => setDialogOp("vencimento")} /> : undefined}
+          footer={data ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Risco de vencimento" onClick={() => setDialogOp("vencimento")} /></div> : undefined}
         />
         <KpiCard
           label="Recomendações pendentes"
@@ -249,7 +249,7 @@ export default function OperacionalPage() {
           icon={ArrowLeftRight}
           accent="teal"
           info="Sugestões do sistema para repor ou remanejar estoque entre unidades que ainda aguardam uma decisão. Avaliá-las mantém o abastecimento equilibrado na rede."
-          action={data ? <BotaoAnaliseIa rotulo="Recomendações pendentes" onClick={() => setDialogOp("recomendacoes")} /> : undefined}
+          footer={data ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Recomendações pendentes" onClick={() => setDialogOp("recomendacoes")} /></div> : undefined}
         />
       </div>
 

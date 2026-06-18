@@ -82,13 +82,13 @@ export function KpiCard({
   return (
     <Card
       className={cn(
-        "relative gap-0 overflow-hidden p-5",
+        "relative flex h-full flex-col gap-0 overflow-hidden p-5",
         onClick &&
           "group cursor-pointer transition-[color,background-color,border-color,box-shadow] duration-200 hover:border-primary/40 hover:bg-muted/30 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       )}
       {...propsInterativas}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-1 items-start justify-between gap-3">
         <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-1.5">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -116,11 +116,12 @@ export function KpiCard({
         )}
       </div>
       {!carregando && (delta || hint) && (
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-2 w-full">
+          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
           {delta && (
             <span
               className={cn(
-                "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular",
+                "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold tabular ml-auto",
                 delta.positivo ? "bg-success/12 text-success" : "bg-danger/12 text-danger",
               )}
             >
@@ -128,7 +129,6 @@ export function KpiCard({
               {delta.value}
             </span>
           )}
-          {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
         </div>
       )}
       {interativo && (
@@ -138,7 +138,7 @@ export function KpiCard({
           <ChevronRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none" />
         </div>
       )}
-      {footer && <div className="mt-3 border-t pt-3">{footer}</div>}
+      {footer && <div className="mt-auto pt-3 border-t">{footer}</div>}
     </Card>
   )
 }
