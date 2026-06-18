@@ -5,8 +5,6 @@ import {
   GitCompareArrows,
   Target,
   TimerReset,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
@@ -18,7 +16,6 @@ import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { AreaAtualizavel } from "@/components/shared/AreaAtualizavel"
 import { TrendChart } from "@/components/charts/TrendChart"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { Spinner } from "@/components/ui/spinner"
 import { useIndicadores, useResumoIndicadores } from "@/hooks/use-indicadores"
 import type { Indicador } from "@/lib/indicadores"
@@ -165,10 +162,11 @@ export default function IndicadoresPage() {
 /** Cartão de um indicador: valor atual, base, meta, série histórica e progresso (tudo do backend). */
 function CartaoIndicador({ ind, onAnalise }: { ind: Indicador; onAnalise: (ind: Indicador) => void }) {
   const cor = ind.atingiu ? "var(--chart-4)" : "var(--chart-3)"
+  const valFmt = (v: number) => (ind.unidade === "%" ? `${fmtDec(v)}%` : `${fmtDec(v)} ${ind.unidade}`)
   return (
     <Section
       title={ind.nome}
-      info={`${ind.melhorMenor ? "Aqui, quanto menor o valor, melhor" : "Aqui, quanto maior o valor, melhor"}. O número grande é o resultado atual; "base" é como estava antes de começar; e "meta" é o alvo a alcançar. A barra mostra o quanto do caminho até a meta já foi percorrido.`}
+      info={`${ind.melhorMenor ? "Aqui, quanto menor o valor, melhor" : "Aqui, quanto maior o valor, melhor"}. O número grande é o resultado atual; abaixo, compare a linha de base (como estava no início), o valor atual e a meta (alvo a alcançar).`}
       action={
         <div className="flex items-center gap-2">
           <BotaoAnaliseIa rotulo={ind.nome} onClick={() => onAnalise(ind)} />
@@ -180,29 +178,37 @@ function CartaoIndicador({ ind, onAnalise }: { ind: Indicador; onAnalise: (ind: 
         </div>
       }
     >
-      <div className="flex items-end justify-between">
+      <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="tabular font-display text-3xl font-bold" style={{ color: cor }}>
-            {fmtDec(ind.atual)}<span className="ml-1 text-base text-muted-foreground">{ind.unidade}</span>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Valor atual</p>
+          <p className="tabular font-display text-3xl font-bold leading-tight" style={{ color: cor }}>
+            {valFmt(ind.atual)}
           </p>
-          <p className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-0.5">
-              {ind.melhorMenor ? <TrendingDown className="size-3 text-success" /> : <TrendingUp className="size-3 text-success" />}
-              base {fmtDec(ind.baseline)}{ind.unidade}
-            </span>
-            {ind.metaReducaoPct > 0 && <Badge variant="outline" className="text-[10px]">meta −{ind.metaReducaoPct}%</Badge>}
-          </p>
+          {ind.metaReducaoPct > 0 && (
+            <Badge variant="outline" className="mt-1 text-[10px]">meta −{ind.metaReducaoPct}%</Badge>
+          )}
         </div>
         <div className="w-1/2">
-          <TrendChart data={ind.historico} color={cor} meta={ind.meta} height={90} label={ind.nome} />
+          <TrendChart data={ind.historico} color={cor} meta={ind.meta} height={84} label={ind.nome} />
         </div>
       </div>
-      <div className="mt-3">
-        <div className="flex justify-between text-xs text-muted-foreground">
-          <span>progresso até a meta</span>
-          <span className="tabular">{ind.progresso}%</span>
+
+      {/* Comparação objetiva: de onde partiu, onde está e o alvo (substitui o "progresso" que podia passar de 100%). */}
+      <div className="mt-3 grid grid-cols-3 divide-x rounded-lg border bg-muted/30 text-center">
+        <div className="px-2 py-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Linha de base</p>
+          <p className="tabular mt-0.5 text-sm font-semibold">{valFmt(ind.baseline)}</p>
         </div>
-        <Progress value={Math.min(100, ind.progresso)} className={`mt-1 h-1.5 ${ind.atingiu ? "[&>div]:bg-success" : "[&>div]:bg-warning"}`} />
+        <div className="px-2 py-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Atual</p>
+          <p className="tabular mt-0.5 text-sm font-bold" style={{ color: cor }}>{valFmt(ind.atual)}</p>
+        </div>
+        <div className="px-2 py-2.5">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Meta</p>
+          <p className="tabular mt-0.5 text-sm font-semibold">
+            {ind.melhorMenor ? "≤ " : "≥ "}{valFmt(ind.meta)}
+          </p>
+        </div>
       </div>
     </Section>
   )

@@ -24,6 +24,13 @@ describe("IndicadoresPage", () => {
     expect((await screen.findAllByText("Meta atingida")).length).toBeGreaterThan(0)
   })
 
+  it("mostra a comparação objetiva Base/Atual/Meta no card (sem o 'progresso até a meta')", async () => {
+    renderIndicadores()
+    // Faixa objetiva substitui a barra de progresso que podia passar de 100%.
+    expect((await screen.findAllByText("Linha de base")).length).toBeGreaterThan(0)
+    expect(screen.queryByText("progresso até a meta")).not.toBeInTheDocument()
+  })
+
   it("mostra o comparativo piloto × atual com a variação real", async () => {
     renderIndicadores()
     expect(
