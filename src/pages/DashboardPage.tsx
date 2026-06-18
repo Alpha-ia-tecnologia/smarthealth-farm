@@ -129,7 +129,7 @@ export default function DashboardPage() {
   const [grafico, setGrafico] = useState<GraficoDashboard | null>(null)
   const [abcAberto, setAbcAberto] = useState(false)
   const painelQuery = usePainelGerencial({ unidadeId, insumoId })
-  const indicadoresQuery = useIndicadores()
+  const indicadoresQuery = useIndicadores({ unidadeId, insumoId })
   // Curva ABC responde só à unidade (filtrar por um único insumo deixaria 1 item, sem sentido).
   const curvaAbcQuery = useCurvaAbc({ unidadeId })
 
@@ -180,9 +180,10 @@ export default function DashboardPage() {
         <FiltroInsumo valor={insumoId} onChange={setInsumoId} unidadeId={unidadeId} />
       </BarraFiltros>
 
-      {/* KPIs do projeto (rede) — sempre os indicadores do edital, independentemente da unidade
-          selecionada. O filtro de unidade afeta apenas os blocos abaixo (previsão, cobertura,
-          alertas e recomendações). */}
+      {/* KPIs do projeto — indicadores do edital. Com filtro (unidade/insumo), o backend recalcula
+          só o VALOR ATUAL no escopo a partir dos dados reais; baseline e meta seguem do edital
+          (constantes do projeto). "Compras emergenciais" é um valor mockado por escopo até existir
+          o domínio de compras. Sem filtro, são os números da rede. */}
       {indicadoresQuery.isError ? (
         <ErroConsulta
           mensagem="Não foi possível carregar os indicadores do projeto."

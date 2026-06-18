@@ -1,5 +1,5 @@
 // Serviço de Indicadores do projeto (RF-IND). Metas vs. linha de base — somente leitura.
-import { api } from "./api"
+import { api, montarQuery } from "./api"
 import { fmtMoeda, fmtNum, fmtPct } from "./format"
 
 /** Ponto da série histórica de um indicador (RF-IND-05). */
@@ -37,9 +37,19 @@ export interface ResumoIndicadores {
   emProgresso: number
 }
 
+/**
+ * Filtros dos indicadores — quando há unidade/insumo, o backend recalcula só o **valor atual** no
+ * escopo (baseline/meta/histórico seguem do edital). Sem filtro, são os indicadores da rede.
+ */
+export interface IndicadoresFiltros {
+  unidadeId?: string
+  insumoId?: string
+}
+
 export const indicadoresApi = {
-  /** GET /indicadores — lista com histórico, progresso, meta atingida e variação. */
-  listar: () => api.get<Indicador[]>("/indicadores"),
+  /** GET /indicadores — lista com histórico, progresso, meta atingida e variação (filtros opcionais). */
+  listar: (filtros: IndicadoresFiltros = {}) =>
+    api.get<Indicador[]>(`/indicadores${montarQuery({ ...filtros })}`),
 
   /** GET /indicadores/resumo — KPIs (total, metas atingidas, em progresso). */
   resumo: () => api.get<ResumoIndicadores>("/indicadores/resumo"),
