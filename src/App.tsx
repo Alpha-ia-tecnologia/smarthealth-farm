@@ -13,6 +13,7 @@ const EstoquePage = lazy(() => import("@/pages/EstoquePage"))
 const AlertasPage = lazy(() => import("@/pages/AlertasPage"))
 const RecomendacoesPage = lazy(() => import("@/pages/RecomendacoesPage"))
 const RelatoriosPage = lazy(() => import("@/pages/RelatoriosPage"))
+const NotasFiscaisPage = lazy(() => import("@/pages/NotasFiscaisPage"))
 const IngestaoPage = lazy(() => import("@/pages/IngestaoPage"))
 const IntegracaoPage = lazy(() => import("@/pages/IntegracaoPage"))
 const SegurancaPage = lazy(() => import("@/pages/SegurancaPage"))
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/alertas" element={<AlertasPage />} />
           <Route path="/recomendacoes" element={<RecomendacoesPage />} />
           <Route path="/relatorios" element={<RelatoriosPage />} />
+          <Route path="/notas-fiscais" element={<NotasFiscaisPage />} />
           <Route path="/ingestao" element={<IngestaoPage />} />
           <Route path="/integracao" element={<IntegracaoPage />} />
           {/* Governança restrita por perfil (RBAC espelhado do backend). */}

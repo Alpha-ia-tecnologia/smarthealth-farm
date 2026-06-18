@@ -38,13 +38,6 @@ import { ApiError } from "@/lib/api"
 import type { CategoriaInsumo, PerfilUsuario, Unidade, Usuario } from "@/types"
 import { fmtNum, fmtDataHora } from "@/lib/format"
 
-/** Painel sem endpoint — sinaliza conteúdo demonstrativo. */
-const BADGE_ILUSTRATIVO = (
-  <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-    Dados ilustrativos
-  </Badge>
-)
-
 const PERFIS: PerfilUsuario[] = ["Operador", "Gestor", "TI"]
 const TODOS = "__todos__"
 
@@ -420,7 +413,6 @@ function AbaParametros() {
       title="Parametrização operacional"
       info="Ajustes que controlam como o sistema faz previsões e dispara alertas — por exemplo, com quantos meses de antecedência prever a demanda ou quando avisar sobre vencimento. Apenas usuários autorizados podem alterar."
       description="Limiares, regras de redistribuição e horizontes de previsão por usuário autorizado."
-      action={BADGE_ILUSTRATIVO}
     >
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[

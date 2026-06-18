@@ -41,11 +41,6 @@ describe("IndicadoresPage", () => {
     expect(screen.getByText("-39%")).toBeInTheDocument()
   })
 
-  it("marca o painel de coleta como dados ilustrativos (mock)", async () => {
-    renderIndicadores()
-    expect(await screen.findByText("Dados ilustrativos")).toBeInTheDocument()
-  })
-
   it("abre o insight de IA de um indicador ao clicar em Análise IA", async () => {
     const { usuario } = renderIndicadores()
     await usuario.click(

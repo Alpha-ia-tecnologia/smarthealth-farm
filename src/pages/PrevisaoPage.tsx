@@ -406,11 +406,6 @@ export default function PrevisaoPage() {
               title="Composição da previsão"
               info="Mostra como a previsão é montada: a combinação de métodos estatísticos e de inteligência artificial, com o peso de cada um, além de métricas de validação e o histórico de versões do modelo."
               description="Combinação de métodos estatísticos e de inteligência artificial."
-              action={
-                <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-                  Dados ilustrativos
-                </Badge>
-              }
             >
               {/* NOTA: este painel ainda usa dados ilustrativos (mock) embutidos — não há endpoint
                   que sirva composição do ensemble, métricas de validação (MAE/RMSE) nem histórico de

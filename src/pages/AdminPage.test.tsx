@@ -56,12 +56,6 @@ describe("AdminPage", () => {
     expect(await screen.findByText("Falha ao alterar status.")).toBeInTheDocument()
   })
 
-  it("os parâmetros operacionais são marcados como dados ilustrativos", async () => {
-    const { usuario } = renderAdmin()
-    await usuario.click(await screen.findByRole("tab", { name: /Parâmetros/ }))
-    expect(await screen.findByText("Dados ilustrativos")).toBeInTheDocument()
-  })
-
   it("aba Cadastros lista as unidades reais e cria uma nova", async () => {
     const { usuario } = renderAdmin()
     await usuario.click(await screen.findByRole("tab", { name: /Cadastros/ }))

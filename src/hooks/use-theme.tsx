@@ -11,9 +11,10 @@ const Ctx = createContext<ThemeCtx>({ theme: "light", toggle: () => {} })
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
+    // Branco é o padrão. Só vamos para o escuro se o usuário tiver escolhido isso antes
+    // (persistido em localStorage); não seguimos a preferência do sistema operacional.
     const stored = localStorage.getItem("sh-theme") as Theme | null
-    if (stored) return stored
-    return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+    return stored ?? "light"
   })
 
   useEffect(() => {

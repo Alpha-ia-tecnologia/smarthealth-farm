@@ -650,11 +650,6 @@ export default function RecomendacoesPage() {
           title="Desempenho do módulo"
           info="Acompanha a qualidade do módulo: o quanto as recomendações têm acertado, quantas redistribuições foram aceitas e a cobertura por regras e por inteligência artificial."
           description="Acompanhamento e auditoria."
-          action={
-            <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-              Dados ilustrativos
-            </Badge>
-          }
         >
           {/* NOTA: métricas ilustrativas (mock) — não há endpoint que sirva assertividade /
               redistribuições aceitas / cobertura. Fora do escopo da Fase 5 (ver ROADMAP). */}

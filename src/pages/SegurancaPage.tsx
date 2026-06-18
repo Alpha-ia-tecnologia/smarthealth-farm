@@ -52,13 +52,6 @@ function corpoSeguranca(resumo: ResumoAuditoria, logs: LogAuditoria[]): string {
   )
 }
 
-/** Painel institucional sem endpoint — sinaliza conteúdo de referência. */
-const BADGE_ILUSTRATIVO = (
-  <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-    Dados ilustrativos
-  </Badge>
-)
-
 const PERFIS: PerfilUsuario[] = ["Operador", "Gestor", "TI", "Admin"]
 const TODOS = "__todos__"
 
@@ -182,9 +175,7 @@ export default function SegurancaPage() {
         <Section
           className="lg:col-span-2 h-fit"
           title="Pilares de conformidade"
-          info="Os principais cuidados que o sistema adota para proteger dados pessoais: esconder dados sensíveis antes de enviá-los a serviços externos, registrar o motivo legal de cada uso e limitar o acesso conforme o cargo de cada pessoa."
-          action={BADGE_ILUSTRATIVO}
-        >
+          info="Os principais cuidados que o sistema adota para proteger dados pessoais: esconder dados sensíveis antes de enviá-los a serviços externos, registrar o motivo legal de cada uso e limitar o acesso conforme o cargo de cada pessoa."        >
           <div className="space-y-3">
             {[
               { i: FileLock2, t: "Anonimização de dados sensíveis", d: "Obrigatória antes de qualquer envio a provedores externos de IA." },
@@ -208,9 +199,7 @@ export default function SegurancaPage() {
           className="lg:col-span-3"
           title="Matriz de controle de acesso"
           info="Tabela que mostra o que cada tipo de usuário (Operador, Gestor, TI e Admin) pode ver ou fazer em cada parte do sistema, garantindo que cada pessoa acesse apenas o necessário para sua função. O Admin é superusuário, com acesso total."
-          description="Permissões por perfil de usuário conforme a política da EMSERH."
-          action={BADGE_ILUSTRATIVO}
-          noPadding
+          description="Permissões por perfil de usuário conforme a política da EMSERH."          noPadding
         >
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

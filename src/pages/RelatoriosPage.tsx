@@ -120,12 +120,6 @@ const MARCOS = [
   { fase: "Operação em paralelo (piloto)", status: "pendente", pct: 15 },
 ]
 
-const BADGE_ILUSTRATIVO = (
-  <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-    Dados ilustrativos
-  </Badge>
-)
-
 export default function RelatoriosPage() {
   const painelQuery = usePainelGerencial()
   const resumoIndQuery = useResumoIndicadores()
@@ -181,7 +175,7 @@ export default function RelatoriosPage() {
 
       {/* Filtros (RF-DASH-06) — ilustrativos: aplicam-se ao catálogo/exportação, que não têm
           endpoint. A lista de unidades é real (API); a aplicação do filtro virá com o gerador. */}
-      <Section title="Filtros" info="Permite refinar os relatórios por unidade, categoria de insumos, período e tipo, mostrando só o que interessa." icon={<Filter className="size-4" />} action={BADGE_ILUSTRATIVO}>
+      <Section title="Filtros" info="Permite refinar os relatórios por unidade, categoria de insumos, período e tipo, mostrando só o que interessa." icon={<Filter className="size-4" />}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <FilterSelect label="Unidade" itens={["Todas", ...unidadesAtendidas]} />
           <FilterSelect label="Categoria de insumo" itens={["Todas", ...CATEGORIAS]} />
@@ -195,7 +189,6 @@ export default function RelatoriosPage() {
         <div className="space-y-3 lg:col-span-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold">Catálogo de relatórios</p>
-            {BADGE_ILUSTRATIVO}
           </div>
           {/* NOTA: catálogo e exportação ilustrativos — não há endpoint de geração de relatório. */}
           {RELATORIOS.map((r) => (
@@ -230,7 +223,6 @@ export default function RelatoriosPage() {
           title="Progresso do projeto · OPED"
           info="Mostra o andamento das etapas do projeto, para que o órgão parceiro acompanhe o quanto já foi entregue."
           description="Indicadores de progresso acessíveis ao Órgão Parceiro de Estado Demandante."
-          action={BADGE_ILUSTRATIVO}
         >
           {/* NOTA: marcos do projeto ilustrativos — não há endpoint de progresso/OPED. */}
           <div className="space-y-4">

@@ -5,6 +5,8 @@ import {
   BellRing,
   CalendarClock,
   CheckCheck,
+  Mail,
+  MessageCircle,
   PackageX,
   RefreshCw,
   Settings2,
@@ -427,6 +429,21 @@ export default function AlertasPage() {
                     Gerar alertas
                   </Button>
                 )}
+              </div>
+            </div>
+
+            {/* Informativo: ao disparar, os responsáveis são notificados pelos canais integrados. */}
+            <div className="mb-4 flex justify-end">
+              <div className="inline-flex items-center gap-2.5 rounded-lg border border-primary/15 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <MessageCircle className="size-4 text-emerald-600 dark:text-emerald-400" />
+                  <Mail className="size-4 text-sky-600 dark:text-sky-400" />
+                </span>
+                <span>
+                  Ao disparar um alerta, os responsáveis são avisados automaticamente por{" "}
+                  <strong className="font-medium text-foreground">WhatsApp</strong> e{" "}
+                  <strong className="font-medium text-foreground">e-mail</strong>.
+                </span>
               </div>
             </div>
 

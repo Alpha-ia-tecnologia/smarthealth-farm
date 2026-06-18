@@ -90,9 +90,8 @@ describe("PrevisaoPage", () => {
     renderComoGestor()
     // A tela carregou (gráfico de topo presente)…
     expect(await screen.findByText("Previsão — Ceftriaxona 1g")).toBeInTheDocument()
-    // …mas o painel de composição (dados ilustrativos) ficou oculto.
+    // …mas o painel de composição ficou oculto.
     expect(screen.queryByText("Composição da previsão")).not.toBeInTheDocument()
-    expect(screen.queryByText("Dados ilustrativos")).not.toBeInTheDocument()
   })
 
   it("filtra por unidade enviando unidadeId ao servidor", async () => {

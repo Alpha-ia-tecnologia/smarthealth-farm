@@ -30,11 +30,6 @@ describe("IngestaoPage", () => {
     expect(screen.getByText("Analgésicos")).toBeInTheDocument()
   })
 
-  it("marca os painéis sem endpoint como dados ilustrativos (mock)", async () => {
-    renderIngestao()
-    expect((await screen.findAllByText("Dados ilustrativos")).length).toBeGreaterThan(0)
-  })
-
   it("mostra erro quando as fontes falham", async () => {
     // 403 (erro de cliente) não tem retry na política do QueryClient → falha imediata.
     server.use(

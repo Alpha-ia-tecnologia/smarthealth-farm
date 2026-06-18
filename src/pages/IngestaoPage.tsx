@@ -42,13 +42,6 @@ const fonteStatus: Record<StatusFonte, StatusKey> = {
   Erro: "critico",
 }
 
-/** Badge de seção sem endpoint na API — sinaliza que o conteúdo é demonstrativo. */
-const BADGE_ILUSTRATIVO = (
-  <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-    Dados ilustrativos
-  </Badge>
-)
-
 // Sazonalidade epidemiológica e linha de base consolidada (RF-DAD-05/08) ainda não têm endpoint —
 // mantidas como demonstração, marcadas na UI. Migram quando o backend expuser.
 const epidemias = [
@@ -144,7 +137,7 @@ export default function IngestaoPage() {
         </Section>
 
         {/* Sazonalidade epidemiológica (RF-DAD-05) — sem endpoint, demonstrativo */}
-        <Section className="lg:col-span-2 h-fit" title="Sazonalidade epidemiológica local" info="Mostra as épocas do ano em que doenças comuns na região aumentam. Esses períodos ajudam a prever a demanda por insumos." description="Variáveis que enriquecem a base preditiva." icon={<Thermometer className="size-4" />} action={BADGE_ILUSTRATIVO}>
+        <Section className="lg:col-span-2 h-fit" title="Sazonalidade epidemiológica local" info="Mostra as épocas do ano em que doenças comuns na região aumentam. Esses períodos ajudam a prever a demanda por insumos." description="Variáveis que enriquecem a base preditiva." icon={<Thermometer className="size-4" />}>
           <div className="space-y-4">
             {epidemias.map((e) => (
               <div key={e.nome}>
@@ -191,7 +184,7 @@ export default function IngestaoPage() {
       </Section>
 
       {/* Linha de base consolidada (RF-DAD-08) — sem endpoint, demonstrativo */}
-      <Section title="Linha de base consolidada" info="Resumo da situação atual calculado a partir dos dados importados. Serve como ponto de partida para comparar melhorias ao longo do tempo." description="Indicadores de partida calculados a partir dos dados ingeridos." action={BADGE_ILUSTRATIVO}>
+      <Section title="Linha de base consolidada" info="Resumo da situação atual calculado a partir dos dados importados. Serve como ponto de partida para comparar melhorias ao longo do tempo." description="Indicadores de partida calculados a partir dos dados ingeridos.">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {linhaBase.map((b) => (
             <div key={b.l} className="rounded-xl bg-muted/50 p-4">

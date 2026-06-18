@@ -27,11 +27,6 @@ describe("RelatoriosPage", () => {
     expect(await screen.findByRole("option", { name: "HTO" })).toBeInTheDocument()
   })
 
-  it("marca o catálogo e o OPED como dados ilustrativos (mock)", async () => {
-    renderRelatorios()
-    expect((await screen.findAllByText("Dados ilustrativos")).length).toBeGreaterThan(0)
-  })
-
   it("exporta (ação demo) com feedback de toast", async () => {
     const { usuario } = renderRelatorios()
     await usuario.click(await screen.findByRole("button", { name: /Planilha/ }))

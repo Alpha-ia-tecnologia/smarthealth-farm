@@ -132,11 +132,6 @@ describe("RecomendacoesPage", () => {
     expect(await screen.findByText("Não foi possível carregar as recomendações.")).toBeInTheDocument()
   })
 
-  it("marca o painel de desempenho como dados ilustrativos (mock)", async () => {
-    renderComoGestor()
-    expect(await screen.findByText("Dados ilustrativos")).toBeInTheDocument()
-  })
-
   it("chegando do painel com ?rec=<id>, realça o cartão e rola a tela até ele", async () => {
     const scrollSpy = vi.fn()
     Element.prototype.scrollIntoView = scrollSpy

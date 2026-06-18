@@ -1,8 +1,5 @@
-import { http, HttpResponse } from "msw"
 import IntegracaoPage from "@/pages/IntegracaoPage"
 import { renderizar, screen } from "@/test/utils"
-import { server } from "@/test/server"
-import { erro } from "@/test/handlers"
 import { salvarToken } from "@/lib/auth-storage"
 
 function renderIntegracao() {
@@ -11,35 +8,50 @@ function renderIntegracao() {
 }
 
 describe("IntegracaoPage", () => {
-  it("mostra os KPIs vindos de /integracoes/resumo", async () => {
+  it("mostra os cards dos canais disponíveis", () => {
     renderIntegracao()
-    expect(await screen.findByText("Integrações operacionais")).toBeInTheDocument()
-    // operacionais/totalIntegracoes = 1/2.
-    expect(await screen.findByText("1/2")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /EMSERH/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /WhatsApp/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Telegram/ })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /E-mail/ })).toBeInTheDocument()
   })
 
-  it("lista as conexões com status e modo do backend", async () => {
-    renderIntegracao()
-    expect(await screen.findByText("FarmaWeb API")).toBeInTheDocument()
-    expect(screen.getByText("Offline (buffer)")).toBeInTheDocument()
+  it("abre a configuração do WhatsApp com os provedores ao clicar no card", async () => {
+    const { usuario } = renderIntegracao()
+    await usuario.click(screen.getByRole("button", { name: /WhatsApp/ }))
+
+    expect(screen.getByText("Configurar WhatsApp")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Evolution API" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Baileys" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "API Oficial" })).toBeInTheDocument()
+    // Provedor padrão (Evolution) exibe seus campos.
+    expect(screen.getByLabelText("URL da instância")).toBeInTheDocument()
   })
 
-  it("mostra os provedores do AI Gateway", async () => {
-    renderIntegracao()
-    expect(await screen.findByText("DeepSeek")).toBeInTheDocument()
-    expect(screen.getByText("Google Gemini")).toBeInTheDocument()
+  it("troca os campos conforme o provedor de WhatsApp escolhido", async () => {
+    const { usuario } = renderIntegracao()
+    await usuario.click(screen.getByRole("button", { name: /WhatsApp/ }))
+    await usuario.click(screen.getByRole("button", { name: "API Oficial" }))
+
+    expect(screen.getByLabelText("Phone Number ID")).toBeInTheDocument()
+    expect(screen.queryByLabelText("URL da instância")).not.toBeInTheDocument()
   })
 
-  it("mostra erro quando os provedores de IA falham", async () => {
-    // 403 (erro de cliente) não tem retry na política do QueryClient → falha imediata.
-    server.use(
-      http.get("*/integracoes/provedores-ia", () =>
-        HttpResponse.json(erro("Acesso negado.", "ACESSO_NEGADO"), { status: 403 }),
-      ),
-    )
-    renderIntegracao()
-    expect(
-      await screen.findByText("Não foi possível carregar os provedores de IA."),
-    ).toBeInTheDocument()
+  it("permite alternar para outro canal pelo menu", async () => {
+    const { usuario } = renderIntegracao()
+    await usuario.click(screen.getByRole("button", { name: /WhatsApp/ }))
+    await usuario.click(screen.getByRole("button", { name: /Telegram/ }))
+
+    expect(screen.getByText("Configurar Telegram")).toBeInTheDocument()
+    expect(screen.getByLabelText("Chat ID")).toBeInTheDocument()
+  })
+
+  it("volta para a grade de canais ao cancelar", async () => {
+    const { usuario } = renderIntegracao()
+    await usuario.click(screen.getByRole("button", { name: /WhatsApp/ }))
+    await usuario.click(screen.getByRole("button", { name: "Cancelar" }))
+
+    expect(screen.queryByText("Configurar WhatsApp")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Telegram/ })).toBeInTheDocument()
   })
 })

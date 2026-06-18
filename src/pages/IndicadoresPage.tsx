@@ -120,11 +120,6 @@ export default function IndicadoresPage() {
               info="Mostra com que frequência os dados são coletados e revisados pela equipe. Garante que os números fiquem sempre atualizados e confiáveis."
               description="Cadência de revisão em comitê de acompanhamento."
               icon={<CalendarDays className="size-4" />}
-              action={
-                <Badge variant="outline" className="border-warning/40 bg-warning/10 text-[10px] text-warning">
-                  Dados ilustrativos
-                </Badge>
-              }
             >
               {/* NOTA: cadência de coleta é ilustrativa (mock) — não há endpoint que a sirva. */}
               <div className="space-y-3">

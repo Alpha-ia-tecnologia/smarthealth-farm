@@ -20,11 +20,6 @@ describe("SegurancaPage", () => {
     expect(screen.getByText("Criou usuário")).toBeInTheDocument()
   })
 
-  it("marca os painéis institucionais como dados ilustrativos", async () => {
-    renderizar(<SegurancaPage />)
-    expect((await screen.findAllByText("Dados ilustrativos")).length).toBeGreaterThanOrEqual(2)
-  })
-
   it("mostra estado vazio quando a trilha não tem eventos", async () => {
     server.use(http.get("*/seguranca/auditoria", () => HttpResponse.json(ok([], 0))))
     renderizar(<SegurancaPage />)
