@@ -4,6 +4,8 @@ import { Boxes, BrainCircuit, GitBranch, RefreshCw, Target, TrendingUp } from "l
 import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
+import { GraficoInsightDialog } from "@/components/shared/GraficoInsightDialog"
 import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -50,6 +52,61 @@ function corpoPrevisao(resumo: ResumoPrevisao, itens: Previsao[]): string {
   )
 }
 
+function corpoMape(resumo: ResumoPrevisao): string {
+  return (
+    `Analise o erro médio (MAPE) das previsões de demanda da rede.\n\n` +
+    `Mape Médio Atual: ${fmtPct(resumo.mapeMedio)} (alvo < ${fmtPct(META_MAPE)}).\n\n` +
+    `Explique o que significa esse erro e, caso esteja acima da meta, quais ações podem ser tomadas para melhorá-lo.`
+  )
+}
+
+function corpoCriticos(resumo: ResumoPrevisao): string {
+  return (
+    `Analise o indicador de itens críticos na meta.\n\n` +
+    `Itens críticos na meta: ${resumo.criticosNaMeta} de um total de ${resumo.totalCriticos}.\n\n` +
+    `Explique o impacto de termos ou não esses itens na meta de erro (MAPE < ${fmtPct(META_MAPE)}) e aponte os riscos.`
+  )
+}
+
+function corpoAtivas(resumo: ResumoPrevisao): string {
+  return (
+    `Analise o número de previsões ativas geradas pelo sistema.\n\n` +
+    `Previsões ativas: ${fmtNum(resumo.previsoesAtivas)}.\n\n` +
+    `Comente sobre o volume de previsões geradas, o que isso representa para a cobertura da rede e como o acompanhamento automatizado beneficia a operação.`
+  )
+}
+
+function corpoDesvio(resumo: ResumoPrevisao): string {
+  return (
+    `Analise o número de itens com desvio (drift) do modelo.\n\n` +
+    `Itens com desvio: ${fmtNum(resumo.itensComDesvio)}.\n\n` +
+    `Explique o que o desvio significa (afastamento do consumo recente em relação ao previsto), os riscos de desabastecimento ou excesso, e se é o caso de focar em recalibração.`
+  )
+}
+
+function corpoSerieTemporal(sel: Previsao | null): string {
+  if (!sel) return "Nenhum insumo selecionado para análise."
+  return (
+    `Analise a série temporal da previsão para o insumo selecionado.\n\n` +
+    `Insumo: ${sel.insumoNome} (${sel.insumoCodigo}) na unidade ${sel.unidadeSigla} (${sel.unidadeNome})\n` +
+    `Erro (MAPE): ${fmtPct(sel.mape)} (alvo < ${fmtPct(META_MAPE)})\n` +
+    `Desvio do modelo (Drift): ${sel.drift}\n` +
+    `Criticidade: ${sel.criticidade}\n` +
+    `Modelo: ${sel.modelo} (v${sel.versaoModelo})\n\n` +
+    `Com base nesses dados, avalie a qualidade dessa previsão específica, os riscos associados ao desvio e à criticidade, e recomende se é necessário recalibrar o modelo.`
+  )
+}
+
+function corpoTabela(itens: Previsao[]): string {
+  const criticos = itens.filter(i => i.mape >= META_MAPE).slice(0, 5)
+  const lista = criticos.map(p => `- ${p.insumoNome} @ ${p.unidadeSigla}: MAPE ${fmtPct(p.mape)}, desvio ${p.drift}`).join("\n")
+  return (
+    `Analise as previsões listadas atualmente na tabela (por item e unidade).\n\n` +
+    `Destaque para itens com erro acima da meta (> ${fmtPct(META_MAPE)}):\n${lista || "Nenhum na página atual."}\n\n` +
+    `Sugira prioridades de atenção e recalibração com base nos erros e desvios encontrados.`
+  )
+}
+
 const driftStatus: Record<Previsao["drift"], StatusKey> = {
   Estável: "ok",
   Atenção: "atencao",
@@ -91,6 +148,8 @@ export default function PrevisaoPage() {
   const perfil = usePerfil()
   // "Gestor ou Admin" — quem pode tomar decisões de gestão (recalibrar, etc.).
   const ehGestor = podeGerir(perfil)
+
+  const [dialogOp, setDialogOp] = useState<string | null>(null)
 
   // Guarda só a chave do item escolhido; a linha é derivada da página (default: a primeira).
   const [selKey, setSelKey] = useState<{ insumoId: string; unidadeId: string } | null>(null)
@@ -270,10 +329,10 @@ export default function PrevisaoPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Erro médio (MAPE)" value={resumoQuery.data ? fmtPct(resumoQuery.data.mapeMedio) : ""} carregando={resumoQuery.isPending} icon={Target} accent="success" hint="alvo < 15%" info="Erro médio das previsões: o quanto, em média, elas erram para mais ou para menos. Quanto menor, melhor — o alvo é ficar abaixo de 15%." />
-          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" info="Quantos dos insumos de maior criticidade já estão com a previsão dentro da meta de erro (abaixo de 15%)." />
-          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" info="Total de previsões geradas automaticamente e em uso no momento, uma para cada combinação de insumo e unidade." />
-          <KpiCard label="Itens com desvio" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensComDesvio) : ""} carregando={resumoQuery.isPending} icon={GitBranch} accent={resumoQuery.data?.itensComDesvio ? "warning" : "success"} hint="monitoramento contínuo" info="Itens cujo consumo recente se afastou do que o modelo previa (desvio). Sinalizam que a previsão pode precisar de recalibração." />
+          <KpiCard label="Erro médio (MAPE)" value={resumoQuery.data ? fmtPct(resumoQuery.data.mapeMedio) : ""} carregando={resumoQuery.isPending} icon={Target} accent="success" hint="alvo < 15%" info="Erro médio das previsões: o quanto, em média, elas erram para mais ou para menos. Quanto menor, melhor — o alvo é ficar abaixo de 15%." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Erro médio" onClick={() => setDialogOp("mape")} /> : undefined} />
+          <KpiCard label="Itens críticos na meta" value={resumoQuery.data ? `${resumoQuery.data.criticosNaMeta}/${resumoQuery.data.totalCriticos}` : ""} carregando={resumoQuery.isPending} icon={Boxes} accent="teal" info="Quantos dos insumos de maior criticidade já estão com a previsão dentro da meta de erro (abaixo de 15%)." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Itens críticos na meta" onClick={() => setDialogOp("criticos")} /> : undefined} />
+          <KpiCard label="Previsões ativas" value={resumoQuery.data ? fmtNum(resumoQuery.data.previsoesAtivas) : ""} carregando={resumoQuery.isPending} icon={BrainCircuit} accent="primary" hint="geradas automaticamente" info="Total de previsões geradas automaticamente e em uso no momento, uma para cada combinação de insumo e unidade." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Previsões ativas" onClick={() => setDialogOp("ativas")} /> : undefined} />
+          <KpiCard label="Itens com desvio" value={resumoQuery.data ? fmtNum(resumoQuery.data.itensComDesvio) : ""} carregando={resumoQuery.isPending} icon={GitBranch} accent={resumoQuery.data?.itensComDesvio ? "warning" : "success"} hint="monitoramento contínuo" info="Itens cujo consumo recente se afastou do que o modelo previa (desvio). Sinalizam que a previsão pode precisar de recalibração." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Itens com desvio" onClick={() => setDialogOp("desvio")} /> : undefined} />
         </div>
       )}
 
@@ -300,7 +359,14 @@ export default function PrevisaoPage() {
               title={sel ? `Previsão — ${sel.insumoNome}` : "Previsão"}
               info="Série temporal do item selecionado: consumo histórico, previsão e projeção futura. Selecione uma linha na tabela abaixo para trocar o item."
               description={sel ? `${sel.unidadeNome} · horizonte de ${sel.horizonteMeses} meses` : undefined}
-              action={sel && <Badge variant="outline" className="font-mono text-[10px]">{sel.modelo}</Badge>}
+              action={
+                sel ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="font-mono text-[10px]">{sel.modelo}</Badge>
+                    <BotaoAnaliseIa rotulo="Previsão" onClick={() => setDialogOp("serie")} />
+                  </div>
+                ) : undefined
+              }
             >
               {!sel || detalheQuery.isPending ? (
                 <div className="flex justify-center py-20">
@@ -403,13 +469,16 @@ export default function PrevisaoPage() {
             info="Lista todas as previsões por insumo e unidade, com o erro (MAPE), a criticidade e o desvio do modelo. Clique em uma linha para ver a série completa."
             description="Selecione uma linha para visualizar a série completa. Itens de maior criticidade destacados."
             action={
-              <SelectFiltro
-                valor={drift}
-                onChange={aoFiltrarDrift}
-                opcoes={DRIFT_OPCOES}
-                todosRotulo="Todos os status"
-                className="w-44"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <BotaoAnaliseIa rotulo="Tabela" onClick={() => setDialogOp("tabela")} />
+                <SelectFiltro
+                  valor={drift}
+                  onChange={aoFiltrarDrift}
+                  opcoes={DRIFT_OPCOES}
+                  todosRotulo="Todos os status"
+                  className="w-44"
+                />
+              </div>
             }
           >
             <AreaAtualizavel atualizando={previsoesQuery.isFetching}>
@@ -425,6 +494,61 @@ export default function PrevisaoPage() {
             </AreaAtualizavel>
           </Section>
         </>
+      )}
+
+      {resumoQuery.data && (
+        <>
+          <GraficoInsightDialog
+            aberto={dialogOp === "mape"}
+            onOpenChange={(a) => setDialogOp(a ? "mape" : null)}
+            titulo="Erro médio (MAPE) — análise por IA"
+            descricao="Avaliação do erro geral das previsões na rede e ações sugeridas."
+            mensagens={mensagensAnalise(corpoMape(resumoQuery.data))}
+            chave="prev-mape"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "criticos"}
+            onOpenChange={(a) => setDialogOp(a ? "criticos" : null)}
+            titulo="Itens críticos na meta — análise por IA"
+            descricao="Impacto da assertividade nos itens de maior criticidade."
+            mensagens={mensagensAnalise(corpoCriticos(resumoQuery.data))}
+            chave="prev-criticos"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "ativas"}
+            onOpenChange={(a) => setDialogOp(a ? "ativas" : null)}
+            titulo="Previsões ativas — análise por IA"
+            descricao="Análise da abrangência e volume das previsões geradas."
+            mensagens={mensagensAnalise(corpoAtivas(resumoQuery.data))}
+            chave="prev-ativas"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "desvio"}
+            onOpenChange={(a) => setDialogOp(a ? "desvio" : null)}
+            titulo="Itens com desvio — análise por IA"
+            descricao="Avaliação dos desvios (drift) recentes e necessidade de recalibração."
+            mensagens={mensagensAnalise(corpoDesvio(resumoQuery.data))}
+            chave="prev-desvio"
+          />
+        </>
+      )}
+      <GraficoInsightDialog
+        aberto={dialogOp === "serie"}
+        onOpenChange={(a) => setDialogOp(a ? "serie" : null)}
+        titulo="Série Temporal — análise por IA"
+        descricao="Análise individual do insumo selecionado."
+        mensagens={mensagensAnalise(corpoSerieTemporal(sel))}
+        chave="prev-serie"
+      />
+      {previsoesQuery.data && (
+        <GraficoInsightDialog
+          aberto={dialogOp === "tabela"}
+          onOpenChange={(a) => setDialogOp(a ? "tabela" : null)}
+          titulo="Tabela de Previsões — análise por IA"
+          descricao="Sugestão de prioridades com base nos itens listados."
+          mensagens={mensagensAnalise(corpoTabela(previsoesQuery.data.itens))}
+          chave="prev-tabela"
+        />
       )}
     </>
   )

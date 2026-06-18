@@ -1,3 +1,4 @@
+import { useState } from "react"
 import {
   BadgeCheck,
   BellRing,
@@ -15,6 +16,8 @@ import {
 import { toast } from "sonner"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
+import { GraficoInsightDialog } from "@/components/shared/GraficoInsightDialog"
 import { KpiCard } from "@/components/shared/KpiCard"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -50,6 +53,38 @@ function corpoRelatorio(totais: TotaisRede, resumoInd: ResumoIndicadores): strin
     `ativos (${totais.alertasDesabastecimento} de desabastecimento, ${totais.alertasVencimento} de ` +
     `vencimento), ${totais.recomendacoesPendentes} recomendações pendentes, economia potencial ` +
     `${fmtMoeda(totais.economiaPotencial)}.`
+  )
+}
+
+function corpoMetas(resumoInd: ResumoIndicadores): string {
+  return (
+    `Analise o progresso das metas do projeto (OPED).\n\n` +
+    `Metas atingidas: ${resumoInd.atingidas} de ${resumoInd.total} (${resumoInd.emProgresso} em progresso).\n\n` +
+    `O que esse nível de atingimento de metas sugere sobre a maturidade do projeto e onde a gestão deve focar seus esforços agora?`
+  )
+}
+
+function corpoEconomiaRel(totais: TotaisRede): string {
+  return (
+    `Analise a economia potencial geral do projeto.\n\n` +
+    `Economia potencial: ${fmtMoeda(totais.economiaPotencial)}.\n\n` +
+    `Resuma de forma executiva como a plataforma tem atuado para gerar essa economia e qual a importância de aprovar rapidamente as recomendações para efetivá-la.`
+  )
+}
+
+function corpoCriticosRel(totais: TotaisRede): string {
+  return (
+    `Faça um resumo executivo sobre a criticidade da rede.\n\n` +
+    `Itens críticos: ${fmtNum(totais.itensCriticos)}.\n\n` +
+    `Qual o risco estratégico de ter esse volume de itens em nível crítico e como a EMSERH pode atuar em nível macro para resolver isso?`
+  )
+}
+
+function corpoAlertasRel(totais: TotaisRede): string {
+  return (
+    `Faça um resumo executivo sobre os alertas operacionais ativos.\n\n` +
+    `Alertas ativos: ${fmtNum(totais.alertasAtivos)} (${fmtNum(totais.alertasDesabastecimento)} de desabastecimento, ${fmtNum(totais.alertasVencimento)} de vencimento).\n\n` +
+    `Quais as implicações para a operação da rede se esses alertas não forem tratados com rapidez e que mensagem a direção deve passar aos operadores?`
   )
 }
 
@@ -96,6 +131,8 @@ export default function RelatoriosPage() {
   const resumoIndQuery = useResumoIndicadores()
   const unidadesQuery = useUnidades()
 
+  const [dialogOp, setDialogOp] = useState<string | null>(null)
+
   const totais = painelQuery.data?.totais
   const resumoInd = resumoIndQuery.data
   const erroResumo = painelQuery.isError || resumoIndQuery.isError
@@ -135,10 +172,10 @@ export default function RelatoriosPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Metas atingidas" value={resumoInd ? `${resumoInd.atingidas}/${resumoInd.total}` : ""} carregando={resumoIndQuery.isPending} icon={BadgeCheck} accent="success" info="Quantas metas do projeto já foram alcançadas em relação ao total acompanhado." />
-          <KpiCard label="Economia potencial" value={totais ? fmtMoeda(totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="teal" info="Valor que pode ser economizado seguindo as recomendações de redistribuição e compra." />
-          <KpiCard label="Itens críticos" value={totais ? fmtNum(totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Número de insumos em situação crítica de estoque, com risco de faltar." />
-          <KpiCard label="Alertas ativos" value={totais ? fmtNum(totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="warning" info="Quantidade de avisos abertos que ainda precisam de atenção da equipe." />
+          <KpiCard label="Metas atingidas" value={resumoInd ? `${resumoInd.atingidas}/${resumoInd.total}` : ""} carregando={resumoIndQuery.isPending} icon={BadgeCheck} accent="success" info="Quantas metas do projeto já foram alcançadas em relação ao total acompanhado." action={resumoInd ? <BotaoAnaliseIa rotulo="Metas" onClick={() => setDialogOp("metas")} /> : undefined} />
+          <KpiCard label="Economia potencial" value={totais ? fmtMoeda(totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="teal" info="Valor que pode ser economizado seguindo as recomendações de redistribuição e compra." action={totais ? <BotaoAnaliseIa rotulo="Economia" onClick={() => setDialogOp("economia")} /> : undefined} />
+          <KpiCard label="Itens críticos" value={totais ? fmtNum(totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Número de insumos em situação crítica de estoque, com risco de faltar." action={totais ? <BotaoAnaliseIa rotulo="Itens críticos" onClick={() => setDialogOp("criticos")} /> : undefined} />
+          <KpiCard label="Alertas ativos" value={totais ? fmtNum(totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="warning" info="Quantidade de avisos abertos que ainda precisam de atenção da equipe." action={totais ? <BotaoAnaliseIa rotulo="Alertas" onClick={() => setDialogOp("alertas")} /> : undefined} />
         </div>
       )}
 
@@ -220,6 +257,45 @@ export default function RelatoriosPage() {
           </div>
         </Section>
       </div>
+
+      {resumoInd && (
+        <GraficoInsightDialog
+          aberto={dialogOp === "metas"}
+          onOpenChange={(a) => setDialogOp(a ? "metas" : null)}
+          titulo="Metas atingidas — resumo executivo"
+          descricao="Avaliação da maturidade do projeto e próximos passos."
+          mensagens={mensagensAnalise(corpoMetas(resumoInd))}
+          chave="rel-metas"
+        />
+      )}
+      {totais && (
+        <>
+          <GraficoInsightDialog
+            aberto={dialogOp === "economia"}
+            onOpenChange={(a) => setDialogOp(a ? "economia" : null)}
+            titulo="Economia potencial — resumo executivo"
+            descricao="Impacto financeiro das recomendações na rede."
+            mensagens={mensagensAnalise(corpoEconomiaRel(totais))}
+            chave="rel-econ"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "criticos"}
+            onOpenChange={(a) => setDialogOp(a ? "criticos" : null)}
+            titulo="Itens críticos — resumo executivo"
+            descricao="Risco estratégico do desabastecimento na rede."
+            mensagens={mensagensAnalise(corpoCriticosRel(totais))}
+            chave="rel-crit"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "alertas"}
+            onOpenChange={(a) => setDialogOp(a ? "alertas" : null)}
+            titulo="Alertas ativos — resumo executivo"
+            descricao="Implicações operacionais dos alertas pendentes."
+            mensagens={mensagensAnalise(corpoAlertasRel(totais))}
+            chave="rel-ale"
+          />
+        </>
+      )}
     </>
   )
 }

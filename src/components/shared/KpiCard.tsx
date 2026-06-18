@@ -24,6 +24,8 @@ interface Props {
   onClick?: () => void
   /** Texto da chamada de ação exibida no rodapé quando o card é clicável. */
   acaoLabel?: string
+  /** Ação adicional renderizada no topo direito do card. */
+  action?: React.ReactNode
 }
 
 const accents: Record<NonNullable<Props["accent"]>, string> = {
@@ -59,6 +61,7 @@ export function KpiCard({
   carregando,
   onClick,
   acaoLabel = "Números reais e análise IA",
+  action,
 }: Props) {
   const interativo = !!onClick && !carregando
   const propsInterativas = onClick
@@ -101,9 +104,14 @@ export function KpiCard({
             </p>
           )}
         </div>
-        {Icon && (
-          <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl ring-1", accents[accent])}>
-            <Icon className="size-5" />
+        {(action || Icon) && (
+          <div className="flex shrink-0 items-center gap-2">
+            {action}
+            {Icon && (
+              <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-xl ring-1", accents[accent])}>
+                <Icon className="size-5" />
+              </div>
+            )}
           </div>
         )}
       </div>

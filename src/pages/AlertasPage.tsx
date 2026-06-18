@@ -13,7 +13,9 @@ import {
 } from "lucide-react"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { KpiCard } from "@/components/shared/KpiCard"
+import { BotaoAnaliseIa } from "@/components/shared/BotaoAnaliseIa"
 import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
+import { GraficoInsightDialog } from "@/components/shared/GraficoInsightDialog"
 import { Section } from "@/components/shared/Section"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { DataTable, type ControleServidor } from "@/components/shared/DataTable"
@@ -69,6 +71,38 @@ function corpoAlertas(resumo: ResumoAlertas, alertas: Alerta[]): string {
   )
 }
 
+function corpoAlertasAtivos(resumo: ResumoAlertas): string {
+  return (
+    `Analise os alertas operacionais ativos no momento.\n\n` +
+    `Total de ativos: ${fmtNum(resumo.ativos)} (${fmtNum(resumo.abertos)} abertos, ${fmtNum(resumo.emTratamento)} em tratamento).\n\n` +
+    `Qual a gravidade de ter esse volume de alertas ativos e quais ações gerenciais devem ser tomadas para agilizar as tratativas?`
+  )
+}
+
+function corpoDesabastecimento(resumo: ResumoAlertas): string {
+  return (
+    `Analise os alertas iminentes de desabastecimento.\n\n` +
+    `Alertas de desabastecimento: ${fmtNum(resumo.desabastecimento)}.\n\n` +
+    `Explique os riscos desses desabastecimentos se concretizarem e recomende os primeiros passos para mitigação do risco na rede.`
+  )
+}
+
+function corpoVencimento(resumo: ResumoAlertas): string {
+  return (
+    `Analise os alertas de risco de vencimento.\n\n` +
+    `Risco de vencimento: ${fmtNum(resumo.vencimento)}.\n\n` +
+    `Comente o impacto financeiro do desperdício de itens vencidos e forneça sugestões práticas para escoar os lotes prestes a vencer.`
+  )
+}
+
+function corpoTratados(resumo: ResumoAlertas): string {
+  return (
+    `Analise a eficiência no tratamento de alertas pela equipe.\n\n` +
+    `Alertas tratados/resolvidos: ${fmtNum(resumo.resolvidos)}.\n\n` +
+    `O que esse número indica sobre a proatividade da equipe e quais dicas para continuar mantendo um alto volume de tratativas?`
+  )
+}
+
 const statusMap = { Aberto: "critico", "Em tratamento": "atencao", Resolvido: "ok" } as const
 
 /** Opções dos filtros isolados da seção "Alertas disparados". */
@@ -100,6 +134,8 @@ export default function AlertasPage() {
   const perfil = usePerfil()
   // "Gestor ou Admin" — quem pode gerar alertas e editar limiares.
   const ehGestor = podeGerir(perfil)
+
+  const [dialogOp, setDialogOp] = useState<string | null>(null)
 
   // Filtros compartilhados (unidade + insumo) — valem para ativos e histórico.
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
@@ -334,10 +370,10 @@ export default function AlertasPage() {
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Alertas ativos" value={resumoQuery.data ? fmtNum(resumoQuery.data.ativos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Total de avisos que ainda exigem atenção: os que ninguém começou a tratar somados aos que já estão em tratamento. Quanto maior o número, mais situações de risco aguardam uma providência." />
-          <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos insumos estão prestes a faltar no estoque, segundo a previsão de consumo. São os casos mais urgentes, porque a falta afeta diretamente o atendimento." />
-          <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" info="Quantos insumos têm lotes perto da data de validade. São itens que precisam ser usados ou remanejados a tempo para não serem descartados." />
-          <KpiCard label="Tratados" value={resumoQuery.data ? fmtNum(resumoQuery.data.resolvidos) : ""} carregando={resumoQuery.isPending} icon={SlidersHorizontal} accent="success" hint="alertas resolvidos" info="Quantidade de avisos que já foram resolvidos. Serve para acompanhar o quanto a equipe vem dando conta dos riscos identificados." />
+          <KpiCard label="Alertas ativos" value={resumoQuery.data ? fmtNum(resumoQuery.data.ativos) : ""} carregando={resumoQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Total de avisos que ainda exigem atenção: os que ninguém começou a tratar somados aos que já estão em tratamento. Quanto maior o número, mais situações de risco aguardam uma providência." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Alertas ativos" onClick={() => setDialogOp("ativos")} /> : undefined} />
+          <KpiCard label="Desabastecimento iminente" value={resumoQuery.data ? fmtNum(resumoQuery.data.desabastecimento) : ""} carregando={resumoQuery.isPending} icon={PackageX} accent="danger" info="Quantos insumos estão prestes a faltar no estoque, segundo a previsão de consumo. São os casos mais urgentes, porque a falta afeta diretamente o atendimento." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Desabastecimentos" onClick={() => setDialogOp("desabastecimento")} /> : undefined} />
+          <KpiCard label="Risco de vencimento" value={resumoQuery.data ? fmtNum(resumoQuery.data.vencimento) : ""} carregando={resumoQuery.isPending} icon={CalendarClock} accent="warning" info="Quantos insumos têm lotes perto da data de validade. São itens que precisam ser usados ou remanejados a tempo para não serem descartados." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Vencimentos" onClick={() => setDialogOp("vencimento")} /> : undefined} />
+          <KpiCard label="Tratados" value={resumoQuery.data ? fmtNum(resumoQuery.data.resolvidos) : ""} carregando={resumoQuery.isPending} icon={SlidersHorizontal} accent="success" hint="alertas resolvidos" info="Quantidade de avisos que já foram resolvidos. Serve para acompanhar o quanto a equipe vem dando conta dos riscos identificados." action={resumoQuery.data ? <BotaoAnaliseIa rotulo="Tratativas" onClick={() => setDialogOp("tratados")} /> : undefined} />
         </div>
       )}
 
@@ -507,6 +543,43 @@ export default function AlertasPage() {
         onConfirmar={confirmarAcao}
         processando={tratar.isPending}
       />
+
+      {resumoQuery.data && (
+        <>
+          <GraficoInsightDialog
+            aberto={dialogOp === "ativos"}
+            onOpenChange={(a) => setDialogOp(a ? "ativos" : null)}
+            titulo="Alertas ativos — análise por IA"
+            descricao="Avaliação da carga de alertas que exigem atenção."
+            mensagens={mensagensAnalise(corpoAlertasAtivos(resumoQuery.data))}
+            chave="ale-ativos"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "desabastecimento"}
+            onOpenChange={(a) => setDialogOp(a ? "desabastecimento" : null)}
+            titulo="Desabastecimento iminente — análise por IA"
+            descricao="Recomendações urgentes para evitar falta de estoque."
+            mensagens={mensagensAnalise(corpoDesabastecimento(resumoQuery.data))}
+            chave="ale-desabastecimento"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "vencimento"}
+            onOpenChange={(a) => setDialogOp(a ? "vencimento" : null)}
+            titulo="Risco de vencimento — análise por IA"
+            descricao="Ações para mitigar desperdício de lotes vencendo."
+            mensagens={mensagensAnalise(corpoVencimento(resumoQuery.data))}
+            chave="ale-vencimento"
+          />
+          <GraficoInsightDialog
+            aberto={dialogOp === "tratados"}
+            onOpenChange={(a) => setDialogOp(a ? "tratados" : null)}
+            titulo="Tratativas concluídas — análise por IA"
+            descricao="Avaliação do engajamento da equipe na resolução de alertas."
+            mensagens={mensagensAnalise(corpoTratados(resumoQuery.data))}
+            chave="ale-tratados"
+          />
+        </>
+      )}
     </>
   )
 }
