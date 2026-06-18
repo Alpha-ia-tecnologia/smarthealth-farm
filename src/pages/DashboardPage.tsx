@@ -198,7 +198,7 @@ export default function DashboardPage() {
             icon={PackageX}
             accent="danger"
             delta={ruptura ? deltaIndicador(ruptura) : undefined}
-            onClick={ruptura ? () => setIndicadorSel(ruptura) : undefined}
+            footer={ruptura ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Taxa de desabastecimento" onClick={() => setIndicadorSel(ruptura)} /></div> : undefined}
             info="Percentual de itens que ficaram em falta quando eram necessários. Quanto menor, melhor — a meta é reduzir esse número em relação à linha de base (situação antes do projeto)."
           />
           <KpiCard
@@ -208,7 +208,7 @@ export default function DashboardPage() {
             icon={CalendarClock}
             accent="warning"
             delta={vencimento ? deltaIndicador(vencimento) : undefined}
-            onClick={vencimento ? () => setIndicadorSel(vencimento) : undefined}
+            footer={vencimento ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Perdas por vencimento" onClick={() => setIndicadorSel(vencimento)} /></div> : undefined}
             info="Percentual de insumos descartados por terem vencido antes de serem usados. Comprar e distribuir na medida certa reduz esse desperdício."
           />
           <KpiCard
@@ -218,7 +218,7 @@ export default function DashboardPage() {
             icon={TrendingDown}
             accent="teal"
             delta={emergencial ? deltaIndicador(emergencial) : undefined}
-            onClick={emergencial ? () => setIndicadorSel(emergencial) : undefined}
+            footer={emergencial ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Compras emergenciais" onClick={() => setIndicadorSel(emergencial)} /></div> : undefined}
             info="Volume de compras feitas com urgência, fora do planejamento. Costumam sair mais caras (frete e preço); a meta é reduzi-las com previsão e reposição programada."
           />
           <KpiCard
@@ -228,7 +228,7 @@ export default function DashboardPage() {
             icon={Target}
             accent="success"
             delta={mape ? deltaIndicador(mape) : undefined}
-            onClick={mape ? () => setIndicadorSel(mape) : undefined}
+            footer={mape ? <div className="flex justify-end"><BotaoAnaliseIa rotulo="Assertividade" onClick={() => setIndicadorSel(mape)} /></div> : undefined}
             info="MAPE é o erro médio da previsão de demanda: o quanto, em média, ela erra para mais ou para menos. Quanto menor o erro, mais confiável é a previsão (alvo abaixo da meta)."
           />
         </div>
