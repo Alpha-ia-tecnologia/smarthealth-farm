@@ -22,6 +22,17 @@ describe("IndicadorInsightDialog", () => {
     expect(screen.getByText("Linha de base")).toBeInTheDocument()
   })
 
+  it("mostra a barra de progresso com o marcador da meta", async () => {
+    renderizar(<IndicadorInsightDialog indicador={indicador} aberto onOpenChange={() => {}} />)
+
+    // Barra acessível com o progresso e a posição da meta (100% na escala).
+    const barra = await screen.findByRole("img", { name: /Progresso até a meta: 112%/ })
+    expect(barra).toBeInTheDocument()
+    expect(barra).toHaveAccessibleName(/A meta corresponde a 100% \(atingida\)/)
+    // "Meta" aparece duas vezes: no tile de número real e no marcador da régua da barra.
+    expect(screen.getAllByText("Meta").length).toBeGreaterThanOrEqual(2)
+  })
+
   it("mostra o lastro em números absolutos por trás da taxa (%)", async () => {
     renderizar(<IndicadorInsightDialog indicador={indicador} aberto onOpenChange={() => {}} />)
     // ind-ruptura: 9 de 80 itens essenciais por trás dos 11,2%.

@@ -9,7 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { AnaliseIaPainel } from "@/components/shared/AnaliseIaPainel"
 import { TrendChart } from "@/components/charts/TrendChart"
@@ -138,10 +137,50 @@ function NumerosReais({ indicador }: { indicador: Indicador }) {
           <span>Progresso até a meta</span>
           <span className="tabular">{progresso}%</span>
         </div>
-        <Progress
-          value={Math.min(100, progresso)}
-          className={cn("mt-1 h-1.5", atingiu ? "[&>div]:bg-success" : "[&>div]:bg-warning")}
+        <BarraProgressoMeta progresso={progresso} atingiu={atingiu} />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Barra de "progresso até a meta" com **marcador da meta**. A meta é o ponto de 100% nesta escala;
+ * como o progresso pode passar de 100% (ex.: 112%), a barra é redimensionada para
+ * `escala = max(progresso, 110)` — assim o marcador da meta nunca encosta na ponta e o quanto se
+ * passou dela fica visível. Ex.: progresso 112% → preenchimento cheio e marcador da meta em ~89%.
+ */
+function BarraProgressoMeta({ progresso, atingiu }: { progresso: number; atingiu: boolean }) {
+  const escala = Math.max(progresso, 110)
+  const preenchimento = Math.max(0, Math.min(100, (progresso / escala) * 100))
+  const posicaoMeta = (100 / escala) * 100
+
+  return (
+    <div className="mt-1.5">
+      <div
+        className="relative h-2 w-full overflow-hidden rounded-full bg-muted"
+        role="img"
+        aria-label={`Progresso até a meta: ${progresso}%. A meta corresponde a 100% (${atingiu ? "atingida" : "não atingida"}).`}
+      >
+        <div
+          className={cn("h-full rounded-full transition-all", atingiu ? "bg-success" : "bg-warning")}
+          style={{ width: `${preenchimento}%` }}
         />
+        {/* Marcador da meta (100% nesta escala). */}
+        <div
+          className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-foreground/80"
+          style={{ left: `${posicaoMeta}%` }}
+          aria-hidden
+        />
+      </div>
+      {/* Régua: início (0%) e a posição da meta. */}
+      <div className="relative mt-1 h-3.5 text-[10px] text-muted-foreground" aria-hidden>
+        <span className="absolute left-0">0%</span>
+        <span
+          className="absolute -translate-x-1/2 whitespace-nowrap font-medium text-foreground/80"
+          style={{ left: `${posicaoMeta}%` }}
+        >
+          Meta
+        </span>
       </div>
     </div>
   )

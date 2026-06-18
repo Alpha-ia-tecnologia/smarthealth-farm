@@ -21,7 +21,7 @@ import { PaginaIaInsight } from "@/components/shared/PaginaIaInsight"
 import { CurvaAbcResumo } from "@/components/shared/CurvaAbcResumo"
 import { CurvaAbcInsightDialog } from "@/components/shared/CurvaAbcInsightDialog"
 import { Section } from "@/components/shared/Section"
-import { BarraFiltros, FiltroUnidade } from "@/components/shared/filtros"
+import { BarraFiltros, FiltroInsumo, FiltroUnidade } from "@/components/shared/filtros"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ErroConsulta } from "@/components/shared/ErroConsulta"
 import { ForecastChart } from "@/components/charts/ForecastChart"
@@ -124,12 +124,14 @@ function deltaIndicador(ind: Indicador) {
 
 export default function DashboardPage() {
   const [unidadeId, setUnidadeId] = useState<string | undefined>(undefined)
+  const [insumoId, setInsumoId] = useState<string | undefined>(undefined)
   const [indicadorSel, setIndicadorSel] = useState<Indicador | null>(null)
   const [grafico, setGrafico] = useState<GraficoDashboard | null>(null)
   const [abcAberto, setAbcAberto] = useState(false)
-  const painelQuery = usePainelGerencial({ unidadeId })
+  const painelQuery = usePainelGerencial({ unidadeId, insumoId })
   const indicadoresQuery = useIndicadores()
-  const curvaAbcQuery = useCurvaAbc()
+  // Curva ABC responde só à unidade (filtrar por um único insumo deixaria 1 item, sem sentido).
+  const curvaAbcQuery = useCurvaAbc({ unidadeId })
 
   const indPorCodigo = useMemo(
     () => new Map((indicadoresQuery.data ?? []).map((i) => [i.codigo, i])),
@@ -175,6 +177,7 @@ export default function DashboardPage() {
 
       <BarraFiltros>
         <FiltroUnidade valor={unidadeId} onChange={setUnidadeId} />
+        <FiltroInsumo valor={insumoId} onChange={setInsumoId} unidadeId={unidadeId} />
       </BarraFiltros>
 
       {/* KPIs do projeto (rede) — sempre os indicadores do edital, independentemente da unidade
@@ -249,57 +252,6 @@ export default function DashboardPage() {
       />
 
       <CurvaAbcInsightDialog curva={curvaAbcQuery.data} aberto={abcAberto} onOpenChange={setAbcAberto} />
-
-      {/* Previsão agregada + acurácia */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Section
-          className="lg:col-span-2"
-          title={painel ? `Demanda × Previsão — ${painel.serieAgregada.insumoNome} (rede)` : "Demanda × Previsão (rede)"}
-          description="Comparativo entre consumo realizado e previsto, com projeção de 3 meses."
-          info="Compara o consumo já realizado (histórico) com o previsto pelo modelo e projeta os próximos meses, ajudando a antecipar quanto será necessário."
-          action={
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-[10px]">Modelo preditivo híbrido</Badge>
-              {painel && <BotaoAnaliseIa rotulo="Demanda × Previsão" onClick={() => setGrafico("previsao")} />}
-            </div>
-          }
-        >
-          {painelQuery.isError ? (
-            <ErroConsulta mensagem="Não foi possível carregar a série." onTentarNovamente={() => painelQuery.refetch()} />
-          ) : !painel ? (
-            <div className="flex justify-center py-20"><Spinner size={40} label="Carregando série" /></div>
-          ) : (
-            <ForecastChart serie={painel.serieAgregada.serie} />
-          )}
-        </Section>
-
-        <Section
-          title="Assertividade das previsões"
-          info="Mostra o quanto as previsões têm acertado nos itens mais críticos. O ponteiro indica a assertividade média (100% menos o erro); ao lado, os desabastecimentos que foram evitados."
-          description="Erro médio (MAPE) ponderado dos itens de maior criticidade."
-          action={mape ? <BotaoAnaliseIa rotulo="Assertividade das previsões" onClick={() => setGrafico("assertividade")} /> : undefined}
-        >
-          {indicadoresQuery.isError ? (
-            <ErroConsulta mensagem="Não foi possível carregar os indicadores." onTentarNovamente={() => indicadoresQuery.refetch()} />
-          ) : !mape ? (
-            <div className="flex justify-center py-20"><Spinner size={40} label="Carregando" /></div>
-          ) : (
-            <div className="flex flex-col items-center gap-4">
-              <Gauge value={Math.round((100 - mape.atual) * 10) / 10} label="Assertividade média" suffix="%" color="var(--chart-4)" />
-              <div className="grid w-full grid-cols-2 gap-2 text-center">
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="tabular font-display text-xl font-bold">{fmtPct(mape.atual)}</p>
-                  <p className="text-[11px] text-muted-foreground">erro médio (MAPE)</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <p className="tabular font-display text-xl font-bold text-success">{evitados ? fmtNum(evitados.atual) : "—"}</p>
-                  <p className="text-[11px] text-muted-foreground">desabastecimentos evitados</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </Section>
-      </div>
 
       {/* Cobertura por unidade + alertas + recomendações */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -393,11 +345,62 @@ export default function DashboardPage() {
         </Section>
       </div>
 
+      {/* Previsão agregada + acurácia */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Section
+          className="lg:col-span-2"
+          title={painel ? `Demanda × Previsão — ${painel.serieAgregada.insumoNome} (rede)` : "Demanda × Previsão (rede)"}
+          description="Comparativo entre consumo realizado e previsto, com projeção de 3 meses."
+          info="Compara o consumo já realizado (histórico) com o previsto pelo modelo e projeta os próximos meses, ajudando a antecipar quanto será necessário."
+          action={
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-[10px]">Modelo preditivo híbrido</Badge>
+              {painel && <BotaoAnaliseIa rotulo="Demanda × Previsão" onClick={() => setGrafico("previsao")} />}
+            </div>
+          }
+        >
+          {painelQuery.isError ? (
+            <ErroConsulta mensagem="Não foi possível carregar a série." onTentarNovamente={() => painelQuery.refetch()} />
+          ) : !painel ? (
+            <div className="flex justify-center py-20"><Spinner size={40} label="Carregando série" /></div>
+          ) : (
+            <ForecastChart serie={painel.serieAgregada.serie} />
+          )}
+        </Section>
+
+        <Section
+          title="Assertividade das previsões"
+          info="Mostra o quanto as previsões têm acertado nos itens mais críticos. O ponteiro indica a assertividade média (100% menos o erro); ao lado, os desabastecimentos que foram evitados."
+          description="Erro médio (MAPE) ponderado dos itens de maior criticidade."
+          action={mape ? <BotaoAnaliseIa rotulo="Assertividade das previsões" onClick={() => setGrafico("assertividade")} /> : undefined}
+        >
+          {indicadoresQuery.isError ? (
+            <ErroConsulta mensagem="Não foi possível carregar os indicadores." onTentarNovamente={() => indicadoresQuery.refetch()} />
+          ) : !mape ? (
+            <div className="flex justify-center py-20"><Spinner size={40} label="Carregando" /></div>
+          ) : (
+            <div className="flex flex-col items-center gap-4">
+              <Gauge value={Math.round((100 - mape.atual) * 10) / 10} label="Assertividade média" suffix="%" color="var(--chart-4)" />
+              <div className="grid w-full grid-cols-2 gap-2 text-center">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="tabular font-display text-xl font-bold">{fmtPct(mape.atual)}</p>
+                  <p className="text-[11px] text-muted-foreground">erro médio (MAPE)</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="tabular font-display text-xl font-bold text-success">{evitados ? fmtNum(evitados.atual) : "—"}</p>
+                  <p className="text-[11px] text-muted-foreground">desabastecimentos evitados</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </Section>
+      </div>
+
       <Section
-        title="Curva ABC da rede — valor de consumo"
+        title={unidadeId ? "Curva ABC — valor de consumo" : "Curva ABC da rede — valor de consumo"}
         icon={<BarChart3 className="size-4" />}
         info="Classifica os insumos pelo valor de consumo (consumo médio diário × custo unitário). Poucos itens (classe A) concentram a maior parte do valor — são os que merecem controle mais rígido. Clique em Análise IA para o detalhamento e a recomendação."
-        description="Análise de Pareto: onde está concentrado o valor de consumo da rede."
+        description={unidadeId ? "Análise de Pareto: onde está concentrado o valor de consumo da unidade selecionada." : "Análise de Pareto: onde está concentrado o valor de consumo da rede."}
         action={
           curvaAbcQuery.data && curvaAbcQuery.data.itens.length > 0 ? (
             <BotaoAnaliseIa rotulo="Curva ABC" onClick={() => setAbcAberto(true)} />

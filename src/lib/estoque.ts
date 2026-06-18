@@ -98,6 +98,11 @@ export interface CurvaAbc {
   resumo: ResumoClasseAbc[]
 }
 
+/** Filtros da Curva ABC — só unidade (filtrar por um único insumo deixaria 1 item, sem sentido). */
+export interface CurvaAbcFiltros {
+  unidadeId?: string
+}
+
 export interface PosicaoFiltros {
   unidadeId?: string
   insumoId?: string
@@ -124,8 +129,9 @@ export const estoqueApi = {
   resumo: (filtros: FiltrosResumo = {}) =>
     api.get<ResumoEstoque>(`/estoque/resumo${montarQuery({ ...filtros })}`),
 
-  /** GET /estoque/curva-abc — Curva ABC dos insumos por valor de consumo (rede). */
-  curvaAbc: () => api.get<CurvaAbc>("/estoque/curva-abc"),
+  /** GET /estoque/curva-abc — Curva ABC dos insumos por valor de consumo (filtro opcional por unidade). */
+  curvaAbc: (filtros: CurvaAbcFiltros = {}) =>
+    api.get<CurvaAbc>(`/estoque/curva-abc${montarQuery({ ...filtros })}`),
 
   /** GET /estoque/{insumoId}/{unidadeId} — drill-down: lotes + movimentações. */
   detalhar: (insumoId: string, unidadeId: string) =>
