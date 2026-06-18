@@ -132,10 +132,11 @@ export function KpiCard({
         </div>
       )}
       {interativo && (
-        <div className="mt-3 flex items-center gap-1 text-xs font-medium text-primary/85">
-          <Sparkles className="size-3.5" />
-          <span>{acaoLabel}</span>
-          <ChevronRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none" />
+        <div className="mt-auto pt-3 border-t flex justify-end">
+          <div className="inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-medium text-primary transition-colors group-hover:bg-muted group-hover:text-primary">
+            <Sparkles className="mr-2 size-4" />
+            Análise IA
+          </div>
         </div>
       )}
       {footer && <div className="mt-auto pt-3 border-t">{footer}</div>}
