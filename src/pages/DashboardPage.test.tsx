@@ -76,17 +76,17 @@ describe("DashboardPage", () => {
     expect(screen.getByRole("button", { name: "Gerar novamente" })).toBeInTheDocument()
   })
 
-  it("ao filtrar por unidade, troca os KPIs do edital pelos operacionais da unidade", async () => {
+  it("ao filtrar por unidade, mantém os KPIs do projeto (não troca por operacionais)", async () => {
     const { usuario } = renderDashboard()
-    // Sem filtro: KPI do edital (rede).
+    // Sem filtro: KPIs do projeto (rede).
     expect(await screen.findByText("Taxa de desabastecimento")).toBeInTheDocument()
 
     await usuario.click(screen.getByRole("combobox", { name: "Unidade" }))
     await usuario.click(await screen.findByRole("option", { name: "HTO · São Luís" }))
 
-    // Com unidade: KPIs operacionais da unidade (do /painel filtrado).
-    expect(await screen.findByText("Itens críticos")).toBeInTheDocument()
-    expect(screen.queryByText("Taxa de desabastecimento")).not.toBeInTheDocument()
+    // Com unidade: os KPIs do projeto permanecem; o filtro afeta só os blocos abaixo.
+    expect(await screen.findByText("Taxa de desabastecimento")).toBeInTheDocument()
+    expect(screen.queryByText("Itens críticos")).not.toBeInTheDocument()
   })
 
   it("mostra o resumo da Curva ABC da rede", async () => {

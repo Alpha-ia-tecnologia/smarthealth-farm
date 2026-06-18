@@ -3,9 +3,7 @@ import { Link } from "react-router-dom"
 import {
   ArrowRight,
   BarChart3,
-  BellRing,
   CalendarClock,
-  Coins,
   LayoutDashboard,
   PackageX,
   Target,
@@ -179,15 +177,10 @@ export default function DashboardPage() {
         <FiltroUnidade valor={unidadeId} onChange={setUnidadeId} />
       </BarraFiltros>
 
-      {/* KPIs — sem filtro: indicadores do edital (rede). Com unidade: operacionais da unidade. */}
-      {unidadeId ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard label="Itens críticos" value={painel ? fmtNum(painel.totais.itensCriticos) : ""} carregando={painelQuery.isPending} icon={PackageX} accent="danger" info="Insumos com estoque abaixo do nível seguro nesta unidade — risco de faltar." />
-          <KpiCard label="Alertas ativos" value={painel ? fmtNum(painel.totais.alertasAtivos) : ""} carregando={painelQuery.isPending} icon={BellRing} accent="danger" hint="abertos + em tratamento" info="Avisos de risco ainda não resolvidos nesta unidade (abertos somados aos em tratamento)." />
-          <KpiCard label="Risco de vencimento" value={painel ? fmtNum(painel.totais.alertasVencimento) : ""} carregando={painelQuery.isPending} icon={CalendarClock} accent="warning" info="Insumos com lotes perto da validade nesta unidade, que precisam de uso ou remanejamento." />
-          <KpiCard label="Economia potencial" value={painel ? fmtMoeda(painel.totais.economiaPotencial) : ""} carregando={painelQuery.isPending} icon={Coins} accent="success" info="Quanto a unidade pode economizar seguindo as recomendações em aberto (compra programada sai mais barata que a de urgência)." />
-        </div>
-      ) : indicadoresQuery.isError ? (
+      {/* KPIs do projeto (rede) — sempre os indicadores do edital, independentemente da unidade
+          selecionada. O filtro de unidade afeta apenas os blocos abaixo (previsão, cobertura,
+          alertas e recomendações). */}
+      {indicadoresQuery.isError ? (
         <ErroConsulta
           mensagem="Não foi possível carregar os indicadores do projeto."
           onTentarNovamente={() => indicadoresQuery.refetch()}
